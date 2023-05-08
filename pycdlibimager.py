@@ -2,43 +2,37 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-05'
+__version__ = '0.0.1_2023-05-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Generate ISO from a partition of an evidence item'
 
 from pathlib import Path
-from re import compile as regcompile
-from pycdlib import PyCdlib
-from argparse import ArgumentParser, FileType
+from argparse import ArgumentParser
+from lib.greplists import GrepLists
 from lib.extpath import ExtPath
+from lib.timestamp import TimeStamp
+from lib.filedirlogger import FileDirLogger
 
-class RegList:
-	'''List of regular expressions to exclude paths'''
 
-	def __init__(self, path):
-		'''Read file and build list with '''
-		if isinstance(path, Path):
-			with path.open() as textfile:
-				self.regs = [regcompile(line.strip()) for line in textfile]
-		else:
-			self.regs = None
+#from zipfile import ZipFile
 
-	def is_match(self, string):
-		'''True if one regular expression matches'''
-		if self.regs:
-			for reg in self.regs:
-				if reg.search(string):
-					return True
-		return False
+#class ZIP:
 
-class ISO(PyCdlib):
+#	image = ZipFile('directory1.zip', 'w')
+#   for file in glob.glob('directory1/*'):
+  
+#  f.write(file)
+
+from pycdlib import PyCdlib
+
+class Iso(PyCdlib):
 	'''ISO Image'''
 
-	def __init__(self, filename, parent=None, spec='udf'):
-		'''Create image'''
-		self.image_path = ExtPath.fullpath(f'{filename}.iso', parent)
+	def __init__(self, path, spec='udf'):
+		'''Use UDF or Joliet from PyCdlib'''
+		self.path = path.with_suffix('.iso')
 		super().__init__()
 		if spec.lower() == 'udf':
 			self.new(udf='2.60')
@@ -51,7 +45,7 @@ class ISO(PyCdlib):
 			self.append_directory = self._joliet_add_directory
 			self.append_file = self._joliet_add_file
 		else:
-			raise NotImplementedError(f'unknown specification {spec}')
+			raise NotImplementedError(spec)
 
 	def _udf_add_directory(self, rel_path):
 		'''Add directory to image'''
@@ -71,87 +65,64 @@ class ISO(PyCdlib):
 
 	def close(self):
 		'''Write and close'''
-		super().write(self.image_path)
+		super().write(self.path)
 		super().close()
 
-class FileImage:
+class PyCdlibImager(FileDirLogger):
 	'''Image Generator for files / logical content'''
 
 	def __init__(self, root,
-		imager = ISO,
-		spec = 'udf',
 		filename = None,
 		outdir = None,
 		blacklist = None,
 		whitelist = None,
+		spec = 'udf',
 		echo = print
 	):
-		'''Definitions'''
+		'''Prepare to write image file'''
+		super().__init__(filename=filename, outdir=outdir)
 		self.echo = echo
 		self.root_path = Path(root)
-		if outdir:
-			self.dir_path = Path(outdir)
-			self.dir_path.mkdir(exist_ok=True)
-		else:
-			self.dir_path = Path.cwd()
-		self.content_file = ExtPath.open_write(f'{filename}_content.txt', parent=self.dir_path)
-		self.dropped_file = ExtPath.open_write(f'{filename}_dropped.txt', parent=self.dir_path)
-		self.image = imager(filename, parent=self.dir_path, spec=spec)
-		self.echo(f'Image file {self.image.image_path} with specification >{spec}<')
-		self.blacklist = RegList(blacklist)
-		self.whitelist = RegList(whitelist)
-		if self.whitelist.regs:
-			self.to_store = self._is_in_whitelist
-			self.echo(f'Using whitelist {whitelist}')
-		else:
-			self.to_store = self._not_in_blacklist
-			if self.blacklist.regs:
-				self.echo(f'Using blacklist {blacklist}')
-
-	def _not_in_blacklist(self, posix_str):
-		'''Return True when path is blacklisted'''
-		return not self.blacklist.is_match(posix_str.strip('/'))
-
-	def _is_in_whitelist(self, posix_str):
-		'''Return True when path is not in whitelist'''
-		return self.whitelist.is_match(posix_str.strip('/'))
-
-	def _log_content(self, rel_path):
-		'''Add to file list'''
-		print(rel_path, file=self.content_file)
-
-	def _log_dropped(self, rel_path):
-		'''Add to file list'''
-		print(rel_path, file=self.dropped_file)
+		self.grep = GrepLists(blacklist=blacklist, whitelist=whitelist, echo=echo)
+		self.image = Iso(self.dir_path/filename, spec=spec)
+		self.echo(f'PyCdlib will write to image file {self.image.path} with specification >{spec}<')
 
 	def fill(self):
 		'''Fill image'''
 		for full_path in self.root_path.glob("**/"):	# directories
 			store_path = ExtPath.path_to_str(full_path, parent=self.root_path)
-			if full_path.is_dir() and not full_path is self.root_path:
+			if full_path.is_dir():
 				self.echo(full_path)
-				self.image.append_directory(store_path)
-				self._log_content(store_path)
-			else:
-				self._log_dropped(store_path)
+				if full_path is self.root_path:
+					print(store_path, file=self.directories_file)
+					continue
+				try:
+					self.image.append_directory(store_path)
+					print(store_path, file=self.directories_file)
+				except Exception as ex:
+					print(store_path, file=self.dropped_file)
+					print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
 		for full_path in self.root_path.rglob("*"):	# files
 			store_path = ExtPath.path_to_str(full_path, parent=self.root_path)
 			if not full_path.is_file():
 				continue
 			self.echo(full_path)
-			if self.to_store(store_path):
-				self.image.append_file(full_path, store_path)
-				self._log_content(store_path)
+			if self.grep.to_store(store_path):
+				try:
+					self.image.append_file(full_path, store_path)
+					print(store_path, file=self.files_file)
+				except Exception as ex:
+					print(store_path, file=self.dropped_file)
+					print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
 			else:
-				self._log_dropped(store_path)
+				print(store_path, file=self.excluded_file)
 
 	def close(self):
 		'''Close image file and logs'''
-		self.dropped_file.close()
-		self.content_file.close()
+		super().close()
 		self.image.close()
 
-class CLI(ArgumentParser):
+class PyCdlibCli(ArgumentParser):
 	'''CLI for the imager'''
 
 	@staticmethod
@@ -202,7 +173,7 @@ class CLI(ArgumentParser):
 		'''Run the imager'''
 		if not self.verbose:
 			echo = self.no_echo
-		image = FileImage(self.root,
+		image = PyCdlibImager(self.root,
 			blacklist = self.blacklist,
 			filename = self.filename,
 			outdir = self.outdir,
@@ -214,6 +185,6 @@ class CLI(ArgumentParser):
 		image.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = CLI(description=__description__)
+	app = PyCdlibCli(description=__description__)
 	app.parse()
 	app.run()

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-05'
+__version__ = '0.0.1_2023-05-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -10,7 +10,7 @@ __description__ = 'GUI for FallbackImager'
 
 from pathlib import Path
 from sys import executable
-from configparser import ConfigParser
+from json import load, dump
 from argparse import ArgumentParser
 from datetime import datetime
 from threading import Thread
@@ -20,64 +20,71 @@ from tkinter.scrolledtext import ScrolledText
 from tkinter.messagebox import askquestion, showwarning, showerror
 from tkinter.filedialog import askopenfilename, askdirectory
 from lib.extpath import ExtPath
-from fileimager import CLI as FileImagerCLI
+from pycdlibimager import PyCdlibCli
 
-class Config(ConfigParser):
-	'''Handle config file'''
+class Settings(dict):
+	'''Handle settings'''
 
-	DEFAULT = 'DEFAULT'
-
-	def __init__(self, path=None):
-		'''Set path to config file, default is app or script name with .conf'''
+	def __init__(self, path):
+		'''Set path to JSON config file, default is app or script name with .json'''
+		self.path = path
 		try:
-			self.path = Path(path)
-		except TypeError:
-			script_path = Path(__file__)
-			exe_path =  Path(executable)
-			if script_path.stem != exe_path.stem:
-				path = script_path
-			else:
-				path = exe_path
-			self.path = path.parent/f'{path.stem.lower()}.conf'
-		self.set_section()
-		super().__init__()
-		self.read()
+			with self.path.open() as fh:
+				loaded = load(fh)
+		except FileNotFoundError:
+			loaded = dict()
+		self.update(loaded)
 
-	def set_section(self, *args):
-		'''Set section to read or write'''
-		if len(args) == 1 and isinstance(args[0], str):
-			self._section = args[0]
-		elif len(args) == 0:
-			self._section = self.DEFAULT
-		else:
-			raise KeyError(args)
-
-	def get_section(self, *args):
-		'''Get section'''
-		if len(args) == 1 and isinstance(args[0], str):
-			return args[0]
-		elif len(args) == 0 or args == (None, ):
-			return self._section
+	def init_section(self, section):
+		'''Open a section in settings'''
+		self.section = section
+		if not section in self:
+			self[section] = dict()
 
 	def get(self, key, section=None):
-		'Get string from config'
+		'Get value'
+		if not section:
+			section = self.section
 		try:
-			return self[self.get_section(section)][key]
+			value = self[section][key]
 		except KeyError:
 			return ''
+		try:
+			return value.get()
+		except AttributeError:
+			return value
 
-	def put(self, key, value, section=None):
-		'Put value to config'
-		self[self.get_section(section)][key] = value
+	def init_stringvar(self, key, default=None, section=None):
+		'''Generate StringVar for one setting'''
+		value = self.get(key, section=section)
+		if not value and default:
+			self[self.section][key] = StringVar(value=default)
+		else:
+			self[self.section][key] = StringVar(value=value)
 
-	def read(self):
-		'''Read config file'''
-		super().read(self.path)
+	def raw(self, key, section=None):
+		'''Get value as it is'''
+		if not section:
+			section = self.section
+		return self[self.section][key]
+
+	def decoded(self):
+		'''Decode settings using get method'''
+		dec_settings = dict()
+		for section in self:
+			dec_section = dict()
+			for key in self[section]:
+				value = self.get(key, section=section)
+				if value:
+					dec_section[key] = value
+			if dec_section != dict():
+				dec_settings[section] = dec_section
+		return dec_settings
 
 	def write(self):
 		'''Write config file'''
-		with open(self.path, 'w') as fh:
-			super().write(fh)
+		with self.path.open('w') as fh:
+			dump(self.decoded(), fh)
 
 class Worker(Thread):
 	'''Work jab after job'''
@@ -90,17 +97,17 @@ class Worker(Thread):
 			self.debug = print
 		else:
 			self.debug = FileImagerCLI.no_echo
-		self.fileimager = FileImagerCLI(exit_on_error=False)
+		self.imager = PyCdlibCli(exit_on_error=False)
 
 	def run(self):
 		'''Start the work'''
 		for job in self.jobs:
 			cmd = ' '.join(job)
 			self.echo(f'Processing >{cmd}<...')
-			if job[0].lower() == 'fileimager':
+			if job[0].lower() == 'pycdlib':
 				self.debug(f'job: {job}')
-				self.fileimager.parse(job[1:])
-				self.fileimager.run(echo=self.debug)
+				self.imager.parse(job[1:])
+				self.imager.run(echo=self.debug)
 				self.echo('Job done.')
 			else:
 				self.echo(f'Unknown command >{job[0]}<')
@@ -116,67 +123,69 @@ class Gui(Tk):
 
 	def __init__(self, icon_base64):
 		'Define the main window'
-		self.config = Config()
-		self.settings = dict()
+		script_path = Path(__file__)
+		exe_path =  Path(executable)
+		if script_path.stem != exe_path.stem:
+			self.app_path = script_path
+		else:
+			self.app_path = exe_path
+		self.app_name = self.app_path.stem
+		self.app_full_name = f'{self.app_name} v{__version__}'
 		super().__init__()
-		self.title('FallbackImager')
+		self.title(self.app_full_name)
 		self.resizable(0, 0)
 		self.iconphoto(False, PhotoImage(data = icon_base64))
 		self.mainframe = Frame(self)
 		self.mainframe.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
 		self.notebook = Notebook()
 		self.notebook.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
-		### File Imager ###
-		section = 'FILEIMAGER'
-		self.config.set_section = section
-		self.settings[section] = dict()
+		self.settings = Settings(self.app_path.parent/f'{self.app_path.stem.lower()}.json')
+		### PyCdlib ###
+		self.settings.init_section('pycdlib')
 		self.frame_fileimager = Frame(self.notebook)
 		self.frame_fileimager.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
-		self.notebook.add(self.frame_fileimager, text=' File Imager ')
+		self.notebook.add(self.frame_fileimager, text=' PyCdlib ')
 		frame = Frame(self.frame_fileimager)
 		frame.pack(fill='both', expand=True)
-		self.settings[section]['rootdir'] = StringVar(value=self.config.get('rootdir'))
+		self.settings.init_stringvar('rootdir')
 		Button(frame,
 			text = 'Source:',
-			command = lambda: self.settings[section]['rootdir'].set(
+			command = lambda: self.settings.raw('rootdir').set(
 				askdirectory(
 					title = 'Select source',
 					mustexist = False
 				)
 			)
 		).grid(row=0, column=1, sticky=W, padx=self.PAD, pady=(self.PAD, 0))
-		Entry(frame, textvariable=self.settings[section]['rootdir'], width=self.E_WIDTH).grid(
+		Entry(frame, textvariable=self.settings.raw('rootdir'), width=self.E_WIDTH).grid(
 			row=0, column=2, sticky=W, padx=self.PAD, pady=(self.PAD, 0))
-		self.settings[section]['destdir'] = StringVar(value=self.config.get('destdir'))
+		self.settings.init_stringvar('destdir')
 		Button(frame,
 			text = 'Destination:',
-			command = lambda: self.settings[section]['destdir'].set(
+			command = lambda: self.settings.raw('destdir').set(
 				askdirectory(
 					title = 'Select destination directory',
 					mustexist = False
 				)
 			)
 		).grid(row=1, column=1, sticky=W, padx=self.PAD)
-		Entry(frame, textvariable=self.settings[section]['destdir'], width=self.E_WIDTH).grid(
+		Entry(frame, textvariable= self.settings.raw('destdir'), width=self.E_WIDTH).grid(
 			row=1, column=2, sticky=W, padx=self.PAD)
-		self.settings[section]['destfname'] = StringVar(value=self.config.get('destfname'))
+		self.settings.init_stringvar('destfname')
 		Label(frame, text='File name (no ext.)').grid(
 			row=2, column=0, columnspan=2, sticky='w', padx=self.PAD)
-		Entry(frame, textvariable=self.settings[section]['destfname'], width=self.E_WIDTH).grid(
+		Entry(frame, textvariable=self.settings.raw('destfname'), width=self.E_WIDTH).grid(
 			row=2, column=2, sticky='w', padx=self.PAD)
-		value = self.config.get('use_list')
-		if not value:
-			value = 'none'
-		self.settings[section]['use_list'] = StringVar(value=value)
-		Radiobutton(frame, value='none', variable=self.settings[section]['use_list']).grid(
+		self.settings.init_stringvar('use_list', default='none')
+		Radiobutton(frame, value='none', variable=self.settings.raw('use_list')).grid(
 			row=3, column=0, sticky='w', padx=self.PAD)
 		Label(frame, text='No filter').grid(row=3, column=1, padx=self.PAD)
-		Radiobutton(frame, value='blacklist', variable=self.settings[section]['use_list']).grid(
+		Radiobutton(frame, value='blacklist', variable=self.settings.raw('use_list')).grid(
 			row=4, column=0, sticky='w', padx=self.PAD)
-		self.settings[section]['blacklist'] = StringVar(value=self.config.get('blacklist'))
+		self.settings.init_stringvar('blacklist')
 		Button(frame,
 			text = 'Blacklist:',
-			command = lambda: self.settings[section]['blacklist'].set(
+			command = lambda: self.settings.raw('blacklist').set(
 				askopenfilename(
 					title = 'Select blacklist',
 					filetypes = (
@@ -186,14 +195,14 @@ class Gui(Tk):
 				)
 			)
 		).grid(row=4, column=1, sticky=W, padx=self.PAD)
-		Entry(frame, textvariable=self.settings[section]['blacklist'], width=self.E_WIDTH).grid(
+		Entry(frame, textvariable=self.settings.raw('blacklist'), width=self.E_WIDTH).grid(
 			row=4, column=2, sticky=W, padx=self.PAD)
-		Radiobutton(frame, value='whitelist', variable=self.settings[section]['use_list']).grid(
+		Radiobutton(frame, value='whitelist', variable=self.settings.raw('use_list')).grid(
 			row=5, column=0, sticky='w', padx=self.PAD)
-		self.settings[section]['whitelist'] = StringVar(value=self.config.get('whitelist'))
+		self.settings.init_stringvar('whitelist')
 		Button(frame,
 			text = 'Whitelist:',
-			command = lambda: self.settings[section]['whitelist'].set(
+			command = lambda: self.settings.raw('whitelist').set(
 				askopenfilename(
 					title = 'Select whitelist',
 					filetypes = (
@@ -203,29 +212,24 @@ class Gui(Tk):
 				)
 			)
 		).grid(row=5, column=1, sticky=W, padx=self.PAD)
-		Entry(frame, textvariable=self.settings[section]['whitelist'], width=self.E_WIDTH).grid(
+		Entry(frame, textvariable=self.settings.raw('whitelist'), width=self.E_WIDTH).grid(
 			row=5, column=2, sticky=W, padx=self.PAD)
 		labelframe = LabelFrame(frame, text='Job')
 		labelframe.grid(row=6, column=0, columnspan=2, sticky=W, padx=self.PAD, pady=self.PAD)
-		Button(labelframe,
-			text = 'Append',
-			command = lambda: self.append_job('fileimage')
-			).pack(padx=self.PAD, pady=self.PAD)
-		value = self.config.get('image_type')
-		if not value:
-			value = 'udf'
-		self.settings[section]['image_type'] = StringVar(value=value)
+		Button(labelframe, text='Append', command=self.append_job_pycdlib).pack(
+			padx=self.PAD, pady=self.PAD)
+		self.settings.init_stringvar('image_type', default='udf')
 		labelframe = LabelFrame(frame, text='Output image format')
 		labelframe.grid(row=6, column=2, sticky=W, padx=self.PAD, pady=self.PAD)
-		Radiobutton(labelframe,
+		Radiobutton(labelframe, 
 			text = 'UDF',
 			value = 'udf',
-			variable = self.settings[section]['image_type']
+			variable = self.settings.raw('image_type')
 		).pack(side='left', padx=self.PAD)
 		Radiobutton(labelframe,
 			text = 'Joliet',
 			value = 'joliet',
-			variable = self.settings[section]['image_type']
+			variable = self.settings.raw('image_type')
 		).pack(side='left', padx=self.PAD)
 		### Jobs ###
 		labelframe = LabelFrame(self, text='Jobs')
@@ -236,7 +240,6 @@ class Gui(Tk):
 			width = self.T_WIDTH,
 			height = self.T_HEIGHT
 		)
-		self.jobs.insert(END, 'fileimager -v -f test_joliet -j -b blacklist.txt C:\\Users\\THI\\Documents\\23-0160-0')
 		self.jobs.pack(fill='both', padx=self.PAD, pady=self.PAD, side='left')
 		### Infos ###
 		labelframe = LabelFrame(self, text='Infos')
@@ -255,12 +258,40 @@ class Gui(Tk):
 		frame.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
 		self.start_button = Button(frame, text= 'Start jobs', command = self.start_jobs)
 		self.start_button.pack(padx=self.PAD, pady=self.PAD,side='left')
-		self.quit_button = Button(frame, text="Quit", command=self.destroy)
+		self.quit_button = Button(frame, text="Quit", command=self.quit_app)
 		self.quit_button.pack(padx=self.PAD, pady=self.PAD, side='right')
 
-	def append_job(self, job):
-		'''Append job to job list'''
-		self.jobs.insert(END, f'{job}\n')
+	def	quit_app(self):
+		'''Store configuration and quit application'''
+		self.settings.write()
+		self.destroy()
+
+	def append_job_pycdlib(self):
+		'''Append job for fileimager to job list'''
+		self.settings.section = 'pycdlib'
+		rootdir = self.settings.get('rootdir')
+		destdir = self.settings.get('destdir')
+		destfname = self.settings.get('destfname')
+		if not rootdir or not destdir or not destfname:
+			showerror(
+				title = f'{self.app_name}/{self.settings.section}',
+				message = 'Source, destination directory and destination filename (without extension) are requiered'
+			)
+			return
+		cmd = self.settings.section
+		use_list = self.settings.get('use_list')
+		if use_list == 'blacklist':
+			blacklist = self.settings.get('blacklist')
+			if blacklist:
+				cmd += f' -b {blacklist}'
+		elif use_list == 'whitelist':
+			whitelist = self.settings.get('whitelist')
+			if whitelist:
+				cmd += f' -w {whitelist}'
+		if self.settings.get('image_type') == 'joliet':
+			cmd += ' -j'
+		cmd += f' -o {destdir} -f {destfname} {rootdir}\n'
+		self.jobs.insert(END, f'{cmd}')
 		self.jobs.yview(END)
 
 	def start_jobs(self):
