@@ -6,87 +6,45 @@ __version__ = '0.0.1_2023-05-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Release'
-__description__ = 'Mounter for WMI Images'
+__description__ = 'Mount WMI Images'
 
+from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
-from subprocess import Popen, PIPE, STARTUPINFO
 from sys import executable
-from tkinter import Tk, StringVar, BooleanVar, PhotoImage, E, W, END, RIGHT
-from tkinter.ttk import Frame, LabelFrame, Label, Button, Notebook, Entry, Radiobutton
-from tkinter.scrolledtext import ScrolledText
-from tkinter.messagebox import askquestion, showwarning, showerror
-from tkinter.filedialog import askopenfilename, askdirectory
+from functools import partial
+from subprocess import Popen
+from tkinter import Tk, PhotoImage
+from tkinter.ttk import Frame, LabelFrame, Label, Button, Separator
+from tkinter.messagebox import askyesno, showerror
+from tkinter.filedialog import askdirectory
+from lib.powershell import PowerShell
 
-class Powershell(Popen):
-	'''Powershell via subprocess'''
-
-	def __init__(self, cmd):
-		'''Init subprocess without showing a terminal window'''
-		super().__init__(
-			['powershell', '-Command'] + cmd,
-			startupinfo = STARTUPINFO(),
-			stdout = PIPE,
-			stderr = PIPE,
-			universal_newlines = True
-		)
-
-	@staticmethod
-	def get_clean(stream):
-		'''Clean from blanks'''
-		cleaned = list()
-		for line in stream:
-			line = line.strip()
-			if line:
-				cleaned.append(line)
-		return cleaned
-
-	@staticmethod
-	def decode(stream, delimiter=':'):
-		'''Decode to dict'''
-		decoded = dict()
-		for line in stream:
-			try:
-				key, value = line.split(delimiter, 1)
-			except ValueError:
-				continue
-			key = key.strip()
-			value = value.strip()
-			if key in decoded:
-				decoded[key].append(value)
-			else:
-				decoded[key] = [value]
-		return decoded
-
-	@staticmethod
-	def grep(key, stream, delimiter=':'):
-		'''Grep for keyword and give values as set'''
-		return {
-			line.split(delimiter, 1)[1].strip()
-			for line in stream
-			if line.startswith(key)
-		}
-
-class GetImageInfos(Powershell):
+class GetImageInfos(PowerShell):
 	'''Get-WindowsImage -ImagePath $imagepath'''
 
 	def __init__(self, imagepath):
 		super().__init__(['Get-WindowsImage', '-ImagePath', imagepath])
-		self.stdout = self.get_clean(self.stdout)
+		self.decoded = self.get_stdout_decoded()
 
-	def decode(self):
-		return super().decode(self.stdout)
-
-class GetMounted(Powershell):
+class GetMounted(PowerShell):
 	'''Get-WindowsImage -Mounted'''
 
 	def __init__(self):
 		super().__init__(['Get-WindowsImage', '-Mounted'])
-		self.stdout = self.get_clean(self.stdout)
+		self.decoded = self.get_stdout_decoded()
+		try:
+			self.images = {(Path(self.decoded['ImagePath'][list_index]), image_index):
+				Path(self.decoded['Path'][list_index])
+				for list_index, image_index in enumerate(self.decoded['ImageIndex'])
+			}
+		except KeyError:
+			self.images = dict()
 
-	def imagepaths(self):
-		return super().grep('ImagePath', self.stdout)
+	def get_path(self, file_path, image_index):
+		if (file_path, image_index) in self.images:
+			return self.images[(file_path, image_index)]
 
-class MountImage(Powershell):
+class MountImage(PowerShell):
 	'''Mount-WindowsImage -ImagePath $imagepath -Index $index -Path $path -ReadOnly'''
 
 	def __init__(self, imagepath, path, index=1):
@@ -96,22 +54,18 @@ class MountImage(Powershell):
 			'-Path', path,
 			'-ReadOnly'
 		])
-		self.stdout = self.get_clean(self.stdout)
 
-class DismountImage(Powershell):
+class DismountImage(PowerShell):
 	'''Dismount-WindowsImage -Path $path -Discard'''
 
 	def __init__(self, path):
 		super().__init__(['Dismount-WindowsImage', '-Path', path, '-Discard'])
-		self.stdout = self.get_clean(self.stdout)
 
 class Gui(Tk):
 	'''GUI look and feel'''
 
 	PAD = 4
-	T_WIDTH = 80
-	T_HEIGHT = 8
-	E_WIDTH = 72
+	BUTTON_WIDTH = -80
 
 	def __init__(self, icon_base64):
 		'Define the main window'
@@ -123,33 +77,118 @@ class Gui(Tk):
 			self.app_path = exe_path
 		self.app_name = self.app_path.stem
 		self.app_full_name = f'{self.app_name} v{__version__}'
+		if not any(self.app_path.parent.rglob('*.wim')):
+			showerror(f'{self.app_name}: Error',
+			f'Did not find image files in\n{self.app_path.parent}'
+		)
+			exit()
 		super().__init__()
 		self.title(self.app_full_name)
 		self.resizable(0, 0)
 		self.iconphoto(False, PhotoImage(data = icon_base64))
-		self.mounted_imagepaths = GetMounted().imagepaths()
-		
-		print(self.mounted_imagepaths)
-		
-		self.mainframe = Frame(self)
-		self.mainframe.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
-		for imagepath in self.app_path.parent.rglob('*.wim'):	# files
-			if imagepath.is_file():
-				
-				print(imagepath.name)
-				image_info = GetImageInfos(imagepath)
-				print(image_info.decode())
+		self.mk_main_frame(self)
 
+	def mk_main_frame(self, parent):
+		self.main_frame = Frame(parent)
+		self.main_frame.pack(padx=self.PAD, pady=self.PAD, fill='both', expand=True)
+		dir_frame = LabelFrame(self.main_frame, text=self.app_path.parent)
+		dir_frame.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
+		Separator(dir_frame).pack(
+			padx=self.PAD, pady=self.PAD, fill='both', expand=True)
+		self.file_paths = [file_path	# paths of al image files as list
+			for file_path in self.app_path.parent.rglob('*.wim')
+			if file_path.is_file()
+		]
+		self.mounted = GetMounted()
+		self.mount_buttons = dict()
+		for file_index, file_path in enumerate(self.file_paths):
+			file_frame = Frame(dir_frame)
+			file_frame.pack(padx=self.PAD, fill='both', expand=True)
+			Label(file_frame, text=file_path.name).pack(side='left')
+			images = GetImageInfos(file_path).decoded
+			for list_index, image_index in enumerate(images['ImageIndex']):
+				image_frame = LabelFrame(dir_frame, text=images['ImageName'][list_index])
+				image_frame.pack(
+					padx=(4*self.PAD, self.PAD), fill='both', expand=True)
+				Label(image_frame, text=images['ImageDescription'][list_index]).pack()
+				frame = Frame(image_frame)
+				frame.pack(fill='both', expand=True)
+				self.mount_buttons[file_path.stem] = dict()
+				self.mount_buttons[file_path.stem][image_index] = Button(
+					frame, width=self.BUTTON_WIDTH)
+				self.mount_buttons[file_path.stem][image_index].pack(
+					padx=self.PAD, side='left', fill='both', expand=True)
+				path = self.mounted.get_path(file_path, image_index)
+				if path:
+					self.mount_buttons[file_path.stem][image_index].config(
+						text = path,
+						command = partial(self.dismount, path)
+					)
+				else:
+					self.mount_buttons[file_path.stem][image_index].config(
+						text = 'Mount image',
+						command = partial(self.mount, file_path, image_index)
+					)
+				Label(frame, text=images['ImageSize'][list_index]).pack(
+					padx=self.PAD, side='right')
+			Separator(dir_frame).pack(
+				padx=self.PAD, pady=self.PAD, fill='both', expand=True)
+		frame = Frame(self.main_frame)
+		frame.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
+		Button(frame, text= 'Refresh', command = self.refresh).pack(
+			padx=self.PAD, pady=self.PAD, side='left')
+		Button(frame, text="Quit", command=self.destroy).pack(
+			padx=self.PAD, pady=self.PAD, side='right')
+
+	def refresh(self):
+		self.main_frame.destroy()
+		self.mk_main_frame(self)
+
+	def ask_warning(self, msg):
+		return askyesno(f'{self.app_name}: Warning', msg, icon='warning')
+
+	def check_error(self, proc):
+		if proc.stderr_str:
+			showerror(f'{self.app_name}: Error', proc.stderr_str)
+			return False
+		return True
+
+	def askdirectory(self):
+		return askdirectory(title='Select directory to mount image', mustexist=False)
+
+	def mount(self, file_path, image_index):
+		mnt_dir = self.app_path.parent / f'{file_path.stem}_{image_index}_mnt'
+		if askyesno(self.app_name,
+			f'Default destination:\n{mnt_dir}\n\nMount image to this directory?'
+		):
+			if mnt_dir.exists() and any(mnt_dir.iterdir()):
+				if not self.ask_warning(
+					f'{mnt_dir}\nis not an empty directory\n\nSelect other mount point?'
+				):
+					return
+				mnt_dir = self.askdirectory()
+		else:
+			mnt_dir = self.askdirectory()
+		if not mnt_dir:
+			return
+		mnt_dir = Path(mnt_dir)
+		mnt_dir.mkdir(exist_ok=True)
+		mount = MountImage(file_path, mnt_dir, index=image_index)
+		if self.check_error(mount):
+			Popen(['explorer', f'{mnt_dir}'])
+			self.refresh()
+
+	def dismount(self, path):
+		if self.ask_warning(f'{path}\n\nDismount?'):
+			dismount = DismountImage(path)
+			if self.check_error(dismount):
+				self.refresh()
 
 if __name__ == '__main__':  # start here
-	infos = GetImageInfos('C:\\Users\\THI\Documents\\test_destination\\test.wim')
-	#print(infos.stdout)
-	#print(infos.decode())
-	#mounted = GetMounted()
-	#print(mounted.stdout)
-	#print(mounted.imagepaths())
-	#exit()
-	Gui('''
+	if not IsUserAnAdmin():
+		showerror('Error', 'Administrator privileges are reqired')
+	else:
+		Gui('''
 iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAw1BMVEUAAAAAAACCgoJCQkLCwsIi
 IiKhoaFhYWHi4uISEhKSkpJSUlLR0dExMTGysrJycnLx8fEJCQmJiYlKSkrJyckqKiqpqalpaWnq
 6uoZGRmZmZlaWlrZ2dk5OTm6urp6enr6+voFBQWGhoZFRUXFxcUlJSWlpaVmZmbl5eUVFRWVlZVV
@@ -181,5 +220,4 @@ CdYrVgu4lMnVR70EuFQx4NLdAWzFgNn4Bsj5XgK42hjo32dmLsd7kIxUKSBd/+jtXI4LwZgJZ8Uf
 AfjhATzE28hQfb2YykdZprefvR/wsJy/ToQZu3KuCiwpt+WbL0hetj5/DDzTrku/xW3bUnmXJB9l
 QWw3WWZs90Od/suj7zldhKd40NeOOfV2lbTtLd/dVxK3Sp4aUzoNRO9c5iRJXSewOXw5bU00//pk
 fTKLQh/bYIT8twF58Yf9pwf9m2nqlTMc8D6aw1fS+r3b9/8BKtc/NFcHINi4Q8kAAAAASUVORK5C
-YII='''
-	).mainloop()
+YII=''').mainloop()
