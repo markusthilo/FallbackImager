@@ -12,7 +12,7 @@ from os import remove
 PyInstaller.__main__.run([
 	'FallbackMount.py',
 	'--onefile',
-#	'--noconsole',
+	'--uac-admin',
 	'--icon', 'appicon.ico'
 ])
 move('dist/FallbackMount.exe', 'FallbackMount.exe')
