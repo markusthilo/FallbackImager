@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-09'
+__version__ = '0.0.1_2023-05-11'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Release'
@@ -28,16 +28,31 @@ class PowerShell(Popen):
 			errors = 'ignore',
 			universal_newlines = True
 		)
-		self.stdout_str = self.stdout.read().strip()
+
+	def _read_stderr(self):
+		'''Read stderr ro string and print error'''
 		self.stderr_str = self.stderr.read().strip()
-		print(self.stdout_str)
 		if self.stderr_str:
 			print(self.stderr_str)
+
+	def read_all(self):
+		'''Get full stdout and stderr as string'''
+		self.stdout_str = self.stdout.read().strip()
+		self._read_stderr()
+
+	def readlines_stdout(self):
+		'''Read stdout line by line''' 
+		for line in self.stdout:
+			line = line.strip()
+			if line:
+				yield line
+		self.stdout_str = None
+		self._read_stderr()
 
 	def get_stdout_decoded(self, delimiter=':'):
 		'''Give  stdout decoded to dict'''
 		decoded = dict()
-		for line in self.stdout_str.split('\n'):
+		for line in self.readlines_stdout():
 			try:
 				key, value = line.split(delimiter, 1)
 			except ValueError:

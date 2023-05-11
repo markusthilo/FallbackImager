@@ -10,30 +10,29 @@ __description__ = 'Logging'
 
 from pathlib import Path
 from .extpath import ExtPath
+from .extpath import ExtPath
 from .timestamp import TimeStamp
 
 class FileDirLogger:
 	'''Log stored or dropped files and directories'''
 
-	def __init__(self, filename=None, outdir=None):
+	def __init__(self, filename=None, outdir=None, grep=False):
 		'''Open/create directory to write logs'''
-		if outdir:
-			self.dir_path = Path(outdir)
-			self.dir_path.mkdir(exist_ok=True)
-		else:
-			self.dir_path = Path.cwd()
-		if not filename:
-			filename = TimeStamp.now()
+		self.grep = grep
+		self.dir_path = ExtPath.mkdir(outdir)
+		filename = TimeStamp.now_or(filename)
+		self.errors_file = ExtPath.open_write(f'{filename}_errors.txt', parent=self.dir_path)
 		self.directories_file = ExtPath.open_write(f'{filename}_directories.txt', parent=self.dir_path)
 		self.files_file = ExtPath.open_write(f'{filename}_files.txt', parent=self.dir_path)
-		self.excluded_file = ExtPath.open_write(f'{filename}_excluded.txt', parent=self.dir_path)
 		self.dropped_file = ExtPath.open_write(f'{filename}_dropped.txt', parent=self.dir_path)
-		self.errors_file = ExtPath.open_write(f'{filename}_errors.txt', parent=self.dir_path)
+		if self.grep:
+			self.excluded_file = ExtPath.open_write(f'{filename}_excluded.txt', parent=self.dir_path)
 
 	def close(self):
 		'''Close logfiles'''
-		self.errors_file.close()
+		if self.grep:
+			self.excluded_file.close()
 		self.dropped_file.close()
-		self.excluded_file.close()
 		self.files_file.close()
 		self.directories_file.close()
+		self.errors_file.close()

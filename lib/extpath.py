@@ -2,40 +2,71 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-06'
+__version__ = '0.0.1_2023-05-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Add some methods to pathlib´s Path Class'
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 class ExtPath:
 	'''Add some methods to pathlib´s Path Class'''
 
 	@staticmethod
-	def open_read(path, default=None, encoding=None, errors=None, newline=None):
-		'''Open file to read. Set default for configs etc.'''
-		return (script_path.parent/script_path).with_suffix('.conf')
-
-	@staticmethod
-	def fullpath(name, parent=None):
-		'''Generate full path to write file'''
+	def child(name, parent=None):
+		'''Generate full path'''
+		if not name and not parent:
+			return Path.cwd()
 		if parent:
 			parent = Path(parent)
 		else:
 			parent = Path.cwd()
-		return parent/name
+		if name:
+			return parent/name
+		else:
+			return parent
 
 	@staticmethod
-	def path_to_str(full, parent=None):
+	def mkdir(path):
+		'''Create directory or just give full dorectory path if exists'''
+		cwd = Path.cwd()
+		if not path:
+			return cwd
+		path.mkdir(exist_ok=True)
+		return path
+
+	@staticmethod
+	def to_str(path, parent=None, prefix=None):
 		'''Give Joliet or UDF compatible path as string'''
 		if parent:
-			return f'/{full.relative_to(parent)}'
-		return f'/{full}'
+			path = path.relative_to(parent)
+		string = f'{PurePosixPath(path)}'
+		if prefix:
+			return f'{prefix}{string}'
+		return string
 
 	@staticmethod
-	def open_write(filename, parent=None, encoding=None, errors=None, newline=None):
-		'''Open file to write'''
-		return ExtPath.fullpath(filename, parent=parent).open(
-			mode='w', encoding=encoding, errors=errors, newline=newline)
+	def str_to_posix(string):
+		'''Normalize backslashes to Posix conformity'''
+		return string.replace('\\', '/')
+
+	@staticmethod
+	def walk(root_path):
+		'''Recursivly give all sub-paths'''
+		for path in root_path.rglob('*'):
+			yield path.relative_to(root_path)
+
+	@staticmethod
+	def walk_win_str(root_path):
+		'''Recursivly give all sub-paths as strings'''
+		first_str = str(ExtPath.walk(root_path))
+		if len(first_str) > 1 and first_str[1] == ':':
+			skip = 3
+		elif first_str[0] == '\\':
+			skip = 1
+		else:
+			skip = 0
+		for path in ExtPath.walk(root_path):
+			yield str(path)[skip:]
+

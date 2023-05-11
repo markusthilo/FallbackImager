@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-07'
+__version__ = '0.0.1_2023-05-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -241,18 +241,6 @@ class Gui(Tk):
 			height = self.T_HEIGHT
 		)
 		self.jobs.pack(fill='both', padx=self.PAD, pady=self.PAD, side='left')
-		### Infos ###
-		labelframe = LabelFrame(self, text='Infos')
-		labelframe.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
-		self.infos = ScrolledText(labelframe,
-			padx = self.PAD,
-			pady = self.PAD,
-			width = self.T_WIDTH,
-			height = self.T_HEIGHT
-		)
-		self.infos.bind("<Key>", lambda e: "break")
-		self.infos.insert(END, 'Infos will be here')
-		self.infos.pack(fill='both', padx=self.PAD, pady=self.PAD, side='left')
 		### Quit button ###
 		frame = Frame(self)
 		frame.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
@@ -296,24 +284,13 @@ class Gui(Tk):
 
 	def start_jobs(self):
 		'''Start working job list'''
-		self.infos.config(state='normal')
-		self.infos.delete('1.0', END)
-		self.infos.insert(END, 'Starting jobs...\n')
-		self.infos.configure(state='disabled')
+		print('Starting jobs...')
 		self.jobs.configure(state='disabled')
 		work = Worker(
 			(job.split() for job in self.jobs.get('1.0', END).split('\n') if job != ''),
-			echo = self.append_info,
 			debug = True
 		)
 		work.run()
-
-	def append_info(self, msg):
-		'''Append message in info box'''
-		self.infos.configure(state='normal')
-		self.infos.insert(END, f'{msg}\n')
-		self.infos.configure(state='disabled')
-		self.infos.yview(END)
 
 if __name__ == '__main__':  # start here
 	Gui('''

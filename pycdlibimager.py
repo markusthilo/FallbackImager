@@ -2,37 +2,25 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-08'
+__version__ = '0.0.1_2023-05-11'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Generate ISO from a partition of an evidence item'
+__description__ = 'Generate ISO from logical file structure'
 
 from pathlib import Path
+from pycdlib import PyCdlib
 from argparse import ArgumentParser
 from lib.greplists import GrepLists
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
-from lib.filedirlogger import FileDirLogger
-
-
-#from zipfile import ZipFile
-
-#class ZIP:
-
-#	image = ZipFile('directory1.zip', 'w')
-#   for file in glob.glob('directory1/*'):
-  
-#  f.write(file)
-
-from pycdlib import PyCdlib
+from lib.logger import Logger
 
 class Iso(PyCdlib):
 	'''ISO Image'''
 
 	def __init__(self, path, spec='udf'):
 		'''Use UDF or Joliet from PyCdlib'''
-		self.path = path.with_suffix('.iso')
 		super().__init__()
 		if spec.lower() == 'udf':
 			self.new(udf='2.60')
@@ -68,7 +56,7 @@ class Iso(PyCdlib):
 		super().write(self.path)
 		super().close()
 
-class PyCdlibImager(FileDirLogger):
+class PyCdlibImager:
 	'''Image Generator for files / logical content'''
 
 	def __init__(self, root,
@@ -80,55 +68,52 @@ class PyCdlibImager(FileDirLogger):
 		echo = print
 	):
 		'''Prepare to write image file'''
-		super().__init__(filename=filename, outdir=outdir)
 		self.echo = echo
 		self.root_path = Path(root)
+		self.image_path = ExtPath.child(f'{filename}.iso', parent=outdir)
+		self.log = Logger(filename=filename, outdir=outdir)
 		self.grep = GrepLists(blacklist=blacklist, whitelist=whitelist, echo=echo)
-		self.image = Iso(self.dir_path/filename, spec=spec)
-		self.echo(f'PyCdlib will write to image file {self.image.path} with specification >{spec}<')
+		self.image = Iso(self.image_path, spec=spec)
+		self.echo(f'PyCdlib will write to image file {self.image_path} with specification >{spec}<')
 
-	def fill(self):
+	def create(self):
 		'''Fill image'''
-		for full_path in self.root_path.glob("**/"):	# directories
-			store_path = ExtPath.path_to_str(full_path, parent=self.root_path)
-			if full_path.is_dir():
-				self.echo(full_path)
-				if full_path is self.root_path:
-					print(store_path, file=self.directories_file)
-					continue
-				try:
-					self.image.append_directory(store_path)
-					print(store_path, file=self.directories_file)
-				except Exception as ex:
-					print(store_path, file=self.dropped_file)
-					print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
-		for full_path in self.root_path.rglob("*"):	# files
-			store_path = ExtPath.path_to_str(full_path, parent=self.root_path)
-			if not full_path.is_file():
-				continue
-			self.echo(full_path)
-			if self.grep.to_store(store_path):
-				try:
-					self.image.append_file(full_path, store_path)
-					print(store_path, file=self.files_file)
-				except Exception as ex:
-					print(store_path, file=self.dropped_file)
-					print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
-			else:
-				print(store_path, file=self.excluded_file)
+		for path in ExtPath.walk(self.root_path):
+			print(path)
 
-	def close(self):
-		'''Close image file and logs'''
-		super().close()
+		'''
+				#store_path = ExtPath.to_str(full_path, parent=self.root_path)
+		self.echo(full_path)
+		if full_path is self.root_path:
+			print(store_path, file=self.directories_file)
+			continue
+		try:
+			self.image.append_directory(store_path)
+			print(store_path, file=self.directories_file)
+		except Exception as ex:
+			print(store_path, file=self.dropped_file)
+			print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
+		for full_path in self.root_path.rglob('*'):	# files
+			if full_path.is_file():
+				store_path = ExtPath.to_str(full_path, parent=self.root_path)
+				self.echo(full_path)
+				if self.grep.to_store(store_path):
+					try:
+						self.image.append_file(full_path, store_path)
+						print(store_path, file=self.files_file)
+					except Exception as ex:
+						print(store_path, file=self.dropped_file)
+						print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
+				else:
+					print(store_path, file=self.excluded_file)
+
 		self.image.close()
+		
+		'''
+		self.log.close()
 
 class PyCdlibCli(ArgumentParser):
 	'''CLI for the imager'''
-
-	@staticmethod
-	def no_echo(*args, **kwargs):
-		'''Dummy for silent mode'''
-		pass
 
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
@@ -144,9 +129,6 @@ class PyCdlibCli(ArgumentParser):
 		)
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
-		)
-		self.add_argument('-v', '--verbose', default=False, action='store_true',
-			help='Print infos to stdout'
 		)
 		self.add_argument('-w', '--whitelist', type=Path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
@@ -167,12 +149,9 @@ class PyCdlibCli(ArgumentParser):
 			self.spec = 'joliet'
 		else:
 			self.spec = 'udf'
-		self.verbose = args.verbose
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		if not self.verbose:
-			echo = self.no_echo
 		image = PyCdlibImager(self.root,
 			blacklist = self.blacklist,
 			filename = self.filename,
@@ -181,8 +160,7 @@ class PyCdlibCli(ArgumentParser):
 			spec = self.spec,
 			echo = echo,
 		)
-		image.fill()
-		image.close()
+		image.create()
 
 if __name__ == '__main__':	# start here if called as application
 	app = PyCdlibCli(description=__description__)

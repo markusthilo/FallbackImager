@@ -51,15 +51,17 @@ class MountImage(PowerShell):
 		super().__init__(['Mount-WindowsImage',
 			'-ImagePath', imagepath,
 			'-Index', f'{index}',
-			'-Path', path,
+			'-Path', f'"{path}"',
 			'-ReadOnly'
 		])
+		self.read_all()
 
 class DismountImage(PowerShell):
 	'''Dismount-WindowsImage -Path $path -Discard'''
 
 	def __init__(self, path):
-		super().__init__(['Dismount-WindowsImage', '-Path', path, '-Discard'])
+		super().__init__(['Dismount-WindowsImage', '-Path', f'"{path}"', '-Discard'])
+		self.read_all()
 
 class Gui(Tk):
 	'''GUI look and feel'''
