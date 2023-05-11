@@ -30,13 +30,13 @@ class GrepLists:
 			self.to_store = self._true
 			self.are_active = False
 		
-	def _not_in_blacklist(self, posix_str):
+	def _not_in_blacklist(self, path):
 		'''Return True when path is blacklisted'''
-		return not self.blacklist.is_match(posix_str.strip('/'))
+		return not self.blacklist.is_match(str(path).strip('/\\'))
 
-	def _is_in_whitelist(self, posix_str):
+	def _is_in_whitelist(self, path):
 		'''Return True when path is not in whitelist'''
-		return self.whitelist.is_match(posix_str.strip('/'))
+		return self.whitelist.is_match(str(path).strip('/\\'))
 
 	def _true(self, *args):
 		'''Dummy returning True'''

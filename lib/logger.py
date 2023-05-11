@@ -31,7 +31,7 @@ class Logger:
 		'''Print info to log'''
 		print(TimeStamp.now(), 'INFO', *args, file=self._fh)
 		if echo:
-			echo(*args)
+			self.echo(*args)
 
 	def warning(self, *args, string=None, echo=True):
 		'''Print warning to log'''
@@ -48,8 +48,7 @@ class Logger:
 		if string:
 			self.write(string)
 		print(file=self._fh)
-		if echo:
-			self.echo('ERROR', *args)
+		self.echo('ERROR', *args)
 		if not no_exception:
 			self._fh.close()
 		raise RuntimeError(self.PROC_ERROR)

@@ -78,9 +78,18 @@ class PyCdlibImager:
 
 	def create(self):
 		'''Fill image'''
+		print('DEBUG: create', self.root_path)
 		for path in ExtPath.walk(self.root_path):
-			print(path)
-
+			if self.grep.to_store(path):
+				if path.is_dir():
+					#self.image.append_directory(path)
+					print('self.image.append_directory', path)
+				elif path.is_file():
+					#self.image.append_file(full_path, store_path)
+					print('self.image.append_file', path)
+				else:
+					print('else', path, type(path))
+				
 		'''
 				#store_path = ExtPath.to_str(full_path, parent=self.root_path)
 		self.echo(full_path)

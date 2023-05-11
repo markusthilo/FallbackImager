@@ -9,6 +9,7 @@ __status__ = 'Testing'
 __description__ = 'Add some methods to pathlib´s Path Class'
 
 from pathlib import Path, PurePosixPath
+from platform import system
 
 class ExtPath:
 	'''Add some methods to pathlib´s Path Class'''
@@ -55,12 +56,12 @@ class ExtPath:
 	def walk(root_path):
 		'''Recursivly give all sub-paths'''
 		for path in root_path.rglob('*'):
-			yield path.relative_to(root_path)
+			yield path
 
 	@staticmethod
 	def walk_win_str(root_path):
-		'''Recursivly give all sub-paths as strings'''
-		first_str = str(ExtPath.walk(root_path))
+		'''Recursivly give all sub-paths as strings on Windows'''
+		first_str = str(ExtPath.walk(root_path).relative_to(root_path))
 		if len(first_str) > 1 and first_str[1] == ':':
 			skip = 3
 		elif first_str[0] == '\\':
@@ -68,5 +69,5 @@ class ExtPath:
 		else:
 			skip = 0
 		for path in ExtPath.walk(root_path):
-			yield str(path)[skip:]
+			yield str(path.relative_to(root_path))[skip:]
 
