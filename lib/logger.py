@@ -14,6 +14,7 @@ from .timestamp import TimeStamp
 class Logger:
 	'''Simple logging'''
 
+	PROC_FINISHED = 'Process finished'
 	PROC_ERROR = 'Process returned error'
 
 	def __init__(self, filename=None, outdir=None, head='Start task', echo=print):
@@ -36,34 +37,40 @@ class Logger:
 	def warning(self, *args, string=None, echo=True):
 		'''Print warning to log'''
 		print(TimeStamp.now(), 'WARNING', *args, file=self._fh)
-		if string:
-			self.write(string)
-		print(file=self._fh)
 		if echo:
 			self.echo('WARNING', *args)
-
-	def error(self, *args, string=None, no_exception=False):
-		'''Print error to log'''
-		print(TimeStamp.now(), 'ERROR', *args, file=self._fh)
 		if string:
 			self.write(string)
-		print(file=self._fh)
-		self.echo('ERROR', *args)
-		if not no_exception:
-			self._fh.close()
-		raise RuntimeError(self.PROC_ERROR)
+			if echo:
+				self.echo(string)
 
-	def finished(self, proc, echo=True, no_exception=False):
+	def error(self, *args, string=None, exception=True):
+		'''Print error to log'''
+		print(TimeStamp.now(), 'ERROR', *args, file=self._fh)
+		self.echo('ERROR', *args)
+		if string:
+			self.write(string)
+			self.echo(string)
+		if exception:
+			self._fh.close()
+			raise RuntimeError(self.PROC_ERROR)
+
+	def finished(self, proc, error='', echo=True, exception=True):
 		'''Handle finished process'''
-		if proc.stdout_str:
-			self.write(proc.stdout_str)
-		if proc.stderr_str:
-			self.error('Process returned error',
+		if proc.stderr_str or error:
+			if proc.stdout_str:
+				self.write(proc.stdout_str)
+				self.echo(proc.stdout_str)
+			self.error(self.PROC_ERROR, error,
 				string = proc.stderr_str,
-				no_exception = no_exception
+				exception = exception
 			)
 		else:
-			self.info('Process finished', echo=echo)
+			if proc.stdout_str:
+				self.write(proc.stdout_str)
+			if echo:
+				self.echo(proc.stdout_str)
+			self.info(self.PROC_FINISHED, echo=echo)
 
 	def close(self):
 		'''Close logfile'''

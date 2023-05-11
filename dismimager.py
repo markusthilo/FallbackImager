@@ -13,41 +13,22 @@ from argparse import ArgumentParser
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.powershell import PowerShell
+from lib.dism import CaptureImage, ImageContent
 
-class NewImage(PowerShell):
-	'''New-WindowsImage -ImagePath $imagepath -CapturePath $capturepath -Name $name'''
+class DismImage:
+	'''Create and Verify image with Dism'''
 
-	def __init__(self, imagepath, capturepath, name=None, description=None):
-		if not name:
-			name = capturepath
-		super().__init__(['New-WindowsImage',
-			'-ImagePath', f'"{imagepath}"',
-			'-CapturePath', f'"{capturepath}"',
-			'-Name', f'"{name}"',
-			'-Description', f'"{TimeStamp.now_or(description)}"'
-		])
-
-class ImageContent(PowerShell):
-	'''Get-WindowsImageContent -ImagePath $imagepath -Index $indes'''
-
-	def __init__(self, imagepath, index=1):
-		super().__init__(['Get-WindowsImageContent',
-			'-ImagePath', f'"{imagepath}"',
-			'-Index', f'{index}'
-		])
-
-class WindowsImage:
-	'''Create and Verify images in WMI format'''
-
-	def __init__(self, sourcepath,
+	def __init__(self, root,
 			filename = None,
 			imagepath = None,
 			outdir = None,
-			description = None
+			name = None,
+			description = None,
+			compress = 'none',
+			echo = print
 		):
 		'''Definitihons'''
-		self.source_path = Path(sourcepath)
+		self.root_path = Path(root)
 		if imagepath:
 			self.image_path = Path(imagepath)
 			self.filename = self.image_path.stem
@@ -57,20 +38,56 @@ class WindowsImage:
 			self.outdir = ExtPath.mkdir(outdir)
 			self.image_path = ExtPath.child(f'{self.filename}.wim', parent=self.outdir)
 		self.description = description
-		self.log = Logger(self.filename, outdir=self.outdir, head='windowsimager.WindowsImage')
+		if compress in ['max', 'fast', 'none']:
+			self.compress = compress
+		else:
+			raise NotImplementedError(self.compress)
+		self.echo = echo
+		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage')
 
 	def create(self):
 		'''Create image'''
-		proc = NewImage(self.image_path, self.source_path, description=self.description)
+		proc = CaptureImage(self.image_path, self.root_path,
+			description = self.description,		
+			compress = self.compress,
+			echo = self.echo
+		)
 		self.log.info(proc.cmd_str)
 		proc.read_all()
-		self.log.finished(proc)
+		if self.image_path.is_file():
+			self.log.finished(proc, echo=True)
+		else:
+			self.log.finished(proc, error='Could not create image')
 
-	def compare(self):
+	def verify(self):
 		'''Compare content if image to source'''
-		source = {win_str for win_str in ExtPath.walk_win_str(self.source_path)}
-		proc = ImageContent(self.image_path)
+		
+		first_str = str(next(ExtPath.walk(self.root_path)).relative_to(self.root_path))
+
+		'''
+		if len(first_str) > 1 and first_str[1] == ':':
+			skip = 3
+		elif first_str[0] == '\\':
+			skip = 1
+		else:
+			skip = 0
+		for path in ExtPath.walk(root_path):
+			yield str(path.relative_to(root_path))[skip:]
+		
+		for win_str in ExtPath.walk_win_str(self.root_path):
+			print(win_str)
+		'''
+		
+		source = {path for path in ExtPath.walk(self.root_path)}
+		print(source)
+		print('---------------------')
+		proc = ImageContent(self.image_path, echo=self.echo)
 		self.log.info(proc.cmd_str)
+		proc.read_all()
+		self.log.finished(proc, echo=True)
+
+		
+		'''
 		image = set()
 		content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
 		with content_path.open(mode='w') as fh:
@@ -85,15 +102,17 @@ class WindowsImage:
 				fh.write('\n'.join(sorted(diff)))
 			self.log.warning(f'{len(diff)} differences in source and image, look at {dropped_path}')
 		self.log.close()
+		'''
 
-class WindowsImageCli(ArgumentParser):
+class DismImageCli(ArgumentParser):
 	'''CLI for the imager'''
 
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
 		super().__init__(**kwargs)
-		self.add_argument('-c', '--compare', default=False, action='store_true',
-			help='Compare content of image to source, do not create'
+		self.add_argument('-c', '--compress', type=str, default='none',
+			choices=['max', 'fast', 'none'],
+			help='Compression max|fast|none, none is default', metavar='STRING'
 		)
 		self.add_argument('-d', '--description', type=str,
 			help='Additional description to the image file', metavar='STRING'
@@ -101,39 +120,51 @@ class WindowsImageCli(ArgumentParser):
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
+		self.add_argument('-n', '--name', type=str,
+			help='Intern name of the image in the WMI file', metavar='STRING'
+		)
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
 		self.add_argument('-p', '--imagepath', type=Path,
 			help='Image path', metavar='FILE'
 		)
-		self.add_argument('sourcepath', nargs=1, type=Path,
+		self.add_argument('-v', '--verify', default=False, action='store_true',
+			help='Compare content of image to source, do not create'
+		)
+		self.add_argument('root', nargs=1, type=Path,
 			help='Source', metavar='DIRECTORY'
 		)
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.sourcepath = args.sourcepath[0]
-		self.compare = args.compare
+		self.root = args.root[0]
 		self.description = args.description
 		self.filename = args.filename
 		self.imagepath = args.imagepath
 		self.outdir = args.outdir
+		self.name = args.name
+		self.compress = args.compress
+		self.verify = args.verify
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		image = WindowsImage(self.sourcepath,
+		image = DismImage(self.root,
 			filename = self.filename,
 			imagepath = self.imagepath,
 			outdir = self.outdir,
-			description = self.description
+			name = self.name,
+			description = self.description,
+			compress = self.compress,
+			echo = echo
 		)
-		if not self.compare:
+		if not self.verify:
 			image.create()
-		image.compare()
+		image.verify()
+		
 
 if __name__ == '__main__':	# start here if called as application
-	app = WindowsImageCli(description=__description__)
+	app = DismImageCli(description=__description__)
 	app.parse()
 	app.run()

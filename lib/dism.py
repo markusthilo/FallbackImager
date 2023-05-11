@@ -9,6 +9,7 @@ __status__ = 'Testing'
 __description__ = 'Wrapper for Dism'
 
 from subprocess import Popen, PIPE, STARTUPINFO, STARTF_USESHOWWINDOW
+from .timestamp import TimeStamp
 
 class Dism(Popen):
 	'''Dism via subprocess'''
@@ -80,13 +81,45 @@ class Dism(Popen):
 			if line.lower().startswith(lower_str):
 				yield {key: self.get_value(stdout[ln+ln_delta]) for ln_delta, key in ln_key}
 
+class CaptureImage(Dism):
+	'''
+	Dism /Capture-Image /ImageFile:$image /CaptureDir:$capture /Name:$name
+	/Description:$description /Compress:{max|fast|none}
+	'''
+
+	def __init__(self, image, capture, name=None, description=None, compress='none',
+		echo=print, verbose_stdout=False, verbose_stderr=True
+	):
+		'''Launch Dism'''
+		args = f'/Capture-Image /ImageFile:"{image}" /CaptureDir:"{capture}"'
+		if name:
+			args += f' /Name:"{name}"'
+		else:
+			args += f' /Name:"{capture}"'
+		args += f' /Description:"{TimeStamp.now_or(description)}" /Compress:{compress}'
+		super().__init__(args,
+			echo = echo,
+			verbose_stdout = verbose_stdout,
+			verbose_stderr = verbose_stderr
+		)
+
+class ImageContent(Dism):
+	'''Dism /List-Image /ImageFile:$image /Index:$i'''
+
+	def __init__(self, image, index=1, echo=print, verbose_stdout=False, verbose_stderr=True):
+		'''Launch Dism'''
+		super().__init__(f'Dism /List-Image /ImageFile:"{image}" /Index:{index}',
+			echo = echo,
+			verbose_stdout = verbose_stdout,
+			verbose_stderr = verbose_stderr
+		)
+
 class GetImageInfo(Dism):
-	'''Dism /Get-ImageInfo /ImageFile:IMAGE.wim'''
+	'''Dism /Get-ImageInfo /ImageFile:$image'''
 
 	def __init__(self, image, echo=print, verbose_stdout=False, verbose_stderr=True):
 		'''Launch Dism'''
-		super().__init__(
-			f'/Get-ImageInfo /ImageFile:"{image}"',
+		super().__init__(f'/Get-ImageInfo /ImageFile:"{image}"',
 			echo = echo,
 			verbose_stdout = verbose_stdout,
 			verbose_stderr = verbose_stderr
@@ -121,7 +154,7 @@ class GetMountedImageInfo(Dism):
 		)
 
 class MountImage(Dism):
-	'''Dism /Mount-Image /ImageFile:IMAGE.wim /index:I /MountDir:MNT /ReadOnly'''
+	'''Dism /Mount-Image /ImageFile:$image /index:$i /MountDir:$mnt /ReadOnly'''
 
 	def __init__(self, image, index, mnt, echo=print, verbose_stdout=False, verbose_stderr=True):
 		'''Launch Dism'''
@@ -132,7 +165,7 @@ class MountImage(Dism):
 		)
 
 class UnmountImage(Dism):
-	'''Dism /Unmount-Image /MountDir:MNT /discard'''
+	'''Dism /Unmount-Image /MountDir:$mnt /discard'''
 
 	def __init__(self, mnt, echo=print, verbose_stdout=False, verbose_stderr=True):
 		'''Launch Dism'''

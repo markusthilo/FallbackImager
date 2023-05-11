@@ -38,36 +38,6 @@ class ExtPath:
 		return path
 
 	@staticmethod
-	def to_str(path, parent=None, prefix=None):
-		'''Give Joliet or UDF compatible path as string'''
-		if parent:
-			path = path.relative_to(parent)
-		string = f'{PurePosixPath(path)}'
-		if prefix:
-			return f'{prefix}{string}'
-		return string
-
-	@staticmethod
-	def str_to_posix(string):
-		'''Normalize backslashes to Posix conformity'''
-		return string.replace('\\', '/')
-
-	@staticmethod
 	def walk(root_path):
 		'''Recursivly give all sub-paths'''
-		for path in root_path.rglob('*'):
-			yield path
-
-	@staticmethod
-	def walk_win_str(root_path):
-		'''Recursivly give all sub-paths as strings on Windows'''
-		first_str = str(ExtPath.walk(root_path).relative_to(root_path))
-		if len(first_str) > 1 and first_str[1] == ':':
-			skip = 3
-		elif first_str[0] == '\\':
-			skip = 1
-		else:
-			skip = 0
-		for path in ExtPath.walk(root_path):
-			yield str(path.relative_to(root_path))[skip:]
-
+		return root_path.rglob('*')

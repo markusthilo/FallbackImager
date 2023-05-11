@@ -13,15 +13,15 @@ from pycdlib import PyCdlib
 from argparse import ArgumentParser
 from lib.greplists import GrepLists
 from lib.extpath import ExtPath
-from lib.timestamp import TimeStamp
 from lib.logger import Logger
 
 class Iso(PyCdlib):
-	'''ISO Image'''
+	'''Adjustments to PyCdlib'''
 
 	def __init__(self, path, spec='udf'):
 		'''Use UDF or Joliet from PyCdlib'''
 		super().__init__()
+		self.path = path
 		if spec.lower() == 'udf':
 			self.new(udf='2.60')
 			self._facade = self.get_udf_facade()
@@ -57,7 +57,7 @@ class Iso(PyCdlib):
 		super().close()
 
 class PyCdlibImager:
-	'''Image Generator for files / logical content'''
+	'''Imager using PyCdlib, max. file size is 4 GB!!!'''
 
 	def __init__(self, root,
 		filename = None,
@@ -70,55 +70,49 @@ class PyCdlibImager:
 		'''Prepare to write image file'''
 		self.echo = echo
 		self.root_path = Path(root)
+		self.log = Logger(filename=filename, outdir=outdir,
+			head=f'pycdlibimager.PyCdlibImager, specification: {spec}')
 		self.image_path = ExtPath.child(f'{filename}.iso', parent=outdir)
-		self.log = Logger(filename=filename, outdir=outdir)
-		self.grep = GrepLists(blacklist=blacklist, whitelist=whitelist, echo=echo)
+		self.filters = GrepLists(blacklist=blacklist, whitelist=whitelist, echo=echo)
+		self.content_path = ExtPath.child(f'{filename}_content.txt', parent=outdir)
+		self.dropped_path = ExtPath.child(f'{filename}_dropped.txt', parent=outdir)
+		self.skipped_path = ExtPath.child(f'{filename}_skipped.txt', parent=outdir)
 		self.image = Iso(self.image_path, spec=spec)
-		self.echo(f'PyCdlib will write to image file {self.image_path} with specification >{spec}<')
 
 	def create(self):
 		'''Fill image'''
-		print('DEBUG: create', self.root_path)
-		for path in ExtPath.walk(self.root_path):
-			if self.grep.to_store(path):
-				if path.is_dir():
-					#self.image.append_directory(path)
-					print('self.image.append_directory', path)
-				elif path.is_file():
-					#self.image.append_file(full_path, store_path)
-					print('self.image.append_file', path)
-				else:
-					print('else', path, type(path))
-				
-		'''
-				#store_path = ExtPath.to_str(full_path, parent=self.root_path)
-		self.echo(full_path)
-		if full_path is self.root_path:
-			print(store_path, file=self.directories_file)
-			continue
-		try:
-			self.image.append_directory(store_path)
-			print(store_path, file=self.directories_file)
-		except Exception as ex:
-			print(store_path, file=self.dropped_file)
-			print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
-		for full_path in self.root_path.rglob('*'):	# files
-			if full_path.is_file():
-				store_path = ExtPath.to_str(full_path, parent=self.root_path)
-				self.echo(full_path)
-				if self.grep.to_store(store_path):
+		content_fh = self.content_path.open(mode='w')
+		dropped_fh = self.dropped_path.open(mode='w')
+		if self.filters.are_active:
+			skipped_fh = self.skipped_path.dropped_path.open(mode='w')
+		for full_path in ExtPath.walk(self.root_path):
+			img_path_str = '/' + str(full_path.relative_to(self.root_path)).replace('\\', '/')
+			if self.filters.to_store(full_path):
+				if full_path.is_dir():
 					try:
-						self.image.append_file(full_path, store_path)
-						print(store_path, file=self.files_file)
+						self.image.append_directory(img_path_str)
 					except Exception as ex:
-						print(store_path, file=self.dropped_file)
-						print(f'{TimeStamp.now()}\t{store_path}\t{ex}', file=self.errors_file)
+						print(img_path_str, file=dropped_fh)
+					else:
+						print(img_path_str, file=content_fh)
+				elif full_path.is_file():
+					try:
+						self.image.append_file(full_path, img_path_str)
+					except Exception as ex:
+						print(img_path_str, file=dropped_fh)
+					else:
+						print(img_path_str, file=content_fh)
 				else:
-					print(store_path, file=self.excluded_file)
-
+					print(img_path_str, file=dropped_fh)
+			else:
+				print(img_path_str, file=skipped_fh)
+		self.log.info('Writing image', echo=True)
 		self.image.close()
-		
-		'''
+		self.log.info('Done', echo=True)
+		content_fh.close()
+		dropped_fh.close()
+		if self.filters.are_active:
+			skipped_fh.close()
 		self.log.close()
 
 class PyCdlibCli(ArgumentParser):
