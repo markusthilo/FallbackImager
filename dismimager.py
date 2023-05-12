@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-11'
+__version__ = '0.0.1_2023-05-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -14,6 +14,7 @@ from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.dism import CaptureImage, ImageContent
+from lib.hashes import FileHashes
 
 class DismImage:
 	'''Create and Verify image with Dism'''
@@ -42,6 +43,8 @@ class DismImage:
 			self.compress = compress
 		else:
 			raise NotImplementedError(self.compress)
+		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
+		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
 		self.echo = echo
 		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage')
 
@@ -52,57 +55,39 @@ class DismImage:
 			compress = self.compress,
 			echo = self.echo
 		)
-		self.log.info(proc.cmd_str)
-		proc.read_all()
+		self.log.info('>', proc.cmd_str)
+		for line in proc.readlines_stdout():
+			self.echo(line)
 		if self.image_path.is_file():
 			self.log.finished(proc, echo=True)
 		else:
-			self.log.finished(proc, error='Could not create image')
+			self.log.finished(proc, error=': Could not create image\n')
 
 	def verify(self):
 		'''Compare content if image to source'''
-		
-		first_str = str(next(ExtPath.walk(self.root_path)).relative_to(self.root_path))
-
-		'''
-		if len(first_str) > 1 and first_str[1] == ':':
-			skip = 3
-		elif first_str[0] == '\\':
-			skip = 1
-		else:
-			skip = 0
-		for path in ExtPath.walk(root_path):
-			yield str(path.relative_to(root_path))[skip:]
-		
-		for win_str in ExtPath.walk_win_str(self.root_path):
-			print(win_str)
-		'''
-		
-		source = {path for path in ExtPath.walk(self.root_path)}
-		print(source)
-		print('---------------------')
-		proc = ImageContent(self.image_path, echo=self.echo)
-		self.log.info(proc.cmd_str)
-		proc.read_all()
-		self.log.finished(proc, echo=True)
-
-		
-		'''
+		self.log.info('Image hashes', FileHashes(self.image_path), echo=True)
+		source = {str(path.relative_to(self.root_path)).strip("/\\")
+			for path in ExtPath.walk(self.root_path)}
 		image = set()
-		content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
-		with content_path.open(mode='w') as fh:
+		proc = ImageContent(self.image_path, echo=self.echo)
+		self.log.info('>', proc.cmd_str)
+		with self.content_path.open(mode='w') as content_fh:
 			for line in proc.readlines_stdout():
-				print(line, file=fh)
-				image.add(line.strip('\\'))
-		self.log.finished(proc)
+				if line and line[0] == '\\':
+					print(line, file=content_fh)
+					image.add(line.strip('\\'))
+		if len(image) > 0:
+			self.log.finished(proc, echo=True)
+		else:
+			self.log.finished(proc, error=': No or empty image\n')
 		diff = source - image
-		if len(diff) > 0:
-			dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
-			with dropped_path.open(mode='w') as fh:
-				fh.write('\n'.join(sorted(diff)))
-			self.log.warning(f'{len(diff)} differences in source and image, look at {dropped_path}')
+		if diff:
+			with self.dropped_path.open(mode='w') as dropped_fh:
+				dropped_fh.write('\n'.join(sorted(diff)))
+			self.log.warning(f'{len(diff)} differences in source and image: {self.dropped_path}')
+		else:
+			self.log.info(f'Image content = {self.root_path}', echo=True)
 		self.log.close()
-		'''
 
 class DismImageCli(ArgumentParser):
 	'''CLI for the imager'''
@@ -162,7 +147,6 @@ class DismImageCli(ArgumentParser):
 		if not self.verify:
 			image.create()
 		image.verify()
-		
 
 if __name__ == '__main__':	# start here if called as application
 	app = DismImageCli(description=__description__)

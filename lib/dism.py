@@ -108,7 +108,7 @@ class ImageContent(Dism):
 
 	def __init__(self, image, index=1, echo=print, verbose_stdout=False, verbose_stderr=True):
 		'''Launch Dism'''
-		super().__init__(f'Dism /List-Image /ImageFile:"{image}" /Index:{index}',
+		super().__init__(f'/List-Image /ImageFile:"{image}" /Index:{index}',
 			echo = echo,
 			verbose_stdout = verbose_stdout,
 			verbose_stderr = verbose_stderr
