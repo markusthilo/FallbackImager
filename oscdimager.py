@@ -2,69 +2,123 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-12'
+__version__ = '0.0.1_2023-05-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Create and check WMI Image'
+__description__ = 'Create ISO image using OSCDIMG'
 
 from pathlib import Path
 from argparse import ArgumentParser
+from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.dism import CaptureImage, ImageContent
 from lib.hashes import FileHashes
 
-class DismImage:
-	'''Create and Verify image with Dism'''
+class Oscdimg:
+	'''OSCDIMG via subprocess (../bin/oscdimg.exe -u2 $source $image)'''
+
+	EXE_PATHS = (
+		Path.cwd()/'oscdimg.exe',
+		Path.cwd()/'bin'/'oscdimg.exe',
+		Path(__file__)/'oscdimg.exe',
+		Path(__file__)/'bin'/'oscdimg.exe',
+		(Path('C:')/
+			'Program Files (x86)'/'Windows Kits'/
+			'10'/'Assessment and Deployment Kit'/'Deployment Tools'/'amd64'/'Oscdimg'/
+			'oscdimg.exe'
+		)
+	)
 
 	def __init__(self, root,
 			filename = None,
-			imagepath = None,
 			outdir = None,
-			name = None,
-			description = None,
-			compress = 'none',
+			imagepath = None,
+			exe = None,
 			echo = print
 		):
-		'''Definitihons'''
+		'''Init subprocess for OSCDIMG without showing a terminal window'''
+		if exe:
+			self.exe_path = Path(exe)
+		else:
+			for self.exe_path in self.EXE_PATHS:
+				if self.exe_path.is_file():
+					break
 		self.root_path = Path(root)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		if imagepath:
 			self.image_path = Path(imagepath)
 		else:
-			self.image_path = ExtPath.child(f'{self.filename}.wim', parent=self.outdir)
-		self.name = name
-		self.description = description
-		if compress in ['max', 'fast', 'none']:
-			self.compress = compress
-		else:
-			raise NotImplementedError(self.compress)
+			self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
 		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
 		self.echo = echo
-		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage')
+		self.log = Logger(self.filename, outdir=self.outdir, head='oscdimg.Oscdimg')
+		self.args_str = f'-u2 {self.root_path} {self.image_path}'
+		self.cmd_str = f'{self.exe_path} {self.args_str}'
+		self.startupinfo = STARTUPINFO()
+		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
 
-	def create(self):
+	def _read_stream(self, stream, verbose=False):
+		'''Read stdout or stderr to string'''
+		string = stream.read().strip()
+		if verbose:
+			self.echo(string)
+		return string
+
+	def read_stdout(self):
+		'''Read stdout'''
+		self.stdout_str = self._read_stream(self.stdout, verbose=self.verbose_stdout)
+		return self.stdout_str
+
+	def read_stderr(self):
+		'''Read stderr'''
+		self.stderr_str = self._read_stream(self.stderr, verbose=self.verbose_stderr)
+		return self.stderr_str
+
+	def read_all(self):
+		'''Get full stdout and stderr as strings'''
+		return self.read_stdout(), self.read_stderr()
+
+	def readlines_stdout(self):
+		'''Read stdout line by line''' 
+		for line in self.stdout:
+			line = line.strip()
+			if self.verbose_stdout:
+				self.echo(line)
+			if line:
+				yield line
+		self.stdout_str = None
+		self.read_stderr()
+
+	def create_iso(self):
 		'''Create image'''
-		proc = CaptureImage(self.image_path, self.root_path,
-			name = self.name,
-			description = self.description,		
-			compress = self.compress,
-			echo = self.echo
+		self.log.info(f'> {self.exe_path.name} {self.args_str}', echo=True)
+		proc = Popen(self.cmd_str,
+			shell = True,
+			stdout = PIPE,
+			stderr = STDOUT,#PIPE,
+			encoding = 'utf-8',
+			errors = 'ignore',
+			universal_newlines = True,
+			startupinfo = self.startupinfo
 		)
-		self.log.info('>', proc.cmd_str)
-		for line in proc.readlines_stdout():
-			self.echo(line)
+		for line in proc.stdout:
+			if line.strip():
+				self.echo(line.strip())
+		proc.stdout_str = None
+		proc.stderr_str = None
 		if self.image_path.is_file():
 			self.log.finished(proc, echo=True)
 		else:
 			self.log.finished(proc, error=': Could not create image\n')
 
-	def verify(self):
+	def verify_iso(self):
 		'''Compare content if image to source'''
+		pass
+		'''
 		self.log.info(f'\n\n--- Image hashes ---\n{FileHashes(self.image_path)}\n', echo=True)
 		source = {str(path.relative_to(self.root_path)).strip("/\\")
 			for path in ExtPath.walk(self.root_path)}
@@ -90,25 +144,16 @@ class DismImage:
 		else:
 			self.log.info(f'Image contains all items', echo=True)
 		self.log.close()
+		'''
 
-class DismImageCli(ArgumentParser):
+class OscdimgCli(ArgumentParser):
 	'''CLI for the imager'''
 
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
-		super().__init__(**kwargs)
-		self.add_argument('-c', '--compress', type=str, default='none',
-			choices=['max', 'fast', 'none'],
-			help='Compression max|fast|none, none is default', metavar='STRING'
-		)
-		self.add_argument('-d', '--description', type=str,
-			help='Additional description to the image file', metavar='STRING'
-		)
+		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
-		)
-		self.add_argument('-n', '--name', type=str,
-			help='Intern name of the image in the WMI file', metavar='STRING'
 		)
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
@@ -127,30 +172,25 @@ class DismImageCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.root = args.root[0]
-		self.description = args.description
 		self.filename = args.filename
 		self.imagepath = args.imagepath
 		self.outdir = args.outdir
-		self.name = args.name
-		self.compress = args.compress
 		self.verify = args.verify
 
-	def run(self, echo=print):
+	def run(self, echo=print, exe=None):
 		'''Run the imager'''
-		image = DismImage(self.root,
+		image = Oscdimg(self.root,
 			filename = self.filename,
 			imagepath = self.imagepath,
 			outdir = self.outdir,
-			name = self.name,
-			description = self.description,
-			compress = self.compress,
-			echo = echo
+			echo = echo,
+			exe = exe
 		)
 		if not self.verify:
-			image.create()
-		image.verify()
+			image.create_iso()
+		image.verify_iso()
 
 if __name__ == '__main__':	# start here if called as application
-	app = DismImageCli(description=__description__)
+	app = OscdimgCli()
 	app.parse()
 	app.run()

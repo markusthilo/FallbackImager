@@ -31,4 +31,4 @@ class FileHashes:
 
 	def __repr__(self):
 		'''Representation for logs etc.'''
-		return f'md5: {self.md5}, sha256: {self.sha256}'
+		return f'md5: {self.md5}\nsha256: {self.sha256}'

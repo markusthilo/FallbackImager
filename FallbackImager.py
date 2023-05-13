@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
 __version__ = '0.0.1_2023-05-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'GUI for FallbackImager'
+__description__ = 'GUI to generate images with forensics in mind'
 
+from os import name as __os_name__
+from sys import executable as __executable__
 from pathlib import Path
-from sys import executable
 from json import load, dump
 from argparse import ArgumentParser
 from datetime import datetime
@@ -21,6 +23,15 @@ from tkinter.messagebox import askquestion, showwarning, showerror
 from tkinter.filedialog import askopenfilename, askdirectory
 from lib.extpath import ExtPath
 from pycdlibimager import PyCdlibCli
+
+__executable__ = Path(__executable__)
+if __executable__.stem.lower() == __app_name__.lower():
+	__app_parent__ = __executable__.parent
+else:
+	__app_parent__ = Path(__file__).parent
+if __os_name__ == 'nt':
+	from win32com.shell.shell import IsUserAnAdmin
+	__admin__ = IsUserAnAdmin()
 
 class Settings(dict):
 	'''Handle settings'''
@@ -123,23 +134,15 @@ class Gui(Tk):
 
 	def __init__(self, icon_base64):
 		'Define the main window'
-		script_path = Path(__file__)
-		exe_path =  Path(executable)
-		if script_path.stem != exe_path.stem:
-			self.app_path = script_path
-		else:
-			self.app_path = exe_path
-		self.app_name = self.app_path.stem
-		self.app_full_name = f'{self.app_name} v{__version__}'
 		super().__init__()
-		self.title(self.app_full_name)
+		self.title(f'{__app_name__} v{__version__}')
 		self.resizable(0, 0)
 		self.iconphoto(False, PhotoImage(data = icon_base64))
 		self.mainframe = Frame(self)
 		self.mainframe.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
 		self.notebook = Notebook()
 		self.notebook.pack(fill='both', padx=self.PAD, pady=self.PAD, expand=True)
-		self.settings = Settings(self.app_path.parent/f'{self.app_path.stem.lower()}.json')
+		self.settings = Settings(__app_parent__/f'{__app_name__.lower()}.json')
 		### PyCdlib ###
 		self.settings.init_section('pycdlib')
 		self.frame_fileimager = Frame(self.notebook)
