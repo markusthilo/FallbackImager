@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-12'
+__version__ = '0.0.1_2023-05-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -10,6 +10,8 @@ __description__ = 'Create and check WMI Image'
 
 from pathlib import Path
 from argparse import ArgumentParser
+from sys import executable as __executable__
+from shutil import copyfile
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -19,6 +21,8 @@ from lib.hashes import FileHashes
 class DismImage:
 	'''Create and Verify image with Dism'''
 
+	WIMMOUNT = 'WimMount.exe'
+
 	def __init__(self, root,
 			filename = None,
 			imagepath = None,
@@ -26,6 +30,7 @@ class DismImage:
 			name = None,
 			description = None,
 			compress = 'none',
+			exe = None,
 			echo = print
 		):
 		'''Definitihons'''
@@ -42,8 +47,10 @@ class DismImage:
 			self.compress = compress
 		else:
 			raise NotImplementedError(self.compress)
-		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
-		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
+		if exe:
+			self.exe_path = Path(exe)
+		else:
+			self.exe_path = None
 		self.echo = echo
 		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage')
 
@@ -65,38 +72,68 @@ class DismImage:
 
 	def verify(self):
 		'''Compare content if image to source'''
-		self.log.info(f'\n\n--- Image hashes ---\n{FileHashes(self.image_path)}\n', echo=True)
-		source = {str(path.relative_to(self.root_path)).strip("/\\")
-			for path in ExtPath.walk(self.root_path)}
-		image = set()
+		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}\n', echo=True)
 		proc = ImageContent(self.image_path, echo=self.echo)
 		self.log.info('>', proc.cmd_str)
-		with self.content_path.open(mode='w') as content_fh:
+		image = set()
+		with ExtPath.child(f'{self.filename}_content.txt',
+			parent=self.outdir).open(mode='w') as fh:
 			for line in proc.readlines_stdout():
 				if line and line[0] == '\\':
-					print(line, file=content_fh)
+					print(line, file=fh)
 					image.add(line.strip('\\'))
 		if len(image) > 0:
 			self.log.finished(proc, echo=True)
 		else:
 			self.log.finished(proc, error=': No or empty image\n')
-		diff = source - image
-		if diff:
-			with self.dropped_path.open(mode='w') as dropped_fh:
-				dropped_fh.write('\n'.join(sorted(diff)))
-			self.log.warning(
-				f'{len(diff)} differences between source and image, see: {self.dropped_path.name}'
-			)
+		missing_file_cnt = 0
+		missing_dir_cnt = 0
+		missing_else_cnt = 0
+		with ExtPath.child(f'{self.filename}_missing.txt',
+			parent=self.outdir).open(mode='w') as fh:
+			for path in ExtPath.walk(self.root_path):
+				short = str(path.relative_to(self.root_path)).strip("\\")
+				if short in image:
+					continue
+				if path.is_file():
+					print(f'', file=fh)
+					missing_file_cnt += 1
+				elif path.is_dir():
+					print(f'', file=fh)
+					missing_dir_cnt += 1
+				else:
+					print(f'', file=fh)
+					missing_else_cnt += 1
+		missing_all_cnt = missing_file_cnt + missing_dir_cnt + missing_else_cnt
+		msg = 'Verification:'
+		if missing_all_cnt == 0:
+			msg += f' no missing files or directories in {self.image_path.name}'
+			self.log.info(msg, echo=True)
 		else:
-			self.log.info(f'Image contains all items', echo=True)
-		self.log.close()
+			msg += f'\nMissing content {missing_all_cnt} / {missing_file_cnt}'
+			msg += f' / {missing_dir_cnt} / {missing_else_cnt}'
+			msg += ' (all/files/dirs/other)\n'
+			msg += f'Check {self.filename}_missing.txt if relevant content is missing!'
+			self.log.warning(msg)
+
+	def copy_exe(self, path=None):
+		'''Copy WimMount.exe into destination directory'''
+		if not self.exe_path:
+			this_path = Path(__executable__)
+			if this_path.stem.lower() == __file__.lower():
+				self.exe_path = exe.parent/self.WIMMOUNT
+			else:
+				self.exe_path = Path(__file__).parent/self.WIMMOUNT
+		if not (self.outdir/self.WIMMOUNT).exists():
+			copyfile(self.exe_path, self.outdir/self.WIMMOUNT)
+			self.log.info(f'Copied {self.WIMMOUNT} to destination directory', echo=True)
 
 class DismImageCli(ArgumentParser):
 	'''CLI for the imager'''
 
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
-		super().__init__(**kwargs)
+		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-c', '--compress', type=str, default='none',
 			choices=['max', 'fast', 'none'],
 			help='Compression max|fast|none, none is default', metavar='STRING'
@@ -119,6 +156,9 @@ class DismImageCli(ArgumentParser):
 		self.add_argument('-v', '--verify', default=False, action='store_true',
 			help='Compare content of image to source, do not create'
 		)
+		self.add_argument('-x', '--exe', default=False, action='store_true',
+			help='Copy WimMount.exe to destination directory'
+		)
 		self.add_argument('root', nargs=1, type=Path,
 			help='Source', metavar='DIRECTORY'
 		)
@@ -133,6 +173,7 @@ class DismImageCli(ArgumentParser):
 		self.outdir = args.outdir
 		self.name = args.name
 		self.compress = args.compress
+		self.exe = args.exe
 		self.verify = args.verify
 
 	def run(self, echo=print):
@@ -149,8 +190,11 @@ class DismImageCli(ArgumentParser):
 		if not self.verify:
 			image.create()
 		image.verify()
+		if self.exe:
+			image.copy_exe()
+		image.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = DismImageCli(description=__description__)
+	app = DismImageCli()
 	app.parse()
 	app.run()

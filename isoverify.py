@@ -16,6 +16,7 @@ from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
+from lib.fsreader import FsReader
 
 class IsoReader(PyCdlib):
 	'''Use PyCdlib to get UDF from ISO'''
@@ -40,32 +41,6 @@ class IsoReader(PyCdlib):
 				self.udf_files_cnt += 1
 		self.udf_paths.sort()
 		return self.udf_paths
-
-class FsReader:
-	'''Get the mounted/local file system'''
-
-	def __init__(self, root):
-		'''Define root'''
-		self.root_path = Path(root)
-
-	def get_posix(self):
-		'''Get file structure recursivly'''
-		self.posix_paths = list()
-		self.file_cnt = 0
-		self.dir_cnt = 0
-		self.else_cnt = 0
-		for path, posix, tp in ExtPath.walk_posix(self.root_path):
-			if tp == 'file':
-				self.posix_paths.append(posix)
-				self.file_cnt += 1
-			elif tp == 'dir':
-				self.posix_paths.append(posix)
-				self.dir_cnt += 1
-			else:
-				self.posix_paths.append('$'+posix)
-				self.else_cnt += 1
-		self.posix_paths.sort()
-		return self.posix_paths
 
 class CompareIsoFs:
 	'''Compare image to source'''
@@ -142,7 +117,7 @@ class IsoVerify:
 			msg += f'No missing files or directories in UDF structure of {self.image_path.name}'
 			self.log.info(msg, echo=True)
 		else:
-			msg += f'Files might be lost, check {self.filename}_missing.txt'
+			msg += f'Check {self.filename}_missing.txt if relevant content is missing!'
 			self.log.warning(msg)
 
 class IsoVerifyCli(ArgumentParser):
