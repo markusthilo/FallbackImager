@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-11'
+__version__ = '0.0.1_2023-05-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,31 +13,33 @@ from .reglist import RegList
 class GrepLists:
 	'''Grep by blacklist or whitelist'''
 
-	def __init__(self, blacklist=None, whitelist=None, echo=print):
-		'''Load lists'''
+	@staticmethod
+	def false(*args):
+		'''Dummy returning False'''
+		return False
 
+	def __init__(self, blacklist=None, whitelist=None, echo=None):
+		'''Load lists'''
 		self.blacklist = RegList(blacklist)
 		self.whitelist = RegList(whitelist)
+
+	def get_method(self):
+		'''Deliver the method to check if path has to be dropped'''
 		if self.whitelist.regs:
-			self.to_store = self._is_in_whitelist
-			self.are_active = True
-			self.echo(f'Using whitelist {whitelist}')
-		elif self.blacklist.regs:
-			self.to_store = self._not_in_blacklist
-			self.are_active = True
-			self.echo(f'Using blacklist {blacklist}')
+			if echo:
+				echo(f'Using whitelist {whitelist}')
+			return self._not_whitelist
+		if self.blacklist.regs:
+			if echo:
+				echo(f'Using blacklist {blacklist}')
+			return self._in_blacklist
 		else:
-			self.to_store = self._true
-			self.are_active = False
+			return self.false
 		
-	def _not_in_blacklist(self, path):
-		'''Return True when path is blacklisted'''
-		return not self.blacklist.is_match(str(path).strip('/\\'))
+	def _in_blacklist(self, string):
+		'''Return True if has match in blacklist'''
+		return self.blacklist.is_match(string)
 
-	def _is_in_whitelist(self, path):
-		'''Return True when path is not in whitelist'''
-		return self.whitelist.is_match(str(path).strip('/\\'))
-
-	def _true(self, *args):
-		'''Dummy returning True'''
-		return True
+	def _not_whitelist(self, string):
+		'''Return True if string is not in whitelist'''
+		return not self.whitelist.is_match(string)

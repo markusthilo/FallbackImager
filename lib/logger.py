@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-12'
+__version__ = '0.0.1_2023-05-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -19,7 +19,8 @@ class Logger:
 
 	def __init__(self, filename=None, outdir=None, head='Start task', echo=print):
 		'''Open/create directory to write logs'''
-		self.path = ExtPath.child(f'{filename}_log.txt', parent=outdir)
+		self.outdir = ExtPath.mkdir(outdir)
+		self.path = ExtPath.child(f'{filename}_log.txt', parent=self.outdir)
 		self._fh = self.path.open(mode='w')
 		self.info(head)
 		self.echo = echo
