@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-13'
+__version__ = '0.0.1_2023-05-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -83,30 +83,25 @@ class CompareIsoFs:
 		self.dropped_posix = list()
 		self.missing_posix = list()
 		for posix in self.delta_posix:
-			if self.drop(posix):
+			if drop(posix):
 				self.dropped_posix.append(posix)
 			else:
 				self.missing_posix.append(posix)
 
 class IsoVerify:
-	''''''
+	'''Verification'''
  
 	def __init__(self, root,
 		imagepath = None,
-		blacklist = None,
-		whitelist = None,
+		drop = GrepLists.false,
 		filename = None,
 		outdir = None,
 		echo = print,
 		log = None,
 	):
-		''''''
+		'''Set paths, logs etc.'''
 		self.root_path = Path(root)
-		self.drop = GrepLists(
-				blacklist = blacklist,
-				whitelist = whitelist, 
-				echo = echo
-			).get_method()
+		self.drop = drop
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		if imagepath:
@@ -117,7 +112,7 @@ class IsoVerify:
 		if log:
 			self.log = log
 		else:
-			self.log = Logger(filename=filename, outdir=outdir, 
+			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head=f'isoverify.IsoVerify')
 
 	def posix_verify(self):
@@ -127,23 +122,28 @@ class IsoVerify:
 			fh.write('\n'.join(diff.source_posix))
 		with ExtPath.child(f'{self.filename}_image.txt', parent=self.outdir).open('w') as fh:
 			fh.write('\n'.join(diff.image_posix))
-		with ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir).open('w') as fh:
-			fh.write('\n'.join(diff.dropped_posix))
+		if self.drop != GrepLists.false:
+			with ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir).open('w') as fh:
+				fh.write('\n'.join(diff.dropped_posix))
 		with ExtPath.child(f'{self.filename}_missing.txt', parent=self.outdir).open('w') as fh:
 			fh.write('\n'.join(diff.missing_posix))
-		info = '--------------------\n'
-		info += f'Source {self.root_path.name}:'
-		info += f' {diff.source.file_cnt+diff.source.dir_cnt+diff.source.else_cnt}'
-		info += f' / {diff.source.file_cnt} / {diff.source.dir_cnt} / {diff.source.else_cnt}'
-		info += ' (all/files/dirs/other)\n\n--------------------\n'
-		info += f'Image {self.image_path.name}:'
-		info += f' {diff.image.udf_files_cnt+diff.image.udf_dirs_cnt} /'
-		info += f' {diff.image.udf_files_cnt} / {diff.image.udf_dirs_cnt} (all/files/dirs)\n'
-		info += f'\nImage hashes\n{FileHashes(self.image_path)}'
+		msg = f'Verification:\nSource {self.root_path.name}:'
+		msg += f' {diff.source.file_cnt+diff.source.dir_cnt+diff.source.else_cnt}'
+		msg += f' / {diff.source.file_cnt} / {diff.source.dir_cnt} / {diff.source.else_cnt}'
+		msg += ' (all/files/dirs/other)\n'
+		msg += f'Image {self.image_path.name}:'
+		msg += f' {diff.image.udf_files_cnt+diff.image.udf_dirs_cnt} /'
+		msg += f' {diff.image.udf_files_cnt} / {diff.image.udf_dirs_cnt} (all/files/dirs)\n'
+		msg += f'\nImage hashes\n{FileHashes(self.image_path)}\n\n'
+		if len(diff.dropped_posix) > 0:
+			msg += f'{len(diff.dropped_posix)} UDF entries'
+			msg += ' were ignored in verification (blacklist/whitelist)\n\n'
 		if len(diff.missing_posix) == 0:
-			self.log.info(info, echo=True)
+			msg += f'No missing files or directories in UDF structure of {self.image_path.name}'
+			self.log.info(msg, echo=True)
 		else:
-			self.log.warning(f'Files might be lost, check {self.filename}_missing.txt', string = info)
+			msg += f'Files might be lost, check {self.filename}_missing.txt'
+			self.log.warning(msg)
 
 class IsoVerifyCli(ArgumentParser):
 	'''CLI for IsoVerify'''
@@ -182,14 +182,20 @@ class IsoVerifyCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the verification'''
-		IsoVerify(self.root,
-			imagepath = self.imagepath,
+		drop = GrepLists(
 			blacklist = self.blacklist,
-			whitelist = self.whitelist,
+			whitelist = self.whitelist, 
+			echo = echo
+		).get_method()
+		image = IsoVerify(self.root,
+			imagepath = self.imagepath,
 			filename = self.filename,
 			outdir = self.outdir,
+			drop = drop,
 			echo = echo,
-		).posix_verify()
+		)
+		image.posix_verify()
+		image.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = IsoVerifyCli()
