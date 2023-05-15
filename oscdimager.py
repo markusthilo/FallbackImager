@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-14'
+__version__ = '0.0.1_2023-05-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -98,6 +98,9 @@ class OscdimgCli(ArgumentParser):
 		self.add_argument('-w', '--whitelist', type=Path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
 		)
+		self.add_argument('-x', '--exe', type=Path,
+			help='Path to oscdimg.exe (use if not found automatically)', metavar='FILE'
+		)
 		self.add_argument('root', nargs=1, type=Path,
 			help='Source', metavar='DIRECTORY'
 		)
@@ -110,14 +113,15 @@ class OscdimgCli(ArgumentParser):
 		self.filename = args.filename
 		self.outdir = args.outdir
 		self.whitelist = args.whitelist
+		self.exe = args.exe
 
-	def run(self, echo=print, exe=None):
+	def run(self, echo=print):
 		'''Run the imager'''
 		image = Oscdimg(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
-			echo = echo,
-			exe = exe
+			exe = self.exe,
+			echo = echo
 		)
 		image.create_iso()
 		drop = GrepLists(
