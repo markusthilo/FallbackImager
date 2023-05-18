@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
 __version__ = '0.0.1_2023-05-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Create ISO image using MS OSCDIMG'
+__description__ = '''
+Create ISO image using MS OSCDIMG
+'''
 
 from pathlib import Path
 from argparse import ArgumentParser
@@ -15,6 +18,7 @@ from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.greplists import GrepLists
+from lib.guielements import BasicFilterTab
 from isoverify import IsoVerify
 
 class Oscdimg:
@@ -52,7 +56,7 @@ class Oscdimg:
 		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
 		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
 		self.echo = echo
-		self.log = Logger(self.filename, outdir=self.outdir, head='oscdimg.Oscdimg')
+		self.log = Logger(self.filename, outdir=self.outdir, head='oscdimg.Oscdimg', echo=echo)
 		self.args_str = f'-u2 {self.root_path} {self.image_path}'
 		self.cmd_str = f'{self.exe_path} {self.args_str}'
 		self.startupinfo = STARTUPINFO()
@@ -138,6 +142,13 @@ class OscdimgCli(ArgumentParser):
 			log = image.log
 		).posix_verify()
 		image.log.close()
+
+class OscdimgGui(BasicFilterTab):
+	'''Notebook page'''
+	CMD = __app_name__
+	DESCRIPTION = __description__
+	def __init__(self, root):
+		super().__init__(root)
 
 if __name__ == '__main__':	# start here if called as application
 	app = OscdimgCli()

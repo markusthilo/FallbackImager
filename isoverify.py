@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-14'
+__version__ = '0.0.1_2023-05-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -45,14 +45,17 @@ class IsoReader(PyCdlib):
 class CompareIsoFs:
 	'''Compare image to source'''
 
-	def __init__(self, root, image, drop=GrepLists.false):
+	def __init__(self, root, image, drop=GrepLists.false, echo=print):
 		'''Compare image to source file structure by Posix paths'''
 		self.root_path = Path(root)
+		echo(f'Getting structure of {self.root_path}')
 		self.source = FsReader(self.root_path)
 		self.source_posix = self.source.get_posix()
 		self.image_path = Path(image)
+		echo(f'Reading UDF from {self.image_path}')
 		self.image = IsoReader(self.image_path)
 		self.image_posix = self.image.get_udf()
+		echo('Comparing file paths')
 		self.delta_posix = list(set(self.source_posix)-set(self.image_posix))
 		self.delta_posix.sort()
 		self.dropped_posix = list()
@@ -88,11 +91,12 @@ class IsoVerify:
 			self.log = log
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
-				head=f'isoverify.IsoVerify')
+				head=f'isoverify.IsoVerify', echo=echo)
 
 	def posix_verify(self):
 		'''Verify by Posix paths'''
-		diff = CompareIsoFs(self.root_path, self.image_path, drop=self.drop)
+		self.echo('Starting verification')
+		diff = CompareIsoFs(self.root_path, self.image_path, drop=self.drop, echo=self.echo)
 		with ExtPath.child(f'{self.filename}_source.txt', parent=self.outdir).open('w') as fh:
 			fh.write('\n'.join(diff.source_posix))
 		with ExtPath.child(f'{self.filename}_image.txt', parent=self.outdir).open('w') as fh:

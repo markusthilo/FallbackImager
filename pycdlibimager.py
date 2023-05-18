@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__app_name__ = 'PyCdlibImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-14'
+__version__ = '0.0.1_2023-05-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Generate ISO from logical file structure'
+__description__ = '''
+Generate ISO from logical file structure
+'''
 
 from pathlib import Path
 from pycdlib import PyCdlib
@@ -15,6 +18,7 @@ from lib.greplists import GrepLists
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
+from lib.guielements import BasicFilterTab
 from isoverify import IsoVerify
 
 class Iso(PyCdlib):
@@ -57,11 +61,12 @@ class PyCdlibImager:
 		self.outdir = ExtPath.mkdir(outdir)
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		self.log = Logger(filename=self.filename, outdir=self.outdir,
-			head='pycdlibimager.PyCdlibImager')
+			head='pycdlibimager.PyCdlibImager', echo=echo)
 		self.image = Iso(self.image_path)
 
 	def create_iso(self):
 		'''Fill image'''
+		self.echo('Creating UDF structure')
 		self.dropped_cnt = 0
 		self.unidentified_posix = list()
 		for path, posix, tp in ExtPath.walk_posix(self.root_path):
@@ -79,10 +84,7 @@ class PyCdlibImager:
 		except Exception:
 			self.log.error('Could not create image')
 		else:
-			msg = f'Image {self.image_path} was created'
-		
-		
-			self.log.info(msg, echo=True)
+			self.log.info(f'Image {self.image_path} has been created', echo=True)
 
 class PyCdlibCli(ArgumentParser):
 	'''CLI for the imager'''
@@ -138,6 +140,13 @@ class PyCdlibCli(ArgumentParser):
 			log = image.log
 		).posix_verify()
 		image.log.close()
+
+class PyCdlibGui(BasicFilterTab):
+	'''Notebook page'''
+	CMD = __app_name__
+	DESCRIPTION = __description__
+	def __init__(self, root):
+		super().__init__(root)
 
 if __name__ == '__main__':	# start here if called as application
 	app = PyCdlibCli(description=__description__)

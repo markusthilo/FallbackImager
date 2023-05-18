@@ -31,15 +31,17 @@ class Worker(Thread):
 			self.gui.disable_jobs()
 			echo(f'{self.gui.RUNNING}: {cmd_line}')
 			cmd, *args = cmd_line.split()
-			for imager in self.gui.IMAGERS:
-				if cmd.lower() == imager.CMD.lower():
+			for ImagerGui, ImagerCli in self.gui.IMAGERS.items():
+				if cmd.lower() == ImagerGui.CMD.lower():
 					break
 			else:
-				echo(self.UNDETECTED)
-			echo(imager.CMD, args)
+				echo(self.gui.UNDETECTED)
+				continue
+			imager = ImagerCli()
+			imager.parse(args)
+			imager.run(echo=echo)
 		if cmd:
 			echo(self.gui.ALL_DONE)
 		else:
 			echo(self.gui.NOTHING2DO)
 		self.gui.enable_start()
-

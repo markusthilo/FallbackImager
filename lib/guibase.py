@@ -8,26 +8,31 @@ __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Base for GUI using tkinter'
 
-from pathlib import Path
 from tkinter import Tk
+from .settings import Settings
 from .worker import Worker
-from .guielements import ExpandedNotebook, ExpandedLabelFrame, ExpandedFrame
+from .guielements import ExpandedNotebook, ExpandedFrame
 from .guielements import ExpandedScrolledText, LeftButton, RightButton, LeftLabel
+from .guihelp import Help
 
 class GuiBase(Tk):
 
-	def __init__(self, imagers, settings, name, version, icon):
+	def __init__(self, name, version, icon_path, settings_path):
+		'''Add stuff to Tk'''
 		self.app_name = name
 		self.version = version
-		self.icon_path = Path(icon)
-		self.settings = settings
+		self.icon_path = icon_path
+		self.settings = Settings(settings_path)
 		self.worker = None
 		super().__init__()
 		self.title(f'{self.app_name} v{self.version}')
 		self.resizable(0, 0)
-		self.iconbitmap(self.icon_path)
+		self.iconbitmap(icon_path)
+		frame = ExpandedFrame(self, self)
+		LeftLabel(self, frame, self.DESCRIPTION)
+		RightButton(self, frame, self.HELP, self.show_help)	
 		self.notebook = ExpandedNotebook(self)
-		self.imagers = [imager(self) for imager in imagers]
+		self.imagers = [ImagerGui(self) for ImagerGui in self.IMAGERS]
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.JOBS)
 		self.rm_last_job_button = RightButton(self,
@@ -43,6 +48,10 @@ class GuiBase(Tk):
 		self.start_button = LeftButton(self, frame, self.START_JOBS, self.start_jobs)
 		self.quit_button = RightButton(self, frame, self.QUIT, self.quit_app)
 
+	def show_help(self):
+		'''Show help, usually from __description__'''
+		Help(self).start()
+			
 	def append_job(self, cmd):
 		'''Append message in info box'''
 		last = self.jobs_text.get('end-2l', 'end').strip(';\n')
@@ -79,10 +88,10 @@ class GuiBase(Tk):
 		self.worker = Worker(self)
 		self.worker.start()
 
-	def append_info(self, msg):
+	def append_info(self, *msg):
 		'''Append message in info box'''
 		self.infos_text.configure(state='normal')
-		self.infos_text.insert('end', f'{msg}\n')
+		self.infos_text.insert('end', ' '.join(f'{string}' for string in msg) + '\n')
 		self.infos_text.configure(state='disabled')
 		self.infos_text.yview('end')
 

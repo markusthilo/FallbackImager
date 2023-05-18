@@ -11,19 +11,20 @@ __description__ = 'Forensic imager for diverse formats'
 from os import name as __os_name__
 from sys import executable as __executable__
 from pathlib import Path
-
-from lib.settings import Settings
 from lib.guibase import GuiBase
-from lib.oscdimg_gui import OscdimgGui
+from oscdimager import OscdimgCli, OscdimgGui
+from pycdlibimager import PyCdlibCli, PyCdlibGui
 
 __executable__ = Path(__executable__)
 __file__ = Path(__file__)
 if __executable__.stem.lower() == __file__.stem.lower():
 	__app_name__ = __executable__.stem
-	__app_parent__ = __executable__.parent
+	__parent_path__ = __executable__.parent
 else:
 	__app_name__ = __file__.stem
-	__app_parent__ = __file__.parent
+	__parent_path__ = __file__.parent
+__icon_path__ = __parent_path__/'appicon.ico'
+__settings_path__ = __parent_path__/f'{__app_name__.lower()}.json'
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
 	__admin__ = IsUserAnAdmin()
@@ -31,11 +32,13 @@ if __os_name__ == 'nt':
 class Gui(GuiBase):
 	'''GUI'''
 
-	IMAGERS = ((OscdimgGui),)
+	IMAGERS = {OscdimgGui: OscdimgCli, PyCdlibGui: PyCdlibCli}
 	PAD = 4
 	JOB_HEIGHT = 4
 	INFO_HEIGHT = 8
 	ENTRY_WIDTH = 128
+	DESCRIPTION = 'Imager for different formats as a fallback when the usual tools do not work'
+	HELP = 'Help'
 	JOBS = 'Jobs'
 	REMOVE_LAST = 'Remove last'
 	INFOS = 'Infos'
@@ -65,17 +68,8 @@ class Gui(GuiBase):
 	UNDETECTED = 'Could not detect what to do.\n'
 
 	def __init__(self):
-		self.app_name = __app_name__
-		self.version = __version__
-		self.settings = Settings(__app_parent__/f'{__app_name__.lower()}.json')
-		self.worker = None
-		super().__init__(
-			self.IMAGERS,
-			self.settings,
-			self.app_name,
-			self.version,
-			__app_parent__/'appicon.ico'
-		)
+		'''Buld GUI'''
+		super().__init__(__app_name__, __version__, __icon_path__, __settings_path__)
 
 if __name__ == '__main__':  # start here
 	Gui().mainloop()
