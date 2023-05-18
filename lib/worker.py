@@ -31,10 +31,12 @@ class Worker(Thread):
 			self.gui.disable_jobs()
 			echo(f'{self.gui.RUNNING}: {cmd_line}')
 			cmd, *args = cmd_line.split()
-			echo(cmd)
-			echo(args)
-			#if cmd == 
-
+			for imager in self.gui.IMAGERS:
+				if cmd.lower() == imager.CMD.lower():
+					break
+			else:
+				echo(self.UNDETECTED)
+			echo(imager.CMD, args)
 		if cmd:
 			echo(self.gui.ALL_DONE)
 		else:

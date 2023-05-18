@@ -62,6 +62,7 @@ class Gui(GuiBase):
 	RUNNING = 'Running'
 	NOTHING2DO = 'Add jobs! Nothing to do here.\n'
 	ALL_DONE = 'All done.\n'
+	UNDETECTED = 'Could not detect what to do.\n'
 
 	def __init__(self):
 		self.app_name = __app_name__

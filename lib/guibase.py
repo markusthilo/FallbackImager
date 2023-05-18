@@ -8,6 +8,7 @@ __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Base for GUI using tkinter'
 
+from pathlib import Path
 from tkinter import Tk
 from .worker import Worker
 from .guielements import ExpandedNotebook, ExpandedLabelFrame, ExpandedFrame
@@ -18,7 +19,7 @@ class GuiBase(Tk):
 	def __init__(self, imagers, settings, name, version, icon):
 		self.app_name = name
 		self.version = version
-		self.icon_path = icon
+		self.icon_path = Path(icon)
 		self.settings = settings
 		self.worker = None
 		super().__init__()
@@ -44,7 +45,8 @@ class GuiBase(Tk):
 
 	def append_job(self, cmd):
 		'''Append message in info box'''
-		if not last or cmd != self.jobs_text.get('end-2l', 'end').strip(';\n'):
+		last = self.jobs_text.get('end-2l', 'end').strip(';\n')
+		if not last or cmd != last:
 			self.jobs_text.insert('end', f'{cmd};\n')
 			self.jobs_text.yview('end')	
 
