@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-15'
+__version__ = '0.0.1_2023-05-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -10,16 +10,14 @@ __description__ = 'Settings stored as JSON'
 
 from json import load, dump
 from tkinter import StringVar
+from pathlib import Path
 
 class Settings(dict):
 	'''Handle settings'''
 
 	def __init__(self, path):
 		'''Set path to JSON config file, default is app or script name with .json'''
-		if path:
-			self.path = path
-		else:
-			self.path = __app_parent__/f'{__app_name__.lower()}.json'
+		self.path = path
 		try:
 			with self.path.open() as fh:
 				loaded = load(fh)

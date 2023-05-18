@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-16'
+__version__ = '0.0.1_2023-05-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,86 +11,70 @@ __description__ = 'Forensic imager for diverse formats'
 from os import name as __os_name__
 from sys import executable as __executable__
 from pathlib import Path
-from tkinter import Tk
-from tkinter.messagebox import askquestion, showwarning, showerror
+
 from lib.settings import Settings
-from lib.worker import Worker
-from lib.guielements import ExpandedNotebook, ExpandedLabelFrame, ExpandedFrame
-from lib.guielements import ExpandedScrolledText, LeftButton, RightButton, LeftLabel
+from lib.guibase import GuiBase
 from lib.oscdimg_gui import OscdimgGui
 
 __executable__ = Path(__executable__)
-if __executable__.stem.lower() == __app_name__.lower():
+__file__ = Path(__file__)
+if __executable__.stem.lower() == __file__.stem.lower():
+	__app_name__ = __executable__.stem
 	__app_parent__ = __executable__.parent
 else:
-	__app_parent__ = Path(__file__).parent
+	__app_name__ = __file__.stem
+	__app_parent__ = __file__.parent
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
 	__admin__ = IsUserAnAdmin()
 
-class Gui(Tk):
-	'''GUI look and feel'''
+class Gui(GuiBase):
+	'''GUI'''
 
+	IMAGERS = ((OscdimgGui),)
 	PAD = 4
 	JOB_HEIGHT = 4
 	INFO_HEIGHT = 8
 	ENTRY_WIDTH = 128
+	JOBS = 'Jobs'
+	REMOVE_LAST = 'Remove last'
+	INFOS = 'Infos'
+	CLEAR_INFOS = 'Clear infos'
+	START_JOBS = 'Start jobs'
+	RUNNING = 'Running...'
+	QUIT = 'Quit'
+	SOURCE = 'Source'
+	DIRECTORY = 'Directory'
+	SELECT_ROOT = 'Select source root directory'
+	DESTINATION = 'Destination'
+	FILENAME = 'Filename'
+	SELECT_FILENAME = 'Select file to use name', 
+	OUTDIR = 'Outdir'
+	SELECT_DEST_DIR = 'Select destination directory'
+	SKIP_PATH_CHECK = 'Skip check of paths by blacklist or whitelist'
+	PATHFILTER = 'Pathfilter'
+	CHECK_ALL_PATHS = 'Check if all source paths are in image'
+	BLACKLIST = 'Blacklist'
+	SELECT_BLACKLIST = 'Select blacklist'
+	WHITELIST = 'Whitelist'
+	SELECT_WHITELIST = 'Select whitelist'
+	ADD_JOB = 'Add job'
+	RUNNING = 'Running'
+	NOTHING2DO = 'Add jobs! Nothing to do here.\n'
+	ALL_DONE = 'All done.\n'
 
 	def __init__(self):
+		self.app_name = __app_name__
+		self.version = __version__
 		self.settings = Settings(__app_parent__/f'{__app_name__.lower()}.json')
-		super().__init__()
-		self.title(f'{__app_name__} v{__version__}')
-		self.resizable(0, 0)
-		self.iconbitmap(__app_parent__/'appicon.ico')
-		self.notebook = ExpandedNotebook(self)
-		### OSCDIMAGER ###
-		OscdimgGui(self)
-		### Jobs ###
-		frame = ExpandedFrame(self, self)
-		LeftLabel(self, frame, 'Jobs')
-		self.rm_last_job_button = RightButton(self, frame, 'Remove last', self.remove_last)
-		self.jobstext = ExpandedScrolledText(self, self, self.JOB_HEIGHT)
-
-		### INFOS ###
-		frame = ExpandedFrame(self, self)
-		LeftLabel(self, frame, 'Info')
-		self.clear_info_button = RightButton(self, frame, 'Clear infos', self.clear_infos)
-		self.infotext = ExpandedScrolledText(self, self, self.INFO_HEIGHT)
-		self.infotext.bind('<Key>', lambda e: 'break')
-		self.infotext.configure(state='disabled')
-		self.infotext.insert('end', 'Infos will be here')
-		### START/QUIT FRAME ###
-		frame = ExpandedFrame(self, self)
-		self.start_button = LeftButton(self, frame, 'Start jobs', self.start_jobs)
-		self.quit_button = RightButton(self, frame, 'Quit', self.quit_app)
-
-	def remove_last(self):
-		pass
-
-	def clear_infos(self):
-		pass
-
-	def append_info(self, msg):
-		'''Append message in info box'''
-		self.text.configure(state='normal')
-		self.text.insert(END, f'{msg}\n')
-		self.text.configure(state='disabled')
-		self.text.yview(END)
-
-	def start_jobs(self):
-		'''Start working job list'''
-		print('Starting jobs...')
-		self.jobs.configure(state='disabled')
-		work = Worker(
-			(job.split() for job in self.jobs.get('1.0', END).split('\n') if job != ''),
-			debug = True
+		self.worker = None
+		super().__init__(
+			self.IMAGERS,
+			self.settings,
+			self.app_name,
+			self.version,
+			__app_parent__/'appicon.ico'
 		)
-		work.run()
-
-	def	quit_app(self):
-		'''Store configuration and quit application'''
-		self.settings.write()
-		self.destroy()
 
 if __name__ == '__main__':  # start here
 	Gui().mainloop()

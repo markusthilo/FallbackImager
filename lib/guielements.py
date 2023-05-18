@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-16'
+__version__ = '0.0.1_2023-05-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,6 +13,7 @@ from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
 from tkinter.ttk import Label, Entry, Radiobutton
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askdirectory
+from tkinter.messagebox import showerror
 
 class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
@@ -30,23 +31,23 @@ class ExpandedLabelFrame(LabelFrame):
 	'''|<- LabelFrame ->|'''
 	def __init__(self, root, parent, text):
 		super().__init__(parent, text=text)
-		self.pack(fill='both', padx=root.PAD, pady=root.PAD, expand=True)
+		self.pack(fill='both', padx=root.PAD, expand=True)
 
 class ExpandedSeparator:
 	'''|<--------->|'''
 	def __init__(self, root, parent):
-		Separator(parent).pack(fill='both', padx=root.PAD, pady=root.PAD, expand=True)
+		Separator(parent).pack(fill='both', padx=root.PAD, expand=True)
 
 class ExpandedLabel:
 	'''|<- Label ->|'''
 	def __init__(self, root, parent, text):
 		Label(parent, text=text).pack(
-			fill='both', padx=root.PAD, pady=root.PAD, expand=True)
+			fill='both', padx=root.PAD, expand=True)
 
 class LeftLabel:
 	'''| Label --->|'''
 	def __init__(self, root, parent, text):
-		Label(parent, text=text).pack(padx=root.PAD, pady=root.PAD, side='left')
+		Label(parent, text=text).pack(padx=root.PAD, side='left')
 
 class ExpandedScrolledText(ScrolledText):
 	'''|<- ScrolledText ->|'''
@@ -57,19 +58,19 @@ class ExpandedScrolledText(ScrolledText):
 			width = -1,
 			height = height
 		)
-		self.pack(fill='both', padx=root.PAD, pady=root.PAD, expand=True)
+		self.pack(fill='both', padx=root.PAD, expand=True)
 
 class LeftButton(Button):
 	'''| Button ---|'''
 	def __init__(self, root, parent, text, command):
 		super().__init__(parent, text=text, command=command)
-		self.pack(padx=root.PAD, pady=root.PAD, side='left')
+		self.pack(padx=root.PAD, side='left')
 
 class RightButton(Button):
 	'''|--- Button |'''
 	def __init__(self, root, parent, text, command):
 		super().__init__(parent, text=text, command=command)
-		self.pack(padx=root.PAD, pady=root.PAD, side='right')
+		self.pack(padx=root.PAD, side='right')
 
 class GridButton(Button):
 	'''| | Button | | |'''
@@ -126,7 +127,7 @@ class FilenameSelector(Button):
 	def __init__(self, root, parent, key, text, ask, row):
 		root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=self._askfilename) 
-		self.grid(row=row, column=1, sticky='e', padx=root.PAD)
+		self.grid(row=row, column=1, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=root.settings.raw(key), width=root.ENTRY_WIDTH).grid(
 			row=row, column=2, sticky='w', padx=root.PAD)
 		self.root = root
@@ -153,3 +154,11 @@ class DirSelector(Button):
 		self.grid(row=row, column=1, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=root.settings.raw(key), width=root.ENTRY_WIDTH).grid(
 			row=row, column=2, sticky='w', padx=root.PAD)
+
+class Error:
+	@staticmethod
+	def source_dest_required():
+		showerror(
+			title = 'Missing entries',
+			message = 'Source, destination directory and destination filename (without extension) are requiered'
+		)
