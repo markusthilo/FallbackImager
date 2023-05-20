@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-17'
+__version__ = '0.0.1_2023-05-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Settings stored as JSON'
 
 from json import load, dump
-from tkinter import StringVar
+from tkinter import StringVar, IntVar
 from pathlib import Path
 
 class Settings(dict):
@@ -51,6 +51,16 @@ class Settings(dict):
 			self[self.section][key] = StringVar(value=default)
 		else:
 			self[self.section][key] = StringVar(value=value)
+		return self[self.section][key]
+
+	def init_intvar(self, key, default=None, section=None):
+		'''Generate IntVar for one setting'''
+		value = self.get(key, section=section)
+		if not value and default:
+			self[self.section][key] = IntVar(value=default)
+		else:
+			self[self.section][key] = IntVar(value=value)
+		return self[self.section][key]
 
 	def raw(self, key, section=None):
 		'''Get value as it is'''

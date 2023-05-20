@@ -1,24 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-14'
+__version__ = '0.0.1_2023-05-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Create and check WMI Image'
+__description__ = '''
+Create and check WMI Image
+'''
 
+from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
 from argparse import ArgumentParser
 from sys import executable as __executable__
 from shutil import copyfile
+from tkinter.messagebox import showerror
 from lib.extpath import ExtPath
-from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.dism import CaptureImage, ImageContent
 from lib.hashes import FileHashes
+from lib.timestamp import TimeStamp
+from lib.guielements import SourceDirSelector, Checker
+from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
+from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
+from lib.guielements import FileSelector, GridButton
 
-class DismImage:
+class DismImager:
 	'''Create and Verify image with Dism'''
 
 	WIMMOUNT = 'WimMount.exe'
@@ -30,7 +39,6 @@ class DismImage:
 			name = None,
 			description = None,
 			compress = 'none',
-			exe = None,
 			echo = print
 		):
 		'''Definitihons'''
@@ -47,12 +55,8 @@ class DismImage:
 			self.compress = compress
 		else:
 			raise NotImplementedError(self.compress)
-		if exe:
-			self.exe_path = Path(exe)
-		else:
-			self.exe_path = None
 		self.echo = echo
-		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage')
+		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=echo)
 
 	def create(self):
 		'''Create image'''
@@ -118,17 +122,18 @@ class DismImage:
 
 	def copy_exe(self, path=None):
 		'''Copy WimMount.exe into destination directory'''
-		if not self.exe_path:
-			this_path = Path(__executable__)
-			if this_path.stem.lower() == __file__.lower():
-				self.exe_path = exe.parent/self.WIMMOUNT
+		if not path:
+			if Path(__executable__).name.lower() == 'python.exe':
+				parent = Path(__file__).parent
 			else:
-				self.exe_path = Path(__file__).parent/self.WIMMOUNT
-		if not (self.outdir/self.WIMMOUNT).exists():
-			copyfile(self.exe_path, self.outdir/self.WIMMOUNT)
+				parent = Path(__executable__).parent
+			path = parent/self.WIMMOUNT
+		dest_path = self.outdir/self.WIMMOUNT
+		if not dest_path.exists():
+			copyfile(path, dest_path)
 			self.log.info(f'Copied {self.WIMMOUNT} to destination directory', echo=True)
 
-class DismImageCli(ArgumentParser):
+class DismImagerCli(ArgumentParser):
 	'''CLI for the imager'''
 
 	def __init__(self, **kwargs):
@@ -178,7 +183,7 @@ class DismImageCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		image = DismImage(self.root,
+		image = DismImager(self.root,
 			filename = self.filename,
 			imagepath = self.imagepath,
 			outdir = self.outdir,
@@ -194,7 +199,99 @@ class DismImageCli(ArgumentParser):
 			image.copy_exe()
 		image.log.close()
 
+class DismImagerGui:
+	'''Notebook page'''
+
+	CMD = __app_name__
+	DESCRIPTION = __description__
+
+	def __init__(self, root):
+		'''Notebook page'''
+		root.settings.init_section(self.CMD)
+		self.frame = ExpandedFrame(root, root.notebook)
+		root.notebook.add(self.frame, text=f' {self.CMD} ')
+		root.row = 0
+		self.source_dir = SourceDirSelector(root, self.frame)
+		GridLabel(root, self.frame, root.DESTINATION, columnspan=2)
+		self.filename_str = FilenameSelector(root, self.frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, self.frame, root.OUTDIR,
+			root.DIRECTORY, root.SELECT_DEST_DIR)
+		self.name_str = StringSelector(root, self.frame, root.IMAGE_NAME, root.IMAGE_NAME,
+			command=self._gen_name)
+		self.descr_str = StringSelector(root, self.frame, root.IMAGE_DESCRIPTION, root.IMAGE_DESCRIPTION,
+			command=self._gen_description)
+		GridSeparator(root, self.frame)
+		GridLabel(root, self.frame, root.TO_DO, columnspan=3)
+		StringRadiobuttons(root, self.frame, root.TO_DO,
+			(root.CREATE_AND_VERIFY, root.VERIFY_FILE), root.CREATE_AND_VERIFY)
+		GridLabel(root, self.frame, root.CREATE_AND_VERIFY, column=1, columnspan=2)
+		FileSelector(root, self.frame,
+			root.VERIFY_FILE, root.VERIFY_FILE, root.SELECT_VERIFY_FILE)
+		GridSeparator(root, self.frame)
+		Checker(root, self.frame, root.COPY_EXE, root.COPY_EXE, columnspan=2)
+		GridSeparator(root, self.frame)
+		GridButton(root, self.frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		self.root = root
+
+	def _gen_name(self):
+		'''Generate a name for the image'''
+		if not self.name_str.string.get():
+			self.name_str.string.set(Path(self.source_dir.source_str.get()).name)
+	
+	def _gen_description(self):
+		'''Generate a description for the image'''
+		if not self.descr_str.string.get():
+			descr = TimeStamp.now(no_ms=True)
+			source = self.source_dir.source_str.get()
+			if source:
+				descr += f', {Path(source).name}'
+			self.descr_str.string.set(descr)
+
+	def _error(self):
+		'''Show error for missing entries'''
+		showerror(
+			title = self.root.MISSING_ENTRIES,
+			message = self.root.SOURCED_DEST_REQUIRED
+		)
+
+	def _add_job(self):
+		'''Generate command line'''
+		self.root.settings.section = self.CMD
+		source = self.root.settings.get(self.root.SOURCE)
+		outdir = self.root.settings.get(self.root.OUTDIR)
+		filename = self.root.settings.get(self.root.FILENAME)
+		to_do = self.root.settings.get(self.root.TO_DO)
+		image = self.root.settings.get(self.root.VERIFY_FILE)
+		cmd = self.root.settings.section.lower()
+		if to_do == self.root.VERIFY_FILE:
+			if not image:
+				self._error()
+				return
+			cmd += f' --verify --{self.root.PATH.lower()} {image}'
+			if not filename:
+				filename = image.stem
+			if not outdir and image:
+				outdir = image.parent
+		if not source or not outdir or not filename:
+			self._error()
+			return
+		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
+		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		name = self.root.settings.get(self.root.IMAGE_NAME)
+		if name:
+			cmd += f' --name "{name}"'
+		description = self.root.settings.get(self.root.IMAGE_DESCRIPTION)
+		if description:
+			cmd += f' --description "{description}"'
+		if int(self.root.settings.get(self.root.COPY_EXE)) == 1:
+			cmd += ' --exe'
+		cmd += f' "{source}"'
+		self.root.append_job(cmd)
+
 if __name__ == '__main__':	# start here if called as application
-	app = DismImageCli()
-	app.parse()
-	app.run()
+	if IsUserAnAdmin():
+		app = DismImageCli()
+		app.parse()
+		app.run()
+	else:
+		raise RuntimeError('Admin rights required')

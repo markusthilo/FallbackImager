@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-18'
+__version__ = '0.0.1_2023-05-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -10,10 +10,11 @@ __description__ = 'GUI elements'
 
 from pathlib import Path
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
-from tkinter.ttk import Label, Entry, Radiobutton
+from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askdirectory
 from tkinter.messagebox import showerror
+from .timestamp import TimeStamp
 
 class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
@@ -74,124 +75,155 @@ class RightButton(Button):
 
 class GridButton(Button):
 	'''| | Button | | |'''
-	def __init__(self, root, parent, text, command, row, column=0, columnspan=3):
+	def __init__(self, root, parent, text, command, column=0, columnspan=1):
 		super().__init__(parent, text=text, command=command)
-		self.grid(row=row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		root.row += 1
 
 class GridSeparator:
 	'''|-------|'''
-	def __init__(self, root, parent, row):
-		Separator(parent).grid(row=row, column=0, columnspan=3,
+	def __init__(self, root, parent, column=0, columnspan=3):
+		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD)
+		root.row += 1
 
 class GridLabel:
 	'''| Label |'''
-	def __init__(self, root, parent, text, row, column=0, columnspan=1):
-		Label(parent, text=text).grid(row=row, column=column, columnspan=columnspan,
+	def __init__(self, root, parent, text, column=0, columnspan=1):
+		Label(parent, text=text).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD)
+		root.row += 1
 
 class StringField(Button):
 	'''Button + Entry to enter string'''
-	def __init__(self, root, parent, key, text, command, row):
-		root.settings.init_stringvar(key)
+	def __init__(self, root, parent, key, text, command, column=1):
+		self.string = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=command)
-		self.grid(row=row, column=1, sticky='e', padx=root.PAD)
-		Entry(parent, textvariable=root.settings.raw(key), width=root.ENTRY_WIDTH).grid(
-			row=row, column=2, sticky='w', padx=root.PAD)
+		self.grid(row=root.row, column=column, sticky='e', padx=root.PAD)
+		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, sticky='w', padx=root.PAD)
+		root.row += 1
 
 class StringRadiobuttons:
 	'''| Rabiobutton | | | |'''
-	def __init__(self, root, parent, key, buttons, default):
-		root.settings.init_stringvar(key, default=default)
-		for value, row in buttons:
-			Radiobutton(parent, variable=root.settings.raw(key), value=value).grid(
-				row=row, column=0, sticky='w', padx=root.PAD)
+	def __init__(self, root, parent, key, buttons, default, column=0):
+		self.variable = root.settings.init_stringvar(key, default=default)
+		for row, value in enumerate(buttons):
+			Radiobutton(parent, variable=self.variable, value=value).grid(
+				row=root.row+row, column=column, sticky='w', padx=root.PAD)
+
+class SourceDirSelector(Button):
+	'''Select source'''
+	def __init__(self, root, parent, column=1, columnspan=1):
+		self.source_str = root.settings.init_stringvar(root.SOURCE)
+		
+		GridSeparator(root, parent)
+		GridLabel(root, parent, root.SOURCE, column=column, columnspan=columnspan)
+		super().__init__(parent,
+			text = root.SOURCE,
+			command = lambda: self.source_str.set(askdirectory(title=root.ASK_SOURCE))
+		)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		Entry(parent, textvariable=self.source_str, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+		root.row += 1
+		GridSeparator(root, parent)
+
+class StringSelector(Button):
+	'''String for names, descriptions etc.'''
+	def __init__(self, root, parent, key, text, command=None, column=1, columnspan=1):
+		self.string = root.settings.init_stringvar(key)
+		super().__init__(parent, text=text, command=command)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+		root.row += 1
+
+class Checker(Checkbutton):
+	'''Checkbox'''
+	def __init__(self, root, parent, key, text, column=0, columnspan=1):
+		self.int_var = root.settings.init_stringvar(key)
+		super().__init__(parent, variable=self.int_var)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		GridLabel(root, parent, text, column=column+1, columnspan=columnspan)
 
 class FileSelector(Button):
 	'''Button to select file to read'''
-	def __init__(self, root, parent, key, text, ask, row,
-		filetype=('Text files', '*.txt'),):
-		root.settings.init_stringvar(key)
+	def __init__(self, root, parent, key, text, ask,
+		filetype=('Text files', '*.txt'), column=1, columnspan=1):
+		self.file_str = root.settings.init_stringvar(key)
 		super().__init__(parent,
 			text = text,
-			command = lambda: root.settings.raw(key).set(
+			command = lambda: self.file_str.set(
 				askopenfilename(title=ask, filetypes=(filetype, ('All files', '*.*')))
 			)
 		)
-		self.grid(row=row, column=1, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
-		Entry(parent, textvariable=root.settings.raw(key), width=root.ENTRY_WIDTH).grid(
-			row=row, column=2, sticky='w', padx=root.PAD)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
+		Entry(parent, textvariable=self.file_str, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=2, sticky='w', padx=root.PAD)
+		root.row += 1
 
 class FilenameSelector(Button):
-	'''Button + Entry to enter string'''
-	def __init__(self, root, parent, key, text, ask, row):
-		root.settings.init_stringvar(key)
-		super().__init__(parent, text=text, command=self._askfilename) 
-		self.grid(row=row, column=1, sticky='w', padx=root.PAD)
-		Entry(parent, textvariable=root.settings.raw(key), width=root.ENTRY_WIDTH).grid(
-			row=row, column=2, sticky='w', padx=root.PAD)
-		self.root = root
-		self.key = key
-		self.ask = ask
-	def _askfilename(self):
-		filename = askopenfilename(title=self.ask)
-		if filename:
-			self.root.settings.raw(self.key).set(Path(filename).stem)
+	'''Button + Entry to enter string'''	
+	def __init__(self, root, parent, key, text, default=None, column=1, columnspan=1):
+		self.string = root.settings.init_stringvar(key)
+		self.default = default
+		super().__init__(parent, text=text, command=self._command) 
+		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, sticky='w', padx=root.PAD)
+		root.row += 1
+	def _command(self):
+		if self.string.get():
+			return
+		if self.default:
+			self.string.set(self.default)
+		else:
+			self.string.set(TimeStamp.now(path_comp=True))
 
 class DirSelector(Button):
 	'''Button + Entry to select directory'''
-	def __init__(self, root, parent, key, text, ask, row):
-		root.settings.init_stringvar(key)
+	def __init__(self, root, parent, key, text, ask, column=1, columnspan=1):
+		self.dir_str = root.settings.init_stringvar(key)
 		super().__init__(parent,
 			text = text,
-			command = lambda: root.settings.raw(key).set(
+			command = lambda: self.dir_str.set(
 				askdirectory(
 					title = ask,
 					mustexist = False
 				)
 			)
 		)
-		self.grid(row=row, column=1, sticky='w', padx=root.PAD)
-		Entry(parent, textvariable=root.settings.raw(key), width=root.ENTRY_WIDTH).grid(
-			row=row, column=2, sticky='w', padx=root.PAD)
-
-class Error:
-	@staticmethod
-	def source_dest_required():
-		showerror(
-			title = 'Missing entries',
-			message = 'Source, destination directory and destination filename (without extension) are requiered'
-		)
+		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, sticky='w', padx=root.PAD)
+		root.row += 1
 
 class BasicFilterTab:
 	'''Basic ExpandedNotebook with blacklist and whitelist'''
 
 	def __init__(self, root):
-		'''Notebook page for an imager'''
+		'''Notebook page'''
 		root.settings.init_section(self.CMD)
-		self.frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(self.frame, text=f' {self.CMD} ')
-		GridSeparator(root, self.frame, 0)
-		GridLabel(root, self.frame, root.SOURCE, 1, columnspan=2)
-		DirSelector(root, self.frame, root.SOURCE,
-			root.DIRECTORY, root.SELECT_ROOT, 2)
-		GridSeparator(root, self.frame, 3)
-		GridLabel(root, self.frame, root.DESTINATION, 4, columnspan=2)
-		FilenameSelector(root, self.frame, root.FILENAME, root.FILENAME,
-			root.SELECT_FILENAME, 5)
-		DirSelector(root, self.frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR, 6)
-		GridSeparator(root, self.frame, 7)
-		GridLabel(root, self.frame, root.SKIP_PATH_CHECK, 8, columnspan=3)
-		StringRadiobuttons(root, self.frame, root.PATHFILTER,
-			((f'{None}', 9), (root.BLACKLIST, 10), (root.WHITELIST, 11)), f'{None}')
-		GridLabel(root, self.frame, root.CHECK_ALL_PATHS, 9, column=1, columnspan=2)
-		FileSelector(root, self.frame,
-			root.BLACKLIST, root.BLACKLIST,root.SELECT_BLACKLIST, 10)
-		FileSelector(root, self.frame,
-			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST, 11)
-		GridSeparator(root, self.frame, 12)
-		GridButton(root, self.frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, 13)
+		frame = ExpandedFrame(root, root.notebook)
+		root.notebook.add(frame, text=f' {self.CMD} ')
+		root.row = 0
+		SourceDirSelector(root, frame)
+		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, frame, root.OUTDIR,
+			root.DIRECTORY, root.SELECT_DEST_DIR)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.SKIP_PATH_CHECK, columnspan=3)
+		StringRadiobuttons(root, frame, root.PATHFILTER,
+			(f'{None}', root.BLACKLIST, root.WHITELIST), f'{None}')
+		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=1, columnspan=2)
+		FileSelector(root, frame,
+			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST)
+		FileSelector(root, frame,
+			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST)
+		GridSeparator(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
 		self.root = root
 	
 	def _add_job(self):
@@ -203,22 +235,22 @@ class BasicFilterTab:
 		blacklist = self.root.settings.get(self.root.BLACKLIST)
 		whitelist = self.root.settings.get(self.root.WHITELIST)
 		if not source or not outdir or not filename:
-			Error.source_dest_required()
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.SOURCED_DEST_REQUIRED
+			)
 			return
 		cmd = self.root.settings.section.lower()
-		cmd += f' --{self.root.OUTDIR.lower()} {outdir}'
-		cmd += f' --{self.root.FILENAME.lower()} {filename}'
+		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
+		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
 		path_filter = self.root.settings.get(self.root.PATHFILTER)
 		if path_filter == self.root.BLACKLIST:
 			blacklist = self.root.settings.get(self.root.BLACKLIST)
 			if blacklist:
-				cmd += f' --{self.root.BLACKLIST.lower()} {blacklist}'
+				cmd += f' --{self.root.BLACKLIST.lower()} "{blacklist}"'
 		elif path_filter == self.root.WHITELIST:
 			whitelist = self.root.settings.get(self.root.WHITELIST)
 			if whitelist:
-				cmd += f' --{self.root.WHITELIST.lower()} {whitelist}'
-		cmd += f' {source}'
+				cmd += f' --{self.root.WHITELIST.lower()} "{whitelist}"'
+		cmd += f' "{source}"'
 		self.root.append_job(cmd)
-
-
-
