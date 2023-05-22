@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-20'
+__version__ = '0.0.1_2023-05-22'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -283,7 +283,7 @@ class DismImagerGui:
 		description = self.root.settings.get(self.root.IMAGE_DESCRIPTION)
 		if description:
 			cmd += f' --description "{description}"'
-		if int(self.root.settings.get(self.root.COPY_EXE)) == 1:
+		if self.root.settings.get(self.root.COPY_EXE) == '1':
 			cmd += ' --exe'
 		cmd += f' "{source}"'
 		self.root.append_job(cmd)
