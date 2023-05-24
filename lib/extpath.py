@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-14'
+__version__ = '0.0.1_2023-05-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -42,8 +42,15 @@ class ExtPath:
 		return root.rglob('*')
 
 	@staticmethod
+	def walk_files(root):
+		'''Recursivly give all files in sub-paths as Path and string'''
+		for path in ExtPath.walk(root):
+			if path.is_file():
+				yield path, f'{path.relative_to(root)}'
+
+	@staticmethod
 	def walk_posix(root):
-		'''Recursivly check all sub-paths for files or dirs and give posix'''
+		'''Recursivly find all sub-paths for files or dirs and give posix'''
 		for path in ExtPath.walk(root):
 			posix = f'/{path.relative_to(root).as_posix()}'
 			if path.is_file():

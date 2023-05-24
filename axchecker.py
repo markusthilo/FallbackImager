@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-23'
+__version__ = '0.0.1_2023-05-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,73 +11,32 @@ __description__ = '''
 Verify AXIOM case files
 '''
 
-from pathlib import Path
+from pathlib import Path, PurePath
 from argparse import ArgumentParser
-from sqlite3 import connect as SqliteConnect
 from re import compile as regcompile
 from tkinter.messagebox import showerror
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.greplists import GrepLists
+from lib.mfdbreader import MfdbReader
 from lib.guielements import SourceDirSelector, Checker
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton
 
-class SQLiteReader:
-	'''Read SQLite files'''
-
-	def __init__(self, sqlite_path):
-		'Open database'
-		self.db = SqliteConnect(sqlite_path)
-		self.cursor = self.db.cursor()
-		
-	def fetch_table(self, table, fields=None , where=None):
-		'''Fetch one table completely'''
-		cmd = 'SELECT '
-		if fields:
-			if isinstance(fields, str):
-				cmd += f'"{fields}"'
-			else:
-				cmd += ', '.join(f'"{field}"' for field in fields)
-		else:
-			sql_cmd += '*'
-		cmd += f' FROM "{table}"'
-		if where:
-			cmd += f' WHERE "{where[0]}"='
-			cmd += f"'{where[1]}'"
-		for row in self.cursor.execute(f'{cmd};'):
-			yield row
-
-	def close(self):
-		'Close SQLite database'
-		self.db.close()
 
 class AxChecker:
 	'''Compare AXIOM case file / SQlite data base with paths'''
 
-	def __init__(self, mfdb, diff,
+	def __init__(self, mfdb,
 			filename = None,
 			outdir = None,
-			difftype = 'none',
-			drop = GrepLists.false,
 			log = None,
 			echo = print
 		):
 		'''Definitions'''
 		self.mfdb_path = Path(mfdb)
-		self.diff_path = Path(diff)
-		self.diff_type = None
-		if self.diff_path.is_file():
-			if pathtype == 'plain':
-				self.diff_type = 'Plain text'
-			elif difftype == 'tsv':
-				self.diff_type = 'TSV'
-		elif self.diff_path.is_dir and difftype == 'plain':
-			self.diff_type = 'File system'
-		if not self.diff_type:
-			raise NotImplementedError(f'{path} with {difftype}')
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
@@ -85,98 +44,144 @@ class AxChecker:
 			self.log = log
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
-				head=f'axchecker.AxChecker, diff tipe: {self.diff_type}', echo=echo)
+				head='axchecker.AxChecker', echo=echo)
 
-	def run(self):
-		'''Compare content if image to source'''
+	def open_tsv(self, type_str):
+		'''Open file handlers for one TSV file per partition'''
+		reg = regcompile(' (\([^\)]*\) )|([ *.;:#"/\\\])')
+		return {partition:
+			ExtPath.child(
+				f'{self.filename}_{type_str}_{reg.sub("_", partition)}.txt',
+				parent = self.outdir
+			).open('w') for partition in self.partitions.values()
+		}
+
+	def write_tsv(self, source_ids, fh_dict):
+		'''Write TSV file by given iterable source_ids'''
+		for source_id in source_ids:
+			print(
+				f'{source_id}\t{self.id_with_partition[source_id]}\t{self.short_paths[source_id]}',
+				file = fh_dict[self.id_with_partition[source_id]]
+			)
+
+	def close_tsv(self, fh_dict):
+		'''Close file handlers in dict (values)'''
+		for fh in fh_dict.values():
+			fh.close()
+
+	def check_mfdb(self):
+		'''Load content AXIOM case data base'''
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
+		db = MfdbReader(self.mfdb_path)
+		'''
 		db = SQLiteReader(self.mfdb_path)
-		source_evidence = {source_id: source_evidence_number
-			for source_id, source_evidence_number in db.fetch_table(
-				'source_evidence',
-				fields = ('source_id', 'source_evidence_number')
+		self.paths = {source_id: source_path
+			for source_id, source_path in db.fetch_table('source_path',
+				fields = ('source_id', 'source_path')
 			)
 		}
-		source_partitions = dict()
-		ids_to_drop = set()
-		reg_evidence = regcompile('\.[^.]*$')
-		reg_partition = regcompile(' ([0-9]+) ')
-		for source_id, root_source_id, source_friendly_value in db.fetch_table(
-				'source',
-				fields = ('source_id', 'root_source_id', 'source_friendly_value'),
+		self.images = {source_id: self.paths[source_id]
+			for source_id in db.fetch_table('source',
+				fields = 'source_id',
+				where = ('source_type', 'Image')
+			)
+		}
+		self.partitions = {source_id: self.paths[source_id]
+			for source_id in db.fetch_table('source',
+				fields = 'source_id',
 				where = ('source_type', 'Partition')
-			):
-			evidence = reg_evidence.sub('', source_evidence[root_source_id], 1)
-			match = reg_partition.search(source_friendly_value)
-			if match:
-				partition = match.groups()[0]
-				print('match:', match)
-			else:
-				partition = ''
-			print(source_id, source_evidence[root_source_id], root_source_id, source_friendly_value)
-			print(f'>{evidence} - {partition}<')
-		#root_source_id: source_friendly_value
-		
-		
-		
-		
-		
-		
-		#for source_id, source_path in db.fetch_table('source_path',
-		#	fields=('source_id', 'source_path')):
-		#	print(source_id, source_path)
-		#	if source_path.startswith(
-
-		#hit_location_sources = {row[0]
-		#	for row in db.fetch_table('hit_location', fields='source_id')}
-
-
-		#print(source_evidence)
-		#print(source_partitions)
-		#print(source_paths)
-		#print(hit_location_sources)
-		'''
-		image = set()
-		with ExtPath.child(f'{self.filename}_content.txt',
-			parent=self.outdir).open(mode='w') as fh:
-			for line in proc.readlines_stdout():
-				if line and line[0] == '\\':
-					print(line, file=fh)
-					image.add(line.strip('\\'))
-		if len(image) > 0:
-			self.log.finished(proc, echo=True)
+			)
+		}
+		self.files = {source_id: self.paths[source_id]
+			for source_id in db.fetch_table('source',
+				fields = 'source_id',
+				where = ('source_type', 'File')
+			)
+		}
+		self.folders = {source_id: self.paths[source_id]
+			for source_id in db.fetch_table('source',
+				fields = 'source_id',
+				where = ('source_type', 'Folder')
+			)
+		}
+		self.hits = {source_id: self.paths[source_id]
+			for source_id in db.fetch_table('hit_location',
+				fields = 'source_id'
+			)
+		}
+		self.log.info(f'Closing file handler for {self.mfdb_path.name}', echo=True)
+		db.close()
+		self.file_ids = set(self.files)
+		self.folder_ids = set(self.folders)
+		self.hit_ids = set(self.hits)
+		self.id_with_partition = dict()
+		self.short_paths = dict()
+		self.ignored_file_ids = self.file_ids-self.hit_ids
+		for part_path in self.partitions.values():
+			part_len = len(part_path)
+			for source_id, path in self.paths.items():
+				if path.startswith(part_path):
+					self.id_with_partition[source_id] = part_path
+					self.short_paths[source_id] = path[part_len:]
+		fh_dict = self.open_tsv('Files')
+		self.write_tsv(self.file_ids, fh_dict)
+		self.close_tsv(fh_dict)
+		fh_dict = self.open_tsv('Folders')
+		self.write_tsv(self.folder_ids, fh_dict)
+		self.close_tsv(fh_dict)
+		if self.ignored_file_ids:
+			self.log.info('All falle paths represented in hits/artifacts', echo=True)
 		else:
-			self.log.finished(proc, error=': No or empty image\n')
-		missing_file_cnt = 0
-		missing_dir_cnt = 0
-		missing_else_cnt = 0
-		with ExtPath.child(f'{self.filename}_missing.txt',
-			parent=self.outdir).open(mode='w') as fh:
-			for path in ExtPath.walk(self.root_path):
-				short = str(path.relative_to(self.root_path)).strip("\\")
-				if short in image:
-					continue
-				if path.is_file():
-					print(f'', file=fh)
-					missing_file_cnt += 1
-				elif path.is_dir():
-					print(f'', file=fh)
-					missing_dir_cnt += 1
-				else:
-					print(f'', file=fh)
-					missing_else_cnt += 1
-		missing_all_cnt = missing_file_cnt + missing_dir_cnt + missing_else_cnt
-		msg = 'Verification:'
-		if missing_all_cnt == 0:
-			msg += f' no missing files or directories in {self.image_path.name}'
-			self.log.info(msg, echo=True)
+			fh_dict = self.open_tsv('Ignored')
+			self.write(self.ignored_file_ids, fh_dict)
+			self.close_tsv(fh_dict)
+			self.log.warning('Ignored file paths that are not in hits/artifacts')
+
+		
+		
+		self.file_ids = set(self.files)
+		self.folder_ids = set(self.folders)
+		self.hit_ids = set(self.hits)
+		self.id_with_partition = dict()
+		self.short_paths = dict()
+		self.ignored_file_ids = self.file_ids-self.hit_ids
+		for part_path in self.partitions.values():
+			part_len = len(part_path)
+			for source_id, path in self.paths.items():
+				if path.startswith(part_path):
+					self.id_with_partition[source_id] = part_path
+					self.short_paths[source_id] = path[part_len:]
+		fh_dict = self.open_tsv('Files')
+		self.write_tsv(self.file_ids, fh_dict)
+		self.close_tsv(fh_dict)
+		fh_dict = self.open_tsv('Folders')
+		self.write_tsv(self.folder_ids, fh_dict)
+		self.close_tsv(fh_dict)
+		if self.ignored_file_ids:
+			self.log.info('All falle paths represented in hits/artifacts', echo=True)
 		else:
-			msg += f'\nMissing content {missing_all_cnt} / {missing_file_cnt}'
-			msg += f' / {missing_dir_cnt} / {missing_else_cnt}'
-			msg += ' (all/files/dirs/other)\n'
-			msg += f'Check {self.filename}_missing.txt if relevant content is missing!'
-			self.log.warning(msg)
+			fh_dict = self.open_tsv('Ignored')
+			self.write(self.ignored_file_ids, fh_dict)
+			self.close_tsv(fh_dict)
+			self.log.warning('Ignored file paths that are not in hits/artifacts')
 		'''
+
+	def diff_mfdb(self, diff, diff_type, drop = GrepLists.false):
+		'''Compare Axiom Case'''
+		diff_path = Path(diff)
+		if diff_path.is_dir():
+			if diff_type != 'fs':
+				raise ValueError('A source file system is required for option >fs<')
+
+			for path, file_str in ExtPath.walk_files(diff_path):
+				print(path, file_str)
+			
+			
+			
+		elif diff_type == 'tsv':
+			print('TSV diff to come...')
+		else:
+			raise NotImplementedError(f'Unknown option >{diff_type}<')
 
 class AxCheckerCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -187,7 +192,7 @@ class AxCheckerCli(ArgumentParser):
 		self.add_argument('-b', '--blacklist', type=Path,
 			help='Blacklist (textfile with one regex per line)', metavar='FILE'
 		)
-		self.add_argument('-d', '--diff', type=Path, required=True,
+		self.add_argument('-d', '--diff', type=Path,
 			help='Path to file or directory to compare with', metavar='FILE|DIRECTORY'
 		)
 		self.add_argument('-f', '--filename', type=str,
@@ -196,9 +201,10 @@ class AxCheckerCli(ArgumentParser):
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated missing files', metavar='DIRECTORY'
 		)
-		self.add_argument('-t', '--difftype', type=str, default='plain',
-			choices=['plain', 'tsv'],
-			help='Type of comparison method or type of path to compare', metavar='STRING'
+		
+		self.add_argument('-t', '--difftype', type=str, default='fs',
+			choices=['fs', 'tsv'],
+			help='How to compare, default is >fs< for file structure', metavar='STRING'
 		)
 		self.add_argument('-w', '--whitelist', type=Path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
@@ -220,18 +226,26 @@ class AxCheckerCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run AxChecker'''
-		drop = GrepLists(
+		axchecker = AxChecker(self.mfdb,
+			filename = self.filename,
+			outdir = self.outdir,
+			echo = echo,
+		)
+		axchecker.check_mfdb()
+		if self.diff:
+			drop = GrepLists(
 			blacklist = self.blacklist,
 			whitelist = self.whitelist, 
 			echo = echo
-		).get_method()
-		AxChecker(self.mfdb, self.diff,
-			filename = self.filename,
-			outdir = self.outdir,
-			difftype = self.difftype,
-			drop = drop,
-			echo = echo,
-		).run()
+			).get_method()
+			axchecker.diff_mfdb(self.diff, self.difftype,
+				drop = GrepLists(
+					blacklist = self.blacklist,
+					whitelist = self.whitelist, 
+					echo = echo
+				).get_method()
+			)
+		axchecker.log.close()
 
 class AxCheckerGui:
 	'''Notebook page'''
