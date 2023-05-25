@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-24'
+__version__ = '0.0.1_2023-05-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,7 +13,6 @@ Verify AXIOM case files
 
 from pathlib import Path, PurePath
 from argparse import ArgumentParser
-from re import compile as regcompile
 from tkinter.messagebox import showerror
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
@@ -24,7 +23,6 @@ from lib.guielements import SourceDirSelector, Checker
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton
-
 
 class AxChecker:
 	'''Compare AXIOM case file / SQlite data base with paths'''
@@ -40,141 +38,73 @@ class AxChecker:
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(filename=self.filename, outdir=self.outdir, 
-				head='axchecker.AxChecker', echo=echo)
+		self.log = log
+		self.mfdb = MfdbReader(self.mfdb_path)
 
-	def open_tsv(self, type_str):
-		'''Open file handlers for one TSV file per partition'''
-		reg = regcompile(' (\([^\)]*\) )|([ *.;:#"/\\\])')
-		return {partition:
-			ExtPath.child(
-				f'{self.filename}_{type_str}_{reg.sub("_", partition)}.txt',
-				parent = self.outdir
-			).open('w') for partition in self.partitions.values()
-		}
+	def list_mfdb(self):
+		'''List the images and partitions'''
+		for partition in self.mfdb.get_partitions():
+			self.echo(partition[1])
 
-	def write_tsv(self, source_ids, fh_dict):
+	def write_tsv_files(self, source_ids, type_str):
 		'''Write TSV file by given iterable source_ids'''
+		fh_dict = {source_id:
+			ExtPath.child(
+				f'{self.filename}_{type_str}_{partition}.txt',
+				parent = self.outdir
+			).open('w') for source_id, partition in self.mfdb.get_partition_fnames()
+		}
 		for source_id in source_ids:
-			print(
-				f'{source_id}\t{self.id_with_partition[source_id]}\t{self.short_paths[source_id]}',
-				file = fh_dict[self.id_with_partition[source_id]]
+			print(f'{self.mfdb.short_paths[source_id][1]}',
+				file = fh_dict[self.mfdb.short_paths[source_id][0]]
 			)
-
-	def close_tsv(self, fh_dict):
-		'''Close file handlers in dict (values)'''
 		for fh in fh_dict.values():
 			fh.close()
 
 	def check_mfdb(self):
 		'''Load content AXIOM case data base'''
-		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
-		db = MfdbReader(self.mfdb_path)
-		'''
-		db = SQLiteReader(self.mfdb_path)
-		self.paths = {source_id: source_path
-			for source_id, source_path in db.fetch_table('source_path',
-				fields = ('source_id', 'source_path')
-			)
-		}
-		self.images = {source_id: self.paths[source_id]
-			for source_id in db.fetch_table('source',
-				fields = 'source_id',
-				where = ('source_type', 'Image')
-			)
-		}
-		self.partitions = {source_id: self.paths[source_id]
-			for source_id in db.fetch_table('source',
-				fields = 'source_id',
-				where = ('source_type', 'Partition')
-			)
-		}
-		self.files = {source_id: self.paths[source_id]
-			for source_id in db.fetch_table('source',
-				fields = 'source_id',
-				where = ('source_type', 'File')
-			)
-		}
-		self.folders = {source_id: self.paths[source_id]
-			for source_id in db.fetch_table('source',
-				fields = 'source_id',
-				where = ('source_type', 'Folder')
-			)
-		}
-		self.hits = {source_id: self.paths[source_id]
-			for source_id in db.fetch_table('hit_location',
-				fields = 'source_id'
-			)
-		}
-		self.log.info(f'Closing file handler for {self.mfdb_path.name}', echo=True)
-		db.close()
-		self.file_ids = set(self.files)
-		self.folder_ids = set(self.folders)
-		self.hit_ids = set(self.hits)
-		self.id_with_partition = dict()
-		self.short_paths = dict()
-		self.ignored_file_ids = self.file_ids-self.hit_ids
-		for part_path in self.partitions.values():
-			part_len = len(part_path)
-			for source_id, path in self.paths.items():
-				if path.startswith(part_path):
-					self.id_with_partition[source_id] = part_path
-					self.short_paths[source_id] = path[part_len:]
-		fh_dict = self.open_tsv('Files')
-		self.write_tsv(self.file_ids, fh_dict)
-		self.close_tsv(fh_dict)
-		fh_dict = self.open_tsv('Folders')
-		self.write_tsv(self.folder_ids, fh_dict)
-		self.close_tsv(fh_dict)
-		if self.ignored_file_ids:
-			self.log.info('All falle paths represented in hits/artifacts', echo=True)
+		if not self.log:
+			self.log = Logger(filename=self.filename, outdir=self.outdir, 
+				head='axchecker.AxChecker', echo=self.echo)
+		self.log.info(f'Reading paths from {self.mfdb_path.name} and writing text files', echo=True)
+		self.mfdb.fetch_paths()
+		self.write_tsv_files(self.mfdb.file_ids, 'Files')
+		self.write_tsv_files(self.mfdb.folder_ids, 'Folders')
+		if self.mfdb.ignored_file_ids:
+			self.log.info('All file paths are represented in hits/artifacts', echo=True)
 		else:
-			fh_dict = self.open_tsv('Ignored')
-			self.write(self.ignored_file_ids, fh_dict)
-			self.close_tsv(fh_dict)
-			self.log.warning('Ignored file paths that are not in hits/artifacts')
+			self.write_tsv_files(self.mfdb.ignored_file_ids, 'Ignored')
+			self.log.warning('Found ignored file paths that are not in hits/artifacts')
 
-		
-		
-		self.file_ids = set(self.files)
-		self.folder_ids = set(self.folders)
-		self.hit_ids = set(self.hits)
-		self.id_with_partition = dict()
-		self.short_paths = dict()
-		self.ignored_file_ids = self.file_ids-self.hit_ids
-		for part_path in self.partitions.values():
-			part_len = len(part_path)
-			for source_id, path in self.paths.items():
-				if path.startswith(part_path):
-					self.id_with_partition[source_id] = part_path
-					self.short_paths[source_id] = path[part_len:]
-		fh_dict = self.open_tsv('Files')
-		self.write_tsv(self.file_ids, fh_dict)
-		self.close_tsv(fh_dict)
-		fh_dict = self.open_tsv('Folders')
-		self.write_tsv(self.folder_ids, fh_dict)
-		self.close_tsv(fh_dict)
-		if self.ignored_file_ids:
-			self.log.info('All falle paths represented in hits/artifacts', echo=True)
-		else:
-			fh_dict = self.open_tsv('Ignored')
-			self.write(self.ignored_file_ids, fh_dict)
-			self.close_tsv(fh_dict)
-			self.log.warning('Ignored file paths that are not in hits/artifacts')
-		'''
-
-	def diff_mfdb(self, diff, diff_type, drop = GrepLists.false):
+	def diff_mfdb(self, diff, diff_type, partition=None, drop=GrepLists.false):
 		'''Compare Axiom Case'''
 		diff_path = Path(diff)
 		if diff_path.is_dir():
 			if diff_type != 'fs':
 				raise ValueError('A source file system is required for option >fs<')
+			if len(self.mfdb.partitions) > 1:
+				if not self.partition:
+					raise ValueError('Partition (with imgae) is reqired')
+				for part_id, partition in self.mfdb.get_partitions():
+					if partition == self.partiton:
+						break
+			else:
+				part_id = list(self.mfdb.partitions)[0]
+			normalized_file_paths = {self.mfdb.normalized_path(source_id): source_id
+				for source_id in self.mfdb.file_ids
+				if self.mfdb.short_paths[source_id][0] == part_id
+			}
+			print(normalized_file_paths)
+			for norm_path in ExtPath.walk_normalized_files(diff_path):
+				if norm_path in normalized_file_paths:
+					source_id = normalized_file_paths[norm_path]
+					print('in files', self.mfdb.short_paths[source_id])
+					#if source_id in 
+					
+					
+				#else:
+				
 
-			for path, file_str in ExtPath.walk_files(diff_path):
-				print(path, file_str)
 			
 			
 			
@@ -198,10 +128,15 @@ class AxCheckerCli(ArgumentParser):
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
+		self.add_argument('-l', '--list', default=False, action='store_true',
+			help='List images and partitions (ignores all other arguments)'
+		)
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated missing files', metavar='DIRECTORY'
 		)
-		
+		self.add_argument('-p', '--partition', type=str,
+			help='Image and partiton to compare (--diff DIRECTORY)', metavar='STRING'
+		)
 		self.add_argument('-t', '--difftype', type=str, default='fs',
 			choices=['fs', 'tsv'],
 			help='How to compare, default is >fs< for file structure', metavar='STRING'
@@ -220,7 +155,9 @@ class AxCheckerCli(ArgumentParser):
 		self.blacklist = args.blacklist
 		self.diff = args.diff
 		self.filename = args.filename
+		self.list = args.list
 		self.outdir = args.outdir
+		self.partition = args.partition
 		self.difftype = args.difftype
 		self.whitelist = args.whitelist
 
@@ -231,14 +168,13 @@ class AxCheckerCli(ArgumentParser):
 			outdir = self.outdir,
 			echo = echo,
 		)
+		if self.list:
+			axchecker.list_mfdb()
+			return
 		axchecker.check_mfdb()
 		if self.diff:
-			drop = GrepLists(
-			blacklist = self.blacklist,
-			whitelist = self.whitelist, 
-			echo = echo
-			).get_method()
 			axchecker.diff_mfdb(self.diff, self.difftype,
+				partition = self.partition,
 				drop = GrepLists(
 					blacklist = self.blacklist,
 					whitelist = self.whitelist, 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-24'
+__version__ = '0.0.1_2023-05-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -42,11 +42,11 @@ class ExtPath:
 		return root.rglob('*')
 
 	@staticmethod
-	def walk_files(root):
+	def walk_normalized_files(root):
 		'''Recursivly give all files in sub-paths as Path and string'''
 		for path in ExtPath.walk(root):
 			if path.is_file():
-				yield path, f'{path.relative_to(root)}'
+				yield f'{path.relative_to(root)}'.replace('\\', '/').strip('/')
 
 	@staticmethod
 	def walk_posix(root):

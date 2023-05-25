@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-24'
+__version__ = '0.0.1_2023-05-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Read AXIOM case files'
 
 from sqlite3 import connect as SqliteConnect
+from re import compile as re_compile
 
 class SQLiteReader:
 	'''Read SQLite files'''
@@ -58,40 +59,47 @@ class MfdbReader(SQLiteReader):
 				where = ('source_type', 'Partition')
 			)
 		}
+		self.re_filename = re_compile(' (\([^\)]*\) )|([ *.;:#"/\\\])')
 
-	def fetchall(self):
+	def fetch_paths(self):
 		'''Read all needed data from case file'''
 		self.paths = {source_id: source_path
 			for source_id, source_path in self.fetch_table('source_path',
 				fields = ('source_id', 'source_path')
 			)
 		}
-		self.files = {source_id: self.paths[source_id]
-			for source_id in self.fetch_table('source',
+		self.short_paths = dict()
+		for partition_id, partition in self.get_partitions():
+			part_len = len(partition)
+			for source_id, path in self.paths.items():
+				if len(path) > part_len and path[:part_len] == partition:
+					self.short_paths[source_id] = (partition_id, path[part_len:])
+		self.file_ids = {source_id for source_id in self.fetch_table('source',
 				fields = 'source_id',
 				where = ('source_type', 'File')
 			)
 		}
-		self.folders = {source_id: self.paths[source_id]
-			for source_id in self.fetch_table('source',
+		self.folder_ids = {source_id for source_id in self.fetch_table('source',
 				fields = 'source_id',
 				where = ('source_type', 'Folder')
 			)
 		}
-		self.hits = {source_id: self.paths[source_id]
-			for source_id in self.fetch_table('hit_location',
+		self.hit_ids = {source_id for source_id in self.fetch_table('hit_location',
 				fields = 'source_id'
 			)
 		}
-		self.file_ids = set(self.files)
-		self.folder_ids = set(self.folders)
-		self.hit_ids = set(self.hits)
-		self.id_with_partition = dict()
-		self.short_paths = dict()
 		self.ignored_file_ids = self.file_ids-self.hit_ids
-		for part_path in self.partitions.values():
-			part_len = len(part_path)
-			for source_id, path in self.paths.items():
-				if path.startswith(part_path):
-					self.id_with_partition[source_id] = part_path
-					self.short_paths[source_id] = path[part_len:]
+
+	def get_partitions(self):
+		'''One string for each partition'''
+		for source_id, (image, partition) in self.partitions.items():
+			yield source_id, f'{image} - {partition}'
+
+	def get_partition_fnames(self):
+		'''One string that would work as file name for each partition'''
+		for source_id, partition in self.get_partitions():
+			yield source_id, self.re_filename.sub('_', partition)
+
+	def normalized_path(self, source_id):
+		'''Return a normalized path'''
+		return self.short_paths[source_id][1].replace('\\', '/').strip('/')
