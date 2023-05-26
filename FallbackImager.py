@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-20'
+__version__ = '0.0.1_2023-05-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -19,6 +19,7 @@ from lib.guibase import GuiBase
 from oscdimager import OscdimgGui, OscdimgCli
 from pycdlibimager import PyCdlibGui, PyCdlibCli
 from dismimager import DismImagerGui, DismImagerCli
+from axchecker import AxCheckerGui, AxCheckerCli
 
 ### MODULES ###
 if __os_name__ == 'nt':
@@ -27,12 +28,14 @@ if __os_name__ == 'nt':
 		__modules__ = {
 			OscdimgGui: OscdimgCli,
 			PyCdlibGui: PyCdlibCli,
-			DismImagerGui: DismImagerCli
+			DismImagerGui: DismImagerCli,
+			AxCheckerGui: AxCheckerCli
 		}
 	else:
 		__modules__ = {
 			OscdimgGui: OscdimgCli,
-			PyCdlibGui: PyCdlibCli
+			PyCdlibGui: PyCdlibCli,
+			AxCheckerGui: AxCheckerCli
 		}
 ###############
 
@@ -94,6 +97,15 @@ class Gui(GuiBase):
 	UNDETECTED = 'Could not detect what to do.\n'
 	MISSING_ENTRIES = 'Missing entries'
 	SOURCED_DEST_REQUIRED = 'Source and destination are required'
+	AXIOM = 'AXIOM'
+	CASE_FILE = 'Case File'
+	AXIOM_CASE_FILE = 'Case.mfdb'
+	OPEN_CASE_FILE = 'Open case file'
+	PARTITION = 'Partition'
+	DO_NOT_COMPARE = 'Do not compare'
+	COMPARE_TO = 'Compare to'
+	FILE_STRUCTURE = 'File structure'
+	ASK_FILE_STRUCTURE = 'Select root of file structure'
 
 	def __init__(self):
 		'''Build GUI'''

@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-25'
+__version__ = '0.0.1_2023-05-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = 'Add some methods to pathlib´s Path Class'
 
-from pathlib import Path, PurePosixPath
+from pathlib import Path, WindowsPath
 from platform import system
 
 class ExtPath:
@@ -44,9 +44,14 @@ class ExtPath:
 	@staticmethod
 	def walk_normalized_files(root):
 		'''Recursivly give all files in sub-paths as Path and string'''
+		if isinstance(root, WindowsPath):
+			slash = '\\'
+		else:
+			slash = '/'
 		for path in ExtPath.walk(root):
 			if path.is_file():
-				yield f'{path.relative_to(root)}'.replace('\\', '/').strip('/')
+				relative = f'{path.relative_to(root)}'
+				yield slash+relative, relative.replace('\\', '/').strip('/')
 
 	@staticmethod
 	def walk_posix(root):
