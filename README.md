@@ -1,13 +1,18 @@
 # FallbackImager
 
-Imager for forensic work as complement and fallback to the commercial tools..
+Imager for forensic work as complement and fallback to the commercial tools.
 
 In this testing state only Windows is supported.
 
-This is work in progress. Generating images in WMI and ISO format is the first step.
+This is work in progress. Already working:
 
+Imaging as ISO (+verify)
 
-Already working:
+Imaging as WIM
+
+Checking AXIOM case files
+
+### Additional tool:
 
 ## WimMount
 
