@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-18'
+__version__ = '0.0.2_2023-05-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,6 +18,9 @@ from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
 from lib.fsreader import FsReader
+from lib.guielements import ExpandedFrame, SourceDirSelector, GridSeparator, GridLabel
+from lib.guielements import FilenameSelector, DirSelector, FileSelector
+from lib.guielements import StringRadiobuttons, GridButton
 
 class IsoReader(PyCdlib):
 	'''Use PyCdlib to get UDF from ISO'''
@@ -55,6 +59,7 @@ class CompareIsoFs:
 		echo(f'Reading UDF from {self.image_path}')
 		self.image = IsoReader(self.image_path)
 		self.image_posix = self.image.get_udf()
+		self.image.close()
 		echo('Comparing file paths')
 		self.delta_posix = list(set(self.source_posix)-set(self.image_posix))
 		self.delta_posix.sort()
@@ -175,6 +180,70 @@ class IsoVerifyCli(ArgumentParser):
 		)
 		image.posix_verify()
 		image.log.close()
+
+class IsoVerifyGui:
+	'''Notebook page'''
+	CMD = __app_name__
+	DESCRIPTION = __description__
+
+	def __init__(self, root):
+		'''Notebook page'''
+		root.settings.init_section(self.CMD)
+		frame = ExpandedFrame(root, root.notebook)
+		root.notebook.add(frame, text=f' {self.CMD} ')
+		root.row = 0
+		SourceDirSelector(root, frame)
+		GridLabel(root, frame, root.ISO_IMAGE, columnspan=2)
+		FileSelector(root, frame,
+			root.IMAGE, root.IMAGE, root.SELECT_IMAGE, filetype=('ISO files', '*.iso'))
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, frame, root.OUTDIR,
+			root.DIRECTORY, root.SELECT_DEST_DIR)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.SKIP_PATH_CHECK, columnspan=3)
+		StringRadiobuttons(root, frame, root.PATHFILTER,
+			(f'{None}', root.BLACKLIST, root.WHITELIST), f'{None}')
+		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=1, columnspan=2)
+		FileSelector(root, frame,
+			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST)
+		FileSelector(root, frame,
+			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST)
+		GridSeparator(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		self.root = root
+	
+	def _add_job(self):
+		'''Generate command line'''
+		self.root.settings.section = self.CMD
+		source = self.root.settings.get(self.root.SOURCE)
+		image = self.root.settings.get(self.root.IMAGE)
+		outdir = self.root.settings.get(self.root.OUTDIR)
+		filename = self.root.settings.get(self.root.FILENAME)
+		blacklist = self.root.settings.get(self.root.BLACKLIST)
+		whitelist = self.root.settings.get(self.root.WHITELIST)
+		if not source or not image or not outdir or not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.SOURCED_DEST_REQUIRED
+			)
+			return
+		cmd = self.root.settings.section.lower()
+		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
+		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		cmd += f' --imagepath "{image}"'
+		path_filter = self.root.settings.get(self.root.PATHFILTER)
+		if path_filter == self.root.BLACKLIST:
+			blacklist = self.root.settings.get(self.root.BLACKLIST)
+			if blacklist:
+				cmd += f' --{self.root.BLACKLIST.lower()} "{blacklist}"'
+		elif path_filter == self.root.WHITELIST:
+			whitelist = self.root.settings.get(self.root.WHITELIST)
+			if whitelist:
+				cmd += f' --{self.root.WHITELIST.lower()} "{whitelist}"'
+		cmd += f' "{source}"'
+		self.root.append_job(cmd)
 
 if __name__ == '__main__':	# start here if called as application
 	app = IsoVerifyCli()

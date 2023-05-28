@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-20'
-__license__ = 'GPL-3'
-__email__ = 'markus.thilo@gmail.com'
-__status__ = 'Testing'
-__description__ = 'GUI elements'
-
 from pathlib import Path
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
 from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton
@@ -119,15 +112,17 @@ class SourceDirSelector(Button):
 		
 		GridSeparator(root, parent)
 		GridLabel(root, parent, root.SOURCE, column=column, columnspan=columnspan)
-		super().__init__(parent,
-			text = root.SOURCE,
-			command = lambda: self.source_str.set(askdirectory(title=root.ASK_SOURCE))
-		)
+		super().__init__(parent, text=root.SOURCE, command=self._select)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.source_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 		GridSeparator(root, parent)
+		self.root = root
+	def _select(self):
+		new_dir = askdirectory(title=self.root.ASK_SOURCE)
+		if new_dir:
+			self.source_str.set(new_dir)
 
 class StringSelector(Button):
 	'''String for names, descriptions etc.'''
@@ -150,18 +145,22 @@ class Checker(Checkbutton):
 class FileSelector(Button):
 	'''Button to select file to read'''
 	def __init__(self, root, parent, key, text, ask,
-		filetype=('Text files', '*.txt'), column=1, columnspan=1):
+		filetype=('Text files', '*.txt'), default=None, column=1, columnspan=1):
 		self.file_str = root.settings.init_stringvar(key)
-		super().__init__(parent,
-			text = text,
-			command = lambda: self.file_str.set(
-				askopenfilename(title=ask, filetypes=(filetype, ('All files', '*.*')))
-			)
-		)
+		if default:
+			self.file_str.set(default)
+		super().__init__(parent, text=text, command=self._select)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
 		Entry(parent, textvariable=self.file_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=2, sticky='w', padx=root.PAD)
 		root.row += 1
+		self.root = root
+		self.ask = ask
+		self.filetype = filetype
+	def _select(self):
+		new_filename = askopenfilename(title=self.ask, filetypes=(self.filetype, ('All files', '*.*')))
+		if new_filename:
+			self.file_str.set(new_filename)
 
 class FilenameSelector(Button):
 	'''Button + Entry to enter string'''	
@@ -185,19 +184,53 @@ class DirSelector(Button):
 	'''Button + Entry to select directory'''
 	def __init__(self, root, parent, key, text, ask, column=1, columnspan=1):
 		self.dir_str = root.settings.init_stringvar(key)
-		super().__init__(parent,
-			text = text,
-			command = lambda: self.dir_str.set(
-				askdirectory(
-					title = ask,
-					mustexist = False
-				)
-			)
-		)
+		super().__init__(parent, text=text, command=self._select)
 		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, sticky='w', padx=root.PAD)
 		root.row += 1
+		self.root = root
+		self.ask = ask
+	def _select(self):
+		new_dir = askdirectory(title=self.ask, mustexist=False)
+		if new_dir:
+			self.dir_str.set(new_dir)
+
+class BasicTab:
+	'''Basic ExpandedNotebook'''
+
+	def __init__(self, root):
+		'''Notebook page'''
+		root.settings.init_section(self.CMD)
+		frame = ExpandedFrame(root, root.notebook)
+		root.notebook.add(frame, text=f' {self.CMD} ')
+		root.row = 0
+		SourceDirSelector(root, frame)
+		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, frame, root.OUTDIR,
+			root.DIRECTORY, root.SELECT_DEST_DIR)
+		GridSeparator(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		self.root = root
+	
+	def _add_job(self):
+		'''Generate command line'''
+		self.root.settings.section = self.CMD
+		source = self.root.settings.get(self.root.SOURCE)
+		outdir = self.root.settings.get(self.root.OUTDIR)
+		filename = self.root.settings.get(self.root.FILENAME)
+		if not source or not outdir or not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.SOURCED_DEST_REQUIRED
+			)
+			return
+		cmd = self.root.settings.section.lower()
+		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
+		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		cmd += f' "{source}"'
+		self.root.append_job(cmd)
 
 class BasicFilterTab:
 	'''Basic ExpandedNotebook with blacklist and whitelist'''

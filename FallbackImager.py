@@ -3,21 +3,22 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-26'
+__version__ = '0.0.2_2023-05-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Imager for different formats as a fallback when the usual tools do not work
+Imager for different formats as a fallback when the usual tools let you down
 '''
 
 from pathlib import Path
 from sys import executable as __executable__
 from os import name as __os_name__
+from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
 from oscdimager import OscdimgGui, OscdimgCli
-from pycdlibimager import PyCdlibGui, PyCdlibCli
+from isoverify import IsoVerifyGui, IsoVerifyCli
 from dismimager import DismImagerGui, DismImagerCli
 from axchecker import AxCheckerGui, AxCheckerCli
 
@@ -27,16 +28,18 @@ if __os_name__ == 'nt':
 	if IsUserAnAdmin():
 		__modules__ = {
 			OscdimgGui: OscdimgCli,
-			PyCdlibGui: PyCdlibCli,
+			IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
 			AxCheckerGui: AxCheckerCli
 		}
 	else:
 		__modules__ = {
 			OscdimgGui: OscdimgCli,
-			PyCdlibGui: PyCdlibCli,
+			IsoVerifyGui: IsoVerifyCli,
 			AxCheckerGui: AxCheckerCli
 		}
+else:
+	raise NotImplementedError('Right now there is only a Win Version')
 ###############
 
 __executable__ = Path(__executable__)
@@ -76,8 +79,13 @@ class Gui(GuiBase):
 	FILENAME = 'Filename'
 	OUTDIR = 'Outdir'
 	SELECT_DEST_DIR = 'Select destination directory'
+	ISO_IMAGE = 'ISO image'
+	IMAGE = 'Image'
+	SELECT_IMAGE = 'Select image file'
 	IMAGE_NAME = 'Name'
 	IMAGE_DESCRIPTION = 'Description'
+	OSCDIMG_EXE = 'OSCDIMG'
+	SELECT_OSCDIMG_EXE = 'Select OSCDIMG executable'
 	TO_DO = 'To do'
 	CREATE_AND_VERIFY = 'Create and verify image'
 	VERIFY_FILE = 'Verify'
@@ -94,6 +102,7 @@ class Gui(GuiBase):
 	RUNNING = 'Running'
 	NOTHING2DO = 'Add jobs! Nothing to do here.\n'
 	ALL_DONE = 'All done.\n'
+	EXCEPTIONS = 'Exceptions occured'
 	UNDETECTED = 'Could not detect what to do.\n'
 	MISSING_ENTRIES = 'Missing entries'
 	SOURCED_DEST_REQUIRED = 'Source and destination are required'
@@ -105,18 +114,27 @@ class Gui(GuiBase):
 	DO_NOT_COMPARE = 'Do not compare'
 	COMPARE_TO = 'Compare to'
 	FILE_STRUCTURE = 'File structure'
-	ASK_FILE_STRUCTURE = 'Select root of file structure'
+	TSV = 'Text/TSV file'
+	SELECT_TSV = 'Select Text/TSV file'
+	COLUMN = 'Column'
+	TSV_NO_HEAD = 'Text/TSV file does not have a head line'
+	SELECT_FILE_STRUCTURE = 'Select root of file structure'
+	SELECT_PARTITION = 'Select partition'
+	SELECT = 'Select'
+	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
+	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
+	CASE_AND_PARTITION_REQUIRED = 'AXIOM case file and partition are required'
+	ROOT_DIR_REQUIRED = 'Root directory is required' 
+	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 
-	def __init__(self):
+	def __init__(self, debug=False):
 		'''Build GUI'''
-		super().__init__(__app_name__, __version__, __icon_path__, __settings_path__)
+		super().__init__(__app_name__, __version__, __icon_path__, __settings_path__, debug=debug)
 
 if __name__ == '__main__':  # start here
-	#if IsUserAnAdmin():
-	Gui().mainloop()
-	#else:
-	#	error = 'Admin rights required'
-	#	showerror(title=__app_name__, message=error)
-	#	raise RuntimeError(error)
-
-	
+	argp = ArgumentParser(description=__description__.strip())
+	argp.add_argument('-d', '--debug', default=False, action='store_true',
+			help='Debug mode'
+		)
+	args = argp.parse_args()
+	Gui(debug=args.debug).mainloop()

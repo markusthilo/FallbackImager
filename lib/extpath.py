@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-26'
-__license__ = 'GPL-3'
-__email__ = 'markus.thilo@gmail.com'
-__status__ = 'Testing'
-__description__ = 'Add some methods to pathlib´s Path Class'
-
 from pathlib import Path, WindowsPath
 from platform import system
 

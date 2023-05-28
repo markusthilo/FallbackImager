@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-20'
-__license__ = 'GPL-3'
-__email__ = 'markus.thilo@gmail.com'
-__status__ = 'Testing'
-__description__ = 'The worker for this app using threading'
-
 from threading import Thread
 from shlex import split as ssplit
 
@@ -24,6 +17,7 @@ class Worker(Thread):
 		self.gui.disable_start()
 		echo = self.gui.append_info
 		cmd = None
+		ex_cnt = 0
 		while True:
 			self.gui.enable_jobs()
 			cmd_line = self.gui.pop_first_job()
@@ -41,11 +35,22 @@ class Worker(Thread):
 			else:
 				echo(self.gui.UNDETECTED)
 				continue
-			imager = ImagerCli()
-			imager.parse(args[1:])
-			imager.run(echo=echo)
+			if self.gui.debug:
+				imager = ImagerCli()
+				imager.parse(args[1:])
+				imager.run(echo=echo)
+			else:
+				try:
+					imager = ImagerCli()
+					imager.parse(args[1:])
+					imager.run(echo=echo)
+				except Exception as ex:
+					echo(ex)
+					ex_cnt += 1
 		if cmd:
 			echo(self.gui.ALL_DONE)
+			if ex_cnt > 0:
+				echo(self.gui.EXCEPTIONS)
 		else:
 			echo(self.gui.NOTHING2DO)
 		self.gui.enable_start()

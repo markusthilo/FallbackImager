@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-22'
+__version__ = '0.0.2_2023-05-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'

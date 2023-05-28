@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-18'
-__license__ = 'GPL-3'
-__email__ = 'markus.thilo@gmail.com'
-__status__ = 'Testing'
-__description__ = 'Show help window'
-
 from threading import Thread
 from tkinter import Tk
 from tkinter.ttk import Frame, Button
