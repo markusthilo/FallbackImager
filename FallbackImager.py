@@ -20,6 +20,7 @@ from lib.guibase import GuiBase
 from oscdimager import OscdimgGui, OscdimgCli
 from isoverify import IsoVerifyGui, IsoVerifyCli
 from dismimager import DismImagerGui, DismImagerCli
+from zipimager import ZipImagerGui, ZipImagerCli
 from axchecker import AxCheckerGui, AxCheckerCli
 
 ### MODULES ###
@@ -30,12 +31,14 @@ if __os_name__ == 'nt':
 			OscdimgGui: OscdimgCli,
 			IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
+			ZipImagerGui: ZipImagerCli,
 			AxCheckerGui: AxCheckerCli
 		}
 	else:
 		__modules__ = {
 			OscdimgGui: OscdimgCli,
 			IsoVerifyGui: IsoVerifyCli,
+			ZipImagerGui: ZipImagerCli,
 			AxCheckerGui: AxCheckerCli
 		}
 else:

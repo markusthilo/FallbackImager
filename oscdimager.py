@@ -18,6 +18,7 @@ from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.greplists import GrepLists
+from lib.hashes import FileHashes
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridLabel, FilenameSelector
 from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector, GridButton
 from isoverify import IsoVerify
@@ -104,6 +105,7 @@ class Oscdimg:
 			self.log.finished(proc, echo=True)
 		else:
 			self.log.finished(proc, error=': Could not create image\n')
+		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}', echo=True)
 
 class OscdimgCli(ArgumentParser):
 	'''CLI for the imager'''
