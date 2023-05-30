@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.2_2023-05-28'
+__version__ = '0.0.3_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,7 +15,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 from argparse import ArgumentParser
 from lib.greplists import GrepLists
-from lib.extpath import ExtPath
+from lib.extpath import ExtPath, FilesPercent
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
@@ -47,6 +47,7 @@ class ZipImager:
 		self.echo('Creating Zip file')
 		file_cnt = 0
 		dropped_cnt = 0
+		progress = FilesPercent(self.root_path, echo=self.echo)
 		with (
 			ZipFile(self.image_path, 'w', ZIP_DEFLATED) as zf,
 			self.files_path.open('w') as files_fh,
@@ -54,6 +55,7 @@ class ZipImager:
 		):
 			for path in ExtPath.walk(self.root_path):
 				if path.is_file():
+					progress.inc()
 					relative = path.relative_to(self.root_path)
 					if self.drop(relative):
 						print(relative, file=dropped_fh)

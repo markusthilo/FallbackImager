@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.2_2023-05-28'
+__version__ = '0.0.3_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 from sys import executable as __executable__
 from shutil import copyfile
 from tkinter.messagebox import showerror
-from lib.extpath import ExtPath
+from lib.extpath import ExtPath, FilesPercent
 from lib.logger import Logger
 from lib.dism import CaptureImage, ImageContent
 from lib.hashes import FileHashes
@@ -39,6 +39,7 @@ class DismImager:
 			name = None,
 			description = None,
 			compress = 'none',
+			log = None,
 			echo = print
 		):
 		'''Definitihons'''
@@ -56,7 +57,10 @@ class DismImager:
 		else:
 			raise NotImplementedError(self.compress)
 		self.echo = echo
-		self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=echo)
+		if log:
+			self.log = log
+		else:
+			self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=echo)
 
 	def create(self):
 		'''Create image'''
@@ -66,7 +70,7 @@ class DismImager:
 			compress = self.compress,
 			echo = self.echo
 		)
-		self.log.info('>', proc.cmd_str)
+		self.log.info(f'Creating {self.image_path.name}', echo=True)
 		for line in proc.readlines_stdout():
 			self.echo(line)
 		if self.image_path.is_file():
@@ -78,7 +82,7 @@ class DismImager:
 		'''Compare content if image to source'''
 		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}\n', echo=True)
 		proc = ImageContent(self.image_path, echo=self.echo)
-		self.log.info('>', proc.cmd_str)
+		self.log.info(f'Verifying {self.image_path.name}', echo=True)
 		image = set()
 		with ExtPath.child(f'{self.filename}_content.txt',
 			parent=self.outdir).open(mode='w') as fh:
@@ -93,6 +97,8 @@ class DismImager:
 		missing_file_cnt = 0
 		missing_dir_cnt = 0
 		missing_else_cnt = 0
+		self.echo(f'Comparing {self.image_path.name} to {self.root_path.name}')
+		progress = FilesPercent(self.root_path, echo=self.echo)
 		with ExtPath.child(f'{self.filename}_missing.txt',
 			parent=self.outdir).open(mode='w') as fh:
 			for path in ExtPath.walk(self.root_path):
@@ -100,13 +106,14 @@ class DismImager:
 				if short in image:
 					continue
 				if path.is_file():
-					print(f'', file=fh)
+					progress.inc()
+					print(f'\\{short}', file=fh)
 					missing_file_cnt += 1
 				elif path.is_dir():
-					print(f'', file=fh)
+					print(f'\\{short}\\', file=fh)
 					missing_dir_cnt += 1
 				else:
-					print(f'', file=fh)
+					print(f'\\{short}', file=fh)
 					missing_else_cnt += 1
 		missing_all_cnt = missing_file_cnt + missing_dir_cnt + missing_else_cnt
 		msg = 'Verification:'
@@ -290,7 +297,7 @@ class DismImagerGui:
 
 if __name__ == '__main__':	# start here if called as application
 	if IsUserAnAdmin():
-		app = DismImageCli()
+		app = DismImagerCli()
 		app.parse()
 		app.run()
 	else:

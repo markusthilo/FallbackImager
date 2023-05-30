@@ -3,7 +3,7 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.2_2023-05-28'
+__version__ = '0.0.3_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,7 +13,7 @@ from pathlib import Path
 from pycdlib import PyCdlib
 from argparse import ArgumentParser
 from lib.greplists import GrepLists
-from lib.extpath import ExtPath
+from lib.extpath import ExtPath, FilesPercent
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes

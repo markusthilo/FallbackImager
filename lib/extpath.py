@@ -35,6 +35,11 @@ class ExtPath:
 		return root.rglob('*')
 
 	@staticmethod
+	def sum_files(root):
+		'''Get sum of all files'''
+		return sum(path.is_file() for path in ExtPath.walk(root))
+
+	@staticmethod
 	def walk_normalized_files(root):
 		'''Recursivly give all files in sub-paths as Path and string'''
 		if isinstance(root, WindowsPath):
@@ -57,3 +62,22 @@ class ExtPath:
 				yield path, posix + '/', 'dir'
 			else:
 				yield path, posix, None
+
+class FilesPercent:
+	'''Show progress when going through file structure'''
+
+	def __init__(self, root, echo=print):
+		'''Get quantitiy of files under root'''
+		self.echo = echo
+		self.all_files = ExtPath.sum_files(root)
+		self.counter = 0
+		self.percent = 0
+		self.factor = 100/self.all_files
+
+	def inc(self):
+		'''Check and display message'''
+		self.counter += 1
+		percent = int(self.factor*self.counter)
+		if percent > self.percent:
+			self.percent = percent
+			self.echo(f'{self.percent}%, processing file {self.counter} of {self.all_files}')

@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.2_2023-05-28'
+__version__ = '0.0.3_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -23,17 +23,19 @@ from lib.guielements import ExpandedFrame, SourceDirSelector, GridLabel, Filenam
 from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector, GridButton
 from isoverify import IsoVerify
 
+__oscdimg_exe_name__ = 'oscdimg.exe'
 for __oscdimg_exe_path__ in (
-		Path.cwd()/'oscdimg.exe',
-		Path.cwd()/'bin'/'oscdimg.exe',
-		Path(__file__)/'oscdimg.exe',
-		Path(__file__)/'bin'/'oscdimg.exe',
+		Path.cwd()/__oscdimg_exe_name__,
+		Path.cwd()/'bin'/__oscdimg_exe_name__,
+		Path(__file__)/__oscdimg_exe_name__,
+		Path(__file__)/'bin'/__oscdimg_exe_name__,
 		(Path('C:')/
 			'Program Files (x86)'/'Windows Kits'/
 			'10'/'Assessment and Deployment Kit'/'Deployment Tools'/'amd64'/'Oscdimg'/
-			'oscdimg.exe'
+			__oscdimg_exe_name__
 		)
 	):
+	print(__oscdimg_exe_path__)
 	if __oscdimg_exe_path__.is_file():
 		break
 else:
@@ -51,7 +53,7 @@ class Oscdimg:
 			filename = None,
 			outdir = None,
 			name = None,
-			exe = __oscdimg_exe_path__,
+			exe = None,
 			log = None,
 			echo = print
 		):
@@ -63,16 +65,19 @@ class Oscdimg:
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
 		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
-		self.args_str = f'-h -m -l{self.label} -u2 {self.root_path} {self.image_path}'
+		self.args_str = f'-h -k -m -l"{self.label}" -u2 "{self.root_path}" "{self.image_path}"'
 		self.echo = echo
 		if log:
 			self.log = log
 		else:
 			self.log = Logger(self.filename, outdir=self.outdir, head='oscdimg.Oscdimg', echo=echo)
-		if not exe:
-			self.log.error('Path to oscdimg.exe is not given and cannot be found')
-		else:
+		if exe:
 			self.exe_path = exe
+		else:
+			if __oscdimg_exe_path__:
+				self.exe_path = __oscdimg_exe_path__
+			else:
+				self.log.error('Path to oscdimg.exe is not given and cannot be found')
 		self.cmd_str = f'{self.exe_path} {self.args_str}'
 		self.startupinfo = STARTUPINFO()
 		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
@@ -81,8 +86,6 @@ class Oscdimg:
 			selg.log = log
 		else:
 			self.log = Logger(self.filename, outdir=self.outdir, head='oscdimg.Oscdimg', echo=echo)
-		if not exe:
-			self.log.error('Path to oscdimg.exe is not given and cannot be found')
 
 	def create_iso(self):
 		'''Create image'''

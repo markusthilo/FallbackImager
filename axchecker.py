@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.2_2023-05-28'
+__version__ = '0.0.3_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -16,7 +16,7 @@ from argparse import ArgumentParser
 from tkinter import Toplevel, StringVar
 from tkinter.ttk import Radiobutton
 from tkinter.messagebox import showerror
-from lib.extpath import ExtPath
+from lib.extpath import ExtPath, FilesPercent
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.mfdbreader import MfdbReader
@@ -112,6 +112,7 @@ class AxChecker:
 				for source_id in self.mfdb.file_ids
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
+			progress = FilesPercent(self.diff_path, echo=self.echo)
 			with (
 				ExtPath.child(f'{self.filename}_not_in_files.txt',
 					parent=self.outdir).open('w') as not_files_fh,
@@ -119,6 +120,7 @@ class AxChecker:
 					parent=self.outdir).open('w') as not_hits_fh
 			):
 				for path, norm_path in ExtPath.walk_normalized_files(self.diff_path):
+					progress.inc()
 					if norm_path in normalized_file_paths:
 						source_id = normalized_file_paths[norm_path]
 						if not source_id in self.mfdb.hit_ids:
