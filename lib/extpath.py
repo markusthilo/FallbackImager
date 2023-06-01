@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path, WindowsPath
-from platform import system
+from unicodedata import normalize
 
 class ExtPath:
 	'''Add some methods to pathlib´s Path Class'''
@@ -30,6 +30,20 @@ class ExtPath:
 		return path
 
 	@staticmethod
+	def windowize(path):
+		'''Replace slashes with backslashes'''
+		if isinstance(path, PosixPath):
+			return Path(str(path).replace('/', '\\'))
+		return path
+
+	@staticmethod
+	def normalize(path):
+		'''Normalize path for better comparison'''
+		path = normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
+		path = path.rstrip('\\/ \t\n').replace(':', '/')
+		return path
+
+	@staticmethod
 	def walk(root):
 		'''Recursivly give all sub-paths'''
 		return root.rglob('*')
@@ -40,16 +54,14 @@ class ExtPath:
 		return sum(path.is_file() for path in ExtPath.walk(root))
 
 	@staticmethod
-	def walk_normalized_files(root):
-		'''Recursivly give all files in sub-paths as Path and string'''
+	def walk_files(root):
+		'''Recursivly find all files'''
 		if isinstance(root, WindowsPath):
 			slash = '\\'
 		else:
 			slash = '/'
 		for path in ExtPath.walk(root):
-			if path.is_file():
-				relative = f'{path.relative_to(root)}'
-				yield slash+relative, relative.replace('\\', '/').strip('/')
+			yield f'{slash}{path.relative_to(root)}'
 
 	@staticmethod
 	def walk_posix(root):
@@ -59,9 +71,29 @@ class ExtPath:
 			if path.is_file():
 				yield path, posix, 'file'
 			elif path.is_dir():
-				yield path, posix + '/', 'dir'
+				yield path, f'{posix}/', 'dir'
 			else:
 				yield path, posix, None
+
+	@staticmethod
+	def read_head(path, after=None):
+		'''Read first line of TSV/text file while checking UTF encoding'''
+		for codec in 'utf-16-le', 'utf-16-be', 'utf-16', 'utf-8':
+			try:
+				with path.open('r', encoding=codec) as fh:
+					head = fh.readline().strip()
+					if after and after > 0:
+						head = [head]
+						while after > 0:
+							line = fh.readline()
+							if not line:
+								break
+							head.append(line)
+							after -= 1
+					break
+			except UnicodeDecodeError:
+				continue
+		return head, codec
 
 class FilesPercent:
 	'''Show progress when going through file structure'''

@@ -12,19 +12,6 @@ class Help(Thread):
 	def __init__(self, root):
 		super().__init__()
 		self.root = root
-		'''
-		Tk.__init__()
-		self.window = Toplevel()
-		self.window.title(root.HELP)
-		self.window.iconbitmap(root.icon_path)
-		text = ScrolledText(self.window, width=root.ENTRY_WIDTH, height=4*root.INFO_HEIGHT)
-		text.pack(fill='both', expand=True)
-		text.bind('<Key>', lambda dummy: 'break')
-		text.insert('end', f'{root.app_name} v{root.version}\n\n')
-		for ImagerGui in root.IMAGERS:
-			text.insert('end', f'{ImagerGui.CMD}:\n{ImagerGui.DESCRIPTION}\n\n')
-		text.configure(state='disabled')
-		'''
 
 	def run(self):
 		window = Tk()

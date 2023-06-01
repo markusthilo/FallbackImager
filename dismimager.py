@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.3_2023-05-30'
+__version__ = '0.0.4_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -85,7 +85,7 @@ class DismImager:
 		self.log.info(f'Verifying {self.image_path.name}', echo=True)
 		image = set()
 		with ExtPath.child(f'{self.filename}_content.txt',
-			parent=self.outdir).open(mode='w') as fh:
+			parent=self.outdir).open(mode='w', encoding='utf-8') as fh:
 			for line in proc.readlines_stdout():
 				if line and line[0] == '\\':
 					print(line, file=fh)
@@ -100,7 +100,7 @@ class DismImager:
 		self.echo(f'Comparing {self.image_path.name} to {self.root_path.name}')
 		progress = FilesPercent(self.root_path, echo=self.echo)
 		with ExtPath.child(f'{self.filename}_missing.txt',
-			parent=self.outdir).open(mode='w') as fh:
+			parent=self.outdir).open(mode='w', encoding='utf-8') as fh:
 			for path in ExtPath.walk(self.root_path):
 				short = str(path.relative_to(self.root_path)).strip("\\")
 				if short in image:

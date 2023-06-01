@@ -144,7 +144,7 @@ class Checker(Checkbutton):
 
 class FileSelector(Button):
 	'''Button to select file to read'''
-	def __init__(self, root, parent, key, text, ask,
+	def __init__(self, root, parent, key, text, ask, command=None,
 		filetype=('Text files', '*.txt'), default=None, column=1, columnspan=1):
 		self.file_str = root.settings.init_stringvar(key)
 		if default:
@@ -157,14 +157,17 @@ class FileSelector(Button):
 		self.root = root
 		self.ask = ask
 		self.filetype = filetype
+		self.command = command
 	def _select(self):
 		new_filename = askopenfilename(title=self.ask, filetypes=(self.filetype, ('All files', '*.*')))
 		if new_filename:
 			self.file_str.set(new_filename)
+		if self.command:
+			self.command()
 
 class FilenameSelector(Button):
 	'''Button + Entry to enter string'''	
-	def __init__(self, root, parent, key, text, default=None, column=1, columnspan=1):
+	def __init__(self, root, parent, key, text, default=None, command=None, column=1, columnspan=1):
 		self.string = root.settings.init_stringvar(key)
 		self.default = default
 		super().__init__(parent, text=text, command=self._command) 
@@ -172,6 +175,7 @@ class FilenameSelector(Button):
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, sticky='w', padx=root.PAD)
 		root.row += 1
+		self.command = command
 	def _command(self):
 		if self.string.get():
 			return
@@ -179,10 +183,12 @@ class FilenameSelector(Button):
 			self.string.set(self.default)
 		else:
 			self.string.set(TimeStamp.now(path_comp=True))
+		if self.command:
+			self.command()
 
 class DirSelector(Button):
 	'''Button + Entry to select directory'''
-	def __init__(self, root, parent, key, text, ask, column=1, columnspan=1):
+	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=1):
 		self.dir_str = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=self._select)
 		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
@@ -191,10 +197,13 @@ class DirSelector(Button):
 		root.row += 1
 		self.root = root
 		self.ask = ask
+		self.command = command
 	def _select(self):
 		new_dir = askdirectory(title=self.ask, mustexist=False)
 		if new_dir:
 			self.dir_str.set(new_dir)
+		if self.command:
+			self.command()
 
 class BasicTab:
 	'''Basic ExpandedNotebook'''

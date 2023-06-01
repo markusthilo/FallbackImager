@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.3_2023-05-30'
+__version__ = '0.0.4_2023-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -35,7 +35,6 @@ for __oscdimg_exe_path__ in (
 			__oscdimg_exe_name__
 		)
 	):
-	print(__oscdimg_exe_path__)
 	if __oscdimg_exe_path__.is_file():
 		break
 else:

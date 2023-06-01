@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.3_2023-05-30'
+__version__ = '0.0.4_2023-06-1'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,9 +13,11 @@ Verify AXIOM case files
 
 from pathlib import Path
 from argparse import ArgumentParser
+from functools import partial
 from tkinter import Toplevel, StringVar
-from tkinter.ttk import Radiobutton
+from tkinter.ttk import Radiobutton, Button, Checkbutton
 from tkinter.messagebox import showerror
+from tkinter.scrolledtext import ScrolledText
 from lib.extpath import ExtPath, FilesPercent
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -64,7 +66,7 @@ class AxChecker:
 			ExtPath.child(
 				f'{self.filename}_{type_str}_{partition}.txt',
 				parent = self.outdir
-			).open('w') for source_id, partition in self.mfdb.get_partition_fnames()
+			).open('w', encoding='utf-8') for source_id, partition in self.mfdb.get_partition_fnames()
 		}
 		for source_id in source_ids:
 			print(f'{self.mfdb.short_paths[source_id][1]}',
@@ -75,7 +77,7 @@ class AxChecker:
 
 	def	_split_line(self, line):
 		'''Splite line from, TSV file to list; line: str'''
-		return [key.strip() for key in line.split('\t')]
+		return [key.rstrip('\n') for key in line.split('\t')]
 
 	def check(self):
 		'''Check AXIOM case file'''
@@ -86,11 +88,15 @@ class AxChecker:
 		self.mfdb.fetch_paths()
 		self.write_tsv_files(self.mfdb.file_ids, 'Files')
 		self.write_tsv_files(self.mfdb.folder_ids, 'Folders')
+		self.log.info(
+			f'AXIOM processed {len(self.mfdb.file_ids)} file(s) and  {len(self.mfdb.folder_ids)} folder(s)',
+			echo = True
+		)
 		if self.mfdb.ignored_file_ids:
 			self.log.info('All file paths are represented in hits/artifacts', echo=True)
 		else:
 			self.write_tsv_files(self.mfdb.ignored_file_ids, 'Ignored')
-			self.log.warning('Found ignored file paths that are not in hits/artifacts')
+			self.log.warning(f'Found {len(self.mfdb.ignored_file_ids)} ignored file path(s) not in hits/artifacts')
 		if not self.diff_path:
 			return
 		if not self.partition:
@@ -107,8 +113,8 @@ class AxChecker:
 		self.log.info('Comparing files in AXIOM to {self.diff_path.name}', echo=True)
 		not_file_cnt = 0
 		not_hit_cnt = 0
-		if self.diff_path.is_dir():
-			normalized_file_paths = {self.mfdb.normalized_path(source_id): source_id
+		if self.diff_path.is_dir():	# compare to dir
+			file_paths = {self.mfdb.short_paths[source_id][1]: source_id
 				for source_id in self.mfdb.file_ids
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
@@ -119,33 +125,27 @@ class AxChecker:
 				ExtPath.child(f'{self.filename}_not_in_artifacts.txt',
 					parent=self.outdir).open('w') as not_hits_fh
 			):
-				for path, norm_path in ExtPath.walk_normalized_files(self.diff_path):
+				for path, relative_path in ExtPath.walk_files(self.diff_path):
 					progress.inc()
-					if norm_path in normalized_file_paths:
-						source_id = normalized_file_paths[norm_path]
+					if ExtPath.windowize(relative_path) in file_paths:
+						source_id = file_paths[relative_path]
 						if not source_id in self.mfdb.hit_ids:
 							print(self.mfdb.paths[source_id], file=not_hits_fh)
 							not_hit_cnt += 1
 					else:
 						print(path, file=not_files_fh)
 						not_file_cnt += 1
-		elif self.diff_path.is_file:
+		elif self.diff_path.is_file:	# compare to file
 			column = None
-			for codec in 'utf-32', 'utf-16', 'utf-8':
-				try:
-					with self.diff_path.open('r', encoding=codec) as diff_fh:
-						first = diff_fh.readline()
-						break
-				except UnicodeDecodeError:
-					continue
-			cols = first.split('\t')
+			head, encoding = ExtPath.read_head(self.diff_path)
+			cols = head.split('\t')
 			tsv_fields_len = len(cols)
 			if tsv_fields_len == 1:
 				column = 0
 			else:
 				try:
 					column = int(self.column)-1
-				except ValueError:
+				except (ValueError, TypeError):
 					if self.nohead:
 						self.log.error('Unable to determin column with paths to compare')
 					for column, col_str in enumerate(cols):
@@ -153,16 +153,16 @@ class AxChecker:
 							break
 			if column < 0 or column >= tsv_fields_len:
 				self.log.error('Column out of range')
-			normalized_paths = {self.mfdb.normalized_path(source_id): source_id
+			normalized_paths = {ExtPath.normalize(self.mfdb.short_paths[source_id][1]): source_id
 				for source_id, path in self.mfdb.short_paths.items()
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
 			with (
 				ExtPath.child(f'{self.filename}_diff_paths.txt',
-					parent=self.outdir).open('w') as diff_paths_fh,
+					parent=self.outdir).open('w', encoding=encoding) as diff_paths_fh,
 				ExtPath.child(f'{self.filename}_diff_artifacts.txt',
-					parent=self.outdir).open('w') as diff_hits_fh,
-				self.diff_path.open('r', encoding=codec) as diff_fh
+					parent=self.outdir).open('w', encoding=encoding) as diff_hits_fh,
+				self.diff_path.open('r', encoding=encoding) as diff_fh
 			):
 				if not self.nohead:
 					line = diff_fh.readline()
@@ -171,9 +171,10 @@ class AxChecker:
 				for line in diff_fh:
 					fields = self._split_line(line)
 					if len(fields) < tsv_fields_len:
-						fields.extend(self._split_line(next(self.tsv_file)))
+						line = line.rstrip('\n')
+						fields = self._split_line(f'{line} {next(diff_fh)}')
 					try:
-						path = fields[column].replace('\\', '/').strip()
+						path = ExtPath.normalize(fields[column])
 					except IndexError:
 						self.log.error(f'Found unprocessable line in {diff_path.name}:\n{line}')
 					if path in normalized_paths:
@@ -264,36 +265,50 @@ class AxCheckerGui:
 	def __init__(self, root):
 		'''Notebook page'''
 		root.settings.init_section(self.CMD)
-		self.frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(self.frame, text=f' {self.CMD} ')
+		frame = ExpandedFrame(root, root.notebook)
+		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
-		GridSeparator(root, self.frame)
-		GridLabel(root, self.frame, root.AXIOM, columnspan=3)
-		FileSelector(root, self.frame, root.CASE_FILE, root.CASE_FILE,
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.AXIOM, columnspan=3)
+		FileSelector(root, frame, root.CASE_FILE, root.CASE_FILE,
 			f'{root.OPEN_CASE_FILE} ({root.AXIOM_CASE_FILE})',
 			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
-		StringSelector(root, self.frame, root.PARTITION, root.PARTITION,
-			command=self._select_partition)		
-		GridSeparator(root, self.frame)
-		GridLabel(root, self.frame, root.DESTINATION, columnspan=2)
-		self.filename_str = FilenameSelector(root, self.frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, self.frame, root.OUTDIR,
+		StringSelector(root, frame, root.PARTITION, root.PARTITION,
+			command=self._select_partition)	
+		self.partition_window = None
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, self.frame)
-		GridLabel(root, self.frame, root.VERIFY_FILE, columnspan=2)
-		StringRadiobuttons(root, self.frame, root.VERIFY_FILE,
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.VERIFY_FILE, columnspan=2)
+		StringRadiobuttons(root, frame, root.VERIFY_FILE,
 			(root.DO_NOT_COMPARE, root.FILE_STRUCTURE, root.TSV), root.DO_NOT_COMPARE)
-		GridLabel(root, self.frame, root.DO_NOT_COMPARE, column=1, columnspan=2)
-		DirSelector(root, self.frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE)
-		FileSelector(root, self.frame, root.TSV, root.TSV, root.SELECT_TSV)
-		StringSelector(root, self.frame, root.COLUMN, root.COLUMN)
-		Checker(root, self.frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
-		GridSeparator(root, self.frame)
-		GridButton(root, self.frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridLabel(root, frame, root.DO_NOT_COMPARE, column=1, columnspan=2)
+		DirSelector(root, frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE,
+			command=self._select_file_structure)
+		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
+			command=self._select_tsv_file)
+		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
+		self.column_window = None
+		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
+		GridSeparator(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
 		self.root = root
+
+	def _child_window(self, title):
+		'''Open child window to root'''
+		window = Toplevel(self.root)
+		window.title(title)
+		window.resizable(0, 0)
+		window.iconbitmap(self.root.icon_path)
+		return window
 
 	def _select_partition(self):
 		'''Select partition in the AXIOM case'''
+		if self.partition_window:
+			return
 		self.root.settings.section = self.CMD
 		mfdb = self.root.settings.get(self.root.CASE_FILE)
 		if not mfdb:
@@ -312,25 +327,124 @@ class AxCheckerGui:
 		if len(mfdb.partitions) == 1:
 			self.root.settings.raw(self.root.PARTITION).set(list(mfdb.partitions.values())[0][1])
 			return
-		self.window = Toplevel(self.root)
-		self.window.title(self.root.SELECT_PARTITION)
-		self.window.resizable(0, 0)
-		self.window.iconbitmap(self.root.icon_path)
+		self.partition_window = self._child_window(self.root.SELECT_PARTITION)
+		self.partition_window.protocol('WM_DELETE_WINDOW', self._destroy_partition_window)
 		self._selected_part = StringVar()
 		for partition in mfdb.partitions.values():
-			frame = ExpandedFrame(self.root, self.window)
+			frame = ExpandedFrame(self.root, self.partition_window)
 			Radiobutton(frame, variable=self._selected_part, value=partition).pack(
 				side='left', padx=self.root.PAD)
 			LeftLabel(self.root, frame, partition)
-		frame = ExpandedFrame(self.root, self.window)
+		frame = ExpandedFrame(self.root, self.partition_window)
 		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
-		RightButton(self.root, frame, self.root.QUIT, self.window.destroy)
+		RightButton(self.root, frame, self.root.QUIT, _destroy_partition_window)
+		self.partition_window = None
+
+	def _destroy_partition_window(self):
+		'''Destroy the child window'''
+		self.partition_window.destroy()
+		self.partition_window = None
 
 	def _get_partition(self):
 		'''Get the selected partition'''
 		self.root.settings.section = self.CMD
 		self.root.settings.raw(self.root.PARTITION).set(self._selected_part.get())
-		self.window.destroy()
+		self._destroy_partition_window()
+
+	def _select_file_structure(self):
+		'''Select file structure to compare'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.FILE_STRUCTURE)
+
+	def _select_tsv_file(self):
+		'''Select TSV file to compare'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.TSV)
+
+	def _select_column(self):
+		'''Select column in TSV file to compare'''
+		if self.column_window:
+			return
+		self.root.settings.section = self.CMD
+		tsv = self.root.settings.get(self.root.TSV)
+		if tsv:
+			head, encoding = ExtPath.read_head(Path(tsv), after=self.root.MAX_ROW_QUANT-1)
+			if len(head) < 2:
+				tsv = None
+		if not tsv:
+			showerror(
+				title = self.root.TSV,
+				message = self.root.FIRST_CHOOSE_TSV
+			)
+			return
+		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.TSV)
+		if len(head[0].split('\t')) == 1:
+			self.root.settings.raw(self.root.COLUMN).set('1')
+			return
+		self.column_window = self._child_window(self.root.SELECT_COLUMN)
+		self.column_window.protocol('WM_DELETE_WINDOW', self._destroy_column_window)
+		self._selected_column = StringVar()
+		frame = ExpandedFrame(self.root, self.column_window)
+		preview = {(row, column): entry
+			for row, line in enumerate(head)
+			for column, entry in enumerate(line.split('\t'))
+		}
+		entry_heights = [0]*self.root.MAX_ROW_QUANT
+		for row in range(self.root.MAX_ROW_QUANT):
+			for column in range(self.root.MAX_COLUMN_QUANT):
+				try:
+					entry_heights[row] = max(
+						entry_heights[row],
+						min(int(len(preview[row, column])/self.root.MAX_ENTRY_WIDTH)+1,
+							self.root.MAX_ENTRY_HEIGHT)
+					)
+				except KeyError:
+					break
+		entry_widths = [self.root.MIN_ENTRY_WIDTH]*self.root.MAX_COLUMN_QUANT
+		for column in range(self.root.MAX_COLUMN_QUANT):
+			for row in range(self.root.MAX_ROW_QUANT):
+				try:
+					entry_widths[column] = max(
+						entry_widths[column],
+						min(len(preview[row, column]), self.root.MAX_ENTRY_WIDTH)
+					)
+				except KeyError:
+					break
+		for row, height in enumerate(entry_heights):
+			for column, width in enumerate(entry_widths):
+				try:
+					entry = preview[row, column]
+				except KeyError:
+					break
+				text = ScrolledText(frame, width=width, height=height)
+				text.grid(row=row, column=column)
+				text.bind('<Key>', lambda dummy: 'break')
+				text.insert('end', preview[row, column])
+				text.configure(state='disabled')
+		print(row, column)
+		row += 1
+		for column in range(column):
+			Button(frame,
+				text = f'{column+1}',
+				command = partial(self._get_column, column+1)
+			).grid(row=row, column=column, padx=self.root.PAD, pady=self.root.PAD)
+		frame = ExpandedFrame(self.root, self.column_window)
+		Checkbutton(frame,
+			text = self.root.TSV_NO_HEAD,
+			variable = self.root.settings.raw(self.root.TSV_NO_HEAD)
+		).pack(side='left', padx=self.root.PAD)
+		RightButton(self.root, frame, self.root.QUIT, self._destroy_column_window)
+
+	def _destroy_column_window(self):
+		'''Destroy the child window'''
+		self.column_window.destroy()
+		self.column_window = None
+
+	def _get_column(self, column):
+		'''Get the selected column'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.COLUMN).set(f'{column}')
+		self._destroy_column_window()
 
 	def _add_job(self):
 		'''Generate command line'''
