@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path, WindowsPath
+from pathlib import Path, WindowsPath, PosixPath
 from unicodedata import normalize
 
 class ExtPath:
@@ -61,7 +61,7 @@ class ExtPath:
 		else:
 			slash = '/'
 		for path in ExtPath.walk(root):
-			yield f'{slash}{path.relative_to(root)}'
+			yield path, f'{slash}{path.relative_to(root)}'
 
 	@staticmethod
 	def walk_posix(root):

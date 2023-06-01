@@ -170,9 +170,9 @@ class AxChecker:
 					diff_hits_fh.write(line)
 				for line in diff_fh:
 					fields = self._split_line(line)
-					if len(fields) < tsv_fields_len:
-						line = line.rstrip('\n')
-						fields = self._split_line(f'{line} {next(diff_fh)}')
+					while len(fields) < tsv_fields_len:
+						line = line.rstrip('\n') + f' {next(diff_fh)}'
+						fields = self._split_line(line)
 					try:
 						path = ExtPath.normalize(fields[column])
 					except IndexError:
