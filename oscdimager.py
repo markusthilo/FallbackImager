@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-05-30'
+__version__ = '0.0.4_2023-06-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -14,6 +14,7 @@ Create ISO image using MS OSCDIMG
 from pathlib import Path
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
+from tkinter.messagebox import showerror
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger

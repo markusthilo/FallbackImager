@@ -3,7 +3,7 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-05-30'
+__version__ = '0.0.4_2023-06-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,6 +12,7 @@ __description__ = 'Comparing ISO with UDF to file structure'
 from pathlib import Path
 from pycdlib import PyCdlib
 from argparse import ArgumentParser
+from tkinter.messagebox import showerror
 from lib.greplists import GrepLists
 from lib.extpath import ExtPath, FilesPercent
 from lib.timestamp import TimeStamp
@@ -203,17 +204,27 @@ class IsoVerifyGui:
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.SKIP_PATH_CHECK, columnspan=3)
-		StringRadiobuttons(root, frame, root.PATHFILTER,
+		StringRadiobuttons(root, frame, root.REGEXFILTER,
 			(f'{None}', root.BLACKLIST, root.WHITELIST), f'{None}')
 		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=1, columnspan=2)
 		FileSelector(root, frame,
-			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST)
+			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST, command=self._select_blacklist)
 		FileSelector(root, frame,
-			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST)
+			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST, command=self._select_whitelist)
 		GridSeparator(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
 		self.root = root
-	
+
+	def _select_blacklist(self):
+		'''Select blacklist'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.REGEXFILTER).set(self.root.BLACKLIST)
+
+	def _select_whitelist(self):
+		'''Select whitelist'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.REGEXFILTER).set(self.root.WHITELIST)
+
 	def _add_job(self):
 		'''Generate command line'''
 		self.root.settings.section = self.CMD

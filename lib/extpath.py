@@ -4,6 +4,8 @@
 from pathlib import Path, WindowsPath, PosixPath
 from unicodedata import normalize
 
+__utf__ = 'utf-16-le', 'utf-16-be', 'utf-16', 'utf-8'
+
 class ExtPath:
 	'''Add some methods to pathlib´s Path Class'''
 
@@ -37,11 +39,24 @@ class ExtPath:
 		return path
 
 	@staticmethod
+	def decode(path):
+		'''Decode to UTF-8'''
+		return normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
+
+	@staticmethod
 	def normalize(path):
 		'''Normalize path for better comparison'''
-		path = normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
-		path = path.rstrip('\\/ \t\n').replace(':', '/')
-		return path
+		return ExtPath.decode(path).rstrip('\\/ \t\n').replace('\n', ' ').replace(':', '_')
+
+	@staticmethod
+	def to_posix(path):
+		'''Translate to Posix'''
+		return path.replace('/', '_').replace('\\', '/')
+	
+	@staticmethod
+	def norm_to_posix(path):
+		'''Normalize path and get rid of the stupid win backslashes'''
+		return ExtPath.to_posix(ExtPath.normalize(path))
 
 	@staticmethod
 	def walk(root):
@@ -61,7 +76,8 @@ class ExtPath:
 		else:
 			slash = '/'
 		for path in ExtPath.walk(root):
-			yield path, f'{slash}{path.relative_to(root)}'
+			if path.is_file():
+				yield path, f'{slash}{path.relative_to(root)}'
 
 	@staticmethod
 	def walk_posix(root):
@@ -76,24 +92,21 @@ class ExtPath:
 				yield path, posix, None
 
 	@staticmethod
-	def read_head(path, after=None):
-		'''Read first line of TSV/text file while checking UTF encoding'''
-		for codec in 'utf-16-le', 'utf-16-be', 'utf-16', 'utf-8':
+	def read_utf_head(path, after=0):
+		'''Read first lines of TSV/text file while checking UTF encoding'''
+		lines = list()
+		for codec in __utf__:
 			try:
 				with path.open('r', encoding=codec) as fh:
-					head = fh.readline().strip()
-					if after and after > 0:
-						head = [head]
-						while after > 0:
-							line = fh.readline()
-							if not line:
-								break
-							head.append(line)
-							after -= 1
-					break
-			except UnicodeDecodeError:
+					for cnt, line in enumerate(fh):
+						lines.append(line.strip())
+						if cnt == after:
+							break
+					if after == 0:
+						return codec, lines[0]
+					return codec, lines
+			except UnicodeError:
 				continue
-		return head, codec
 
 class FilesPercent:
 	'''Show progress when going through file structure'''

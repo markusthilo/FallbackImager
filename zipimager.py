@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-05-30'
+__version__ = '0.0.4_2023-06-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -16,6 +16,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from argparse import ArgumentParser
 from lib.greplists import GrepLists
 from lib.extpath import ExtPath, FilesPercent
+from lib.tsvreader import TsvReader
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
@@ -25,6 +26,9 @@ class ZipImager:
 	'''Imager using ZipFile'''
 
 	def __init__(self, root,
+		filelist = None,
+		column = 1,
+		nohead = False,
 		drop = GrepLists.false,
 		filename = None,
 		outdir = None,
@@ -33,6 +37,9 @@ class ZipImager:
 		'''Prepare to create zip file'''
 		self.echo = echo
 		self.root_path = Path(root)
+		self.filelist = filelist
+		self.column = column
+		self.nohead = nohead
 		self.drop = drop
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
@@ -47,16 +54,20 @@ class ZipImager:
 		self.echo('Creating Zip file')
 		file_cnt = 0
 		dropped_cnt = 0
+		if self.filelist:
+			tsv = TsvReader(Path(self.filelist), column=self.column, nohead=self.nohead)
+			if tsv.column < 0:
+				self.log.error('Column out of range/undetected')
+			filelist = {ExtPath.to_posix(path) for path, line in tsv.read_lines() if path}
 		progress = FilesPercent(self.root_path, echo=self.echo)
 		with (
 			ZipFile(self.image_path, 'w', ZIP_DEFLATED) as zf,
 			self.files_path.open('w') as files_fh,
 			self.dropped_path.open('w') as dropped_fh
 		):
-			for path in ExtPath.walk(self.root_path):
-				if path.is_file():
+			for path, relative in ExtPath.walk_files(self.root_path):
+				if not self.filelist or ExtPath.norm_to_posix(relative) in filelist:
 					progress.inc()
-					relative = path.relative_to(self.root_path)
 					if self.drop(relative):
 						print(relative, file=dropped_fh)
 						dropped_cnt += 1
@@ -78,11 +89,20 @@ class ZipImagerCli(ArgumentParser):
 		self.add_argument('-b', '--blacklist', type=Path,
 			help='Blacklist (textfile with one regex per line)', metavar='FILE'
 		)
+		self.add_argument('-c', '--column', type=str,
+			help='Column with path for -l/--filelist', metavar='INTEGER|STRING'
+		)
 		self.add_argument('-f', '--filename', type=str, required=True,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
+		self.add_argument('-n', '--nohead', default=False, action='store_true',
+			help='TSV file has no head line with names of columns (e.g. "Full path" etc.)'
+		)
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
+		)
+		self.add_argument('-l', '--filelist', type=Path,
+			help='Copy only the files in the list', metavar='FILE'
 		)
 		self.add_argument('-w', '--whitelist', type=Path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
@@ -96,7 +116,10 @@ class ZipImagerCli(ArgumentParser):
 		args = super().parse_args(*cmd)
 		self.root = args.root[0]
 		self.blacklist = args.blacklist
+		self.column = args.column
 		self.filename = args.filename
+		self.filelist = args.filelist
+		self.nohead = args.nohead
 		self.outdir = args.outdir
 		self.whitelist = args.whitelist
 
@@ -105,6 +128,9 @@ class ZipImagerCli(ArgumentParser):
 		image = ZipImager(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
+			filelist = self.filelist,
+			column = self.column,
+			nohead = self.nohead,
 			drop = GrepLists(
 				blacklist = self.blacklist,
 				whitelist = self.whitelist, 

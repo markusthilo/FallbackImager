@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
+from functools import partial
+from tkinter import Toplevel, StringVar
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
 from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askdirectory
 from tkinter.messagebox import showerror
 from .timestamp import TimeStamp
+from .extpath import ExtPath
 
 class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
@@ -104,6 +107,18 @@ class StringRadiobuttons:
 		for row, value in enumerate(buttons):
 			Radiobutton(parent, variable=self.variable, value=value).grid(
 				row=root.row+row, column=column, sticky='w', padx=root.PAD)
+
+class VerticalButtons:
+	'''---|Radiobutton|Radiobutton|Radiobutton|---'''
+	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=1):
+		Label(parent, text=key).grid(row=root.row, column=column, columnspan=columnspan)
+		frame = Frame(parent)
+		frame.grid(row=root.row, column=column+columnspan, sticky='w', padx=root.PAD)
+		self.variable = root.settings.init_stringvar(key, default=default)
+		for button in buttons:
+			Radiobutton(frame, variable=self.variable, value=button, text=button).pack(
+				side='right', padx=root.PAD)
+		root.row += 1
 
 class SourceDirSelector(Button):
 	'''Select source'''
@@ -205,6 +220,115 @@ class DirSelector(Button):
 		if self.command:
 			self.command()
 
+class ChildWindow(Toplevel):
+	'''Child window to main application window'''
+
+	def __init__(self, root, title):
+		'''Open child window'''
+		try:
+			if self._active:
+				return
+		except AttributeError:
+			pass
+		super().__init__(root)
+		self.title(title)
+		self.resizable(0, 0)
+		self.iconbitmap(root.icon_path)
+		self.protocol('WM_DELETE_WINDOW', self.destroy)
+		self._active = True
+
+	def destroy(self):
+		'''Destroy the child window'''
+		self._active = False
+		super().destroy()
+
+class SelectTsvColumn(ChildWindow):
+	'''Window to select column aof a TSV file'''
+
+	def __init__(self, root, cmd):
+		'''Open child window'''
+		try:
+			if self._active:
+				return
+		except AttributeError:
+			pass
+		self.root = root
+		self.cmd = cmd
+		self.root.settings.section = self.cmd
+		tsv = self.root.settings.get(self.root.TSV)
+		if tsv:
+			encoding, head = ExtPath.read_utf_head(Path(tsv), after=self.root.MAX_ROW_QUANT)
+			columns = len(head[0].split('\t'))
+			if columns == 1:
+				self.root.settings.raw(self.root.COLUMN).set('1')
+				return
+			if len(head) < 2:
+				tsv = None
+		if not tsv:
+			showerror(
+				title = self.root.TSV,
+				message = self.root.FIRST_CHOOSE_TSV
+			)
+			return
+		super().__init__(self.root, self.root.SELECT_COLUMN)
+		self._selected_column = StringVar()
+		frame = ExpandedFrame(self.root, self)
+		preview = {(row, column): entry
+			for row, line in enumerate(head)
+			for column, entry in enumerate(line.split('\t'))
+		}
+		entry_heights = [0]*self.root.MAX_ROW_QUANT
+		for row in range(self.root.MAX_ROW_QUANT):
+			for column in range(self.root.MAX_COLUMN_QUANT):
+				try:
+					entry_heights[row] = max(
+						entry_heights[row],
+						min(int(len(preview[row, column])/self.root.MAX_ENTRY_WIDTH)+1,
+							self.root.MAX_ENTRY_HEIGHT)
+					)
+				except KeyError:
+					break
+		entry_widths = [self.root.MIN_ENTRY_WIDTH]*self.root.MAX_COLUMN_QUANT
+		for column in range(self.root.MAX_COLUMN_QUANT):
+			for row in range(self.root.MAX_ROW_QUANT):
+				try:
+					entry_widths[column] = max(
+						entry_widths[column],
+						min(len(preview[row, column]), self.root.MAX_ENTRY_WIDTH)
+					)
+				except KeyError:
+					break
+		for row, height in enumerate(entry_heights):
+			for column, width in enumerate(entry_widths):
+				try:
+					entry = preview[row, column]
+				except KeyError:
+					break
+				text = ScrolledText(frame, width=width, height=height)
+				text.grid(row=row, column=column)
+				text.bind('<Key>', lambda dummy: 'break')
+				text.insert('end', preview[row, column])
+				text.configure(state='disabled')
+		if columns > self.root.MAX_COLUMN_QUANT:
+			columns = self.root.MAX_COLUMN_QUANT
+		for column in range(columns):
+			Button(frame,
+				text = f'{column+1}',
+				command = partial(self._get_column, column+1)
+			).grid(row=row, column=column, padx=self.root.PAD, pady=self.root.PAD)
+		frame = ExpandedFrame(self.root, self)
+		Checkbutton(frame,
+			text = self.root.TSV_NO_HEAD,
+			variable = self.root.settings.raw(self.root.TSV_NO_HEAD)
+		).pack(side='left', padx=self.root.PAD)
+		RightButton(self.root, frame, self.root.QUIT, self.destroy)
+
+	def _get_column(self, column):
+		'''Get the selected column'''
+		self.root.settings.section = self.cmd
+		self.root.settings.raw(self.root.COLUMN).set(f'{column}')
+		self.destroy()
+
 class BasicTab:
 	'''Basic ExpandedNotebook'''
 
@@ -242,7 +366,7 @@ class BasicTab:
 		self.root.append_job(cmd)
 
 class BasicFilterTab:
-	'''Basic ExpandedNotebook with blacklist and whitelist'''
+	'''Basic ExpandedNotebook with filelist, blacklist and whitelist'''
 
 	def __init__(self, root):
 		'''Notebook page'''
@@ -256,26 +380,50 @@ class BasicFilterTab:
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.SKIP_PATH_CHECK, columnspan=3)
-		StringRadiobuttons(root, frame, root.PATHFILTER,
-			(f'{None}', root.BLACKLIST, root.WHITELIST), f'{None}')
-		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=1, columnspan=2)
+		GridLabel(root, frame, root.FILTER, columnspan=3)
+		StringRadiobuttons(root, frame, root.FILEFILTER,
+			('', root.TSV), '')
+		GridLabel(root, frame, root.NO_FILEFILTER, column=1, columnspan=2)
+		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
+			command=self._select_tsv_file)
+		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
+		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
+		StringRadiobuttons(root, frame, root.REGEXFILTER,
+			('', root.BLACKLIST, root.WHITELIST), '')
+		GridLabel(root, frame, root.NO_REGEXFILTER, column=1, columnspan=2)
 		FileSelector(root, frame,
-			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST)
+			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST, command=self._select_blacklist)
 		FileSelector(root, frame,
-			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST)
+			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST, command=self._select_whitelist)
 		GridSeparator(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
 		self.root = root
-	
+
+	def _select_tsv_file(self):
+		'''Select TSV file to compare'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.FILEFILTER).set(self.root.TSV)
+
+	def _select_blacklist(self):
+		'''Select blacklist'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.REGEXFILTER).set(self.root.BLACKLIST)
+
+	def _select_whitelist(self):
+		'''Select whitelist'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.REGEXFILTER).set(self.root.WHITELIST)
+
+	def _select_column(self):
+		'''Select column in TSV file to compare'''
+		SelectTsvColumn(self.root, self.CMD)
+
 	def _add_job(self):
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
 		source = self.root.settings.get(self.root.SOURCE)
 		outdir = self.root.settings.get(self.root.OUTDIR)
 		filename = self.root.settings.get(self.root.FILENAME)
-		blacklist = self.root.settings.get(self.root.BLACKLIST)
-		whitelist = self.root.settings.get(self.root.WHITELIST)
 		if not source or not outdir or not filename:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
@@ -285,14 +433,33 @@ class BasicFilterTab:
 		cmd = self.root.settings.section.lower()
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		path_filter = self.root.settings.get(self.root.PATHFILTER)
-		if path_filter == self.root.BLACKLIST:
+		if self.root.settings.get(self.root.FILEFILTER) == self.root.TSV:
+			tsv = self.root.settings.get(self.root.TSV)
+			if not tsv:
+				showerror(
+					title = self.root.MISSING_ENTRIES,
+					message = self.root.TSV_REQUIRED
+				)
+				return
+			cmd += f' --filelist "{tsv}"'
+			column = self.root.settings.get(self.root.COLUMN)
+			if column:
+				column = self.root.settings.get(self.root.COLUMN)
+				if column:
+					cmd += f' --column "{column}"'
+			if self.root.settings.get(self.root.TSV_NO_HEAD) == '1':
+				cmd += ' --nohead'
+		if self.root.settings.get(self.root.REGEXFILTER):
+			regex = self.root.settings.get(self.root.REGEXFILTER)
 			blacklist = self.root.settings.get(self.root.BLACKLIST)
-			if blacklist:
-				cmd += f' --{self.root.BLACKLIST.lower()} "{blacklist}"'
-		elif path_filter == self.root.WHITELIST:
 			whitelist = self.root.settings.get(self.root.WHITELIST)
-			if whitelist:
-				cmd += f' --{self.root.WHITELIST.lower()} "{whitelist}"'
+			if regex == self.root.BLACKLIST:
+				blacklist = self.root.settings.get(self.root.BLACKLIST)
+				if blacklist:
+					cmd += f' --{self.root.BLACKLIST.lower()} "{blacklist}"'
+			elif regex == self.root.WHITELIST:
+				whitelist = self.root.settings.get(self.root.WHITELIST)
+				if whitelist:
+					cmd += f' --{self.root.WHITELIST.lower()} "{whitelist}"'
 		cmd += f' "{source}"'
 		self.root.append_job(cmd)

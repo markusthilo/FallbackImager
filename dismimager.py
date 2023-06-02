@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-05-30'
+__version__ = '0.0.4_2023-06-03'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,7 +22,7 @@ from lib.logger import Logger
 from lib.dism import CaptureImage, ImageContent
 from lib.hashes import FileHashes
 from lib.timestamp import TimeStamp
-from lib.guielements import SourceDirSelector, Checker
+from lib.guielements import SourceDirSelector, Checker, VerticalButtons
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton
@@ -227,6 +227,7 @@ class DismImagerGui:
 			command=self._gen_name)
 		self.descr_str = StringSelector(root, self.frame, root.IMAGE_DESCRIPTION, root.IMAGE_DESCRIPTION,
 			command=self._gen_description)
+		VerticalButtons(root, self.frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
 		GridSeparator(root, self.frame)
 		GridLabel(root, self.frame, root.TO_DO, columnspan=3)
 		StringRadiobuttons(root, self.frame, root.TO_DO,
@@ -268,6 +269,7 @@ class DismImagerGui:
 		outdir = self.root.settings.get(self.root.OUTDIR)
 		filename = self.root.settings.get(self.root.FILENAME)
 		to_do = self.root.settings.get(self.root.TO_DO)
+		compression = self.root.settings.get(self.root.COMPRESSION)
 		image = self.root.settings.get(self.root.VERIFY_FILE)
 		cmd = self.root.settings.section.lower()
 		if to_do == self.root.VERIFY_FILE:
@@ -290,6 +292,8 @@ class DismImagerGui:
 		description = self.root.settings.get(self.root.IMAGE_DESCRIPTION)
 		if description:
 			cmd += f' --description "{description}"'
+		if compression:
+			cmd += f' --compress "{compression.lower()}"'
 		if self.root.settings.get(self.root.COPY_EXE) == '1':
 			cmd += ' --exe'
 		cmd += f' "{source}"'
