@@ -379,6 +379,7 @@ class BasicFilterTab:
 		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
+		Checker(root, frame, root.FLAT, root.FLAT, column=1)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.FILTER, columnspan=3)
 		StringRadiobuttons(root, frame, root.FILEFILTER,
@@ -433,6 +434,8 @@ class BasicFilterTab:
 		cmd = self.root.settings.section.lower()
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		if self.root.settings.get(self.root.FLAT):
+			cmd += ' --flat'
 		if self.root.settings.get(self.root.FILEFILTER) == self.root.TSV:
 			tsv = self.root.settings.get(self.root.TSV)
 			if not tsv:

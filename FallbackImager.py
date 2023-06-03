@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-06-03'
+__version__ = '0.0.5_2023-06-03'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -88,6 +88,7 @@ class Gui(GuiBase):
 	OUTDIR = 'Outdir'
 	SELECT_DEST_DIR = 'Select destination directory'
 	FILTER = 'Filter'
+	FLAT = 'Flat structure without folders'
 	ISO_IMAGE = 'ISO image'
 	IMAGE = 'Image'
 	SELECT_IMAGE = 'Select image file'

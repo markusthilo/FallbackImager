@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-06-02'
+__version__ = '0.0.5_2023-06-03'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -26,6 +26,7 @@ class ZipImager:
 	'''Imager using ZipFile'''
 
 	def __init__(self, root,
+		flat = False,
 		filelist = None,
 		column = 1,
 		nohead = False,
@@ -37,6 +38,7 @@ class ZipImager:
 		'''Prepare to create zip file'''
 		self.echo = echo
 		self.root_path = Path(root)
+		self.flat = flat
 		self.filelist = filelist
 		self.column = column
 		self.nohead = nohead
@@ -66,18 +68,42 @@ class ZipImager:
 			self.dropped_path.open('w') as dropped_fh
 		):
 			for path, relative in ExtPath.walk_files(self.root_path):
-				if not self.filelist or ExtPath.norm_to_posix(relative) in filelist:
-					progress.inc()
-					if self.drop(relative):
-						print(relative, file=dropped_fh)
-						dropped_cnt += 1
+				if self.filelist:
+					posix = ExtPath.norm_to_posix(relative)
+					if not posix in filelist:
+						continue
+					filelist.remove(posix)
+				progress.inc()
+				if self.drop(relative):
+					print(f'{relative}\tdropped_by_regex', file=dropped_fh)
+					dropped_cnt += 1
+				else:
+					if self.flat:
+						fname = ExtPath.flatten(relative)
+						try:
+							zf.write(path, fname)
+							print(f'{relative}\t{fname}', file=files_fh)
+							file_cnt += 1
+						except:
+							print(f'{relative}\tdropped_by_zip', file=dropped_fh)
+							dropped_cnt += 1
 					else:
-						zf.write(path, relative)
-						print(relative, file=files_fh)
-						file_cnt += 1
+						try:
+							zf.write(path, relative)
+							print(relative, file=files_fh)
+							file_cnt += 1
+						except:
+							print(f'{relative}\tdropped_by_zip', file=dropped_fh)
+							dropped_cnt += 1
 		self.log.info(f'Created {self.image_path.name} containing {file_cnt} file(s)', echo=True)
 		if self.drop != GrepLists.false:
 			self.log.info(f'Dropped {dropped_cnt} file(s) by given filter(s)')
+		if self.filelist and len(filelist) > 0:
+			path = ExtPath.child(f'{self.filename}_missing.txt', parent=self.outdir)
+			with path.open('w') as fh:
+				for posix in filelist:
+					print(posix, file=fh)
+			self.log.warning(f'Files from given list are missing, check {path.name}')
 		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}', echo=True)
 
 class ZipImagerCli(ArgumentParser):
@@ -104,6 +130,9 @@ class ZipImagerCli(ArgumentParser):
 		self.add_argument('-l', '--filelist', type=Path,
 			help='Copy only the files in the list', metavar='FILE'
 		)
+		self.add_argument('-t', '--flat', default=False, action='store_true',
+			help='Generate a flat structure without folders'
+		)
 		self.add_argument('-w', '--whitelist', type=Path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
 		)
@@ -119,6 +148,7 @@ class ZipImagerCli(ArgumentParser):
 		self.column = args.column
 		self.filename = args.filename
 		self.filelist = args.filelist
+		self.flat = args.flat
 		self.nohead = args.nohead
 		self.outdir = args.outdir
 		self.whitelist = args.whitelist
@@ -131,6 +161,7 @@ class ZipImagerCli(ArgumentParser):
 			filelist = self.filelist,
 			column = self.column,
 			nohead = self.nohead,
+			flat = self.flat,
 			drop = GrepLists(
 				blacklist = self.blacklist,
 				whitelist = self.whitelist, 

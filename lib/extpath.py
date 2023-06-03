@@ -59,6 +59,11 @@ class ExtPath:
 		return ExtPath.to_posix(ExtPath.normalize(path))
 
 	@staticmethod
+	def flatten(path):
+		'''Normalize path and get rid of the stupid win backslashes'''
+		return ExtPath.normalize(path).lstrip('\\/').replace('/', '_').replace('\\', '_')
+
+	@staticmethod
 	def walk(root):
 		'''Recursivly give all sub-paths'''
 		return root.rglob('*')
