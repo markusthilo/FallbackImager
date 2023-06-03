@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.4_2023-06-03'
+__version__ = '0.0.5_2023-06-03'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -137,8 +137,11 @@ class DismImager:
 			path = parent/self.WIMMOUNT
 		dest_path = self.outdir/self.WIMMOUNT
 		if not dest_path.exists():
-			copyfile(path, dest_path)
-			self.log.info(f'Copied {self.WIMMOUNT} to destination directory', echo=True)
+			if path and path.is_file():
+				copyfile(path, dest_path)
+				self.log.info(f'Copied {self.WIMMOUNT} to destination directory', echo=True)
+			else:
+				self.log.warning(f'Did not find {self.WIMMOUNT} in the script/executable directory')
 
 class DismImagerCli(ArgumentParser):
 	'''CLI for the imager'''

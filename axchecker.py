@@ -9,6 +9,14 @@ __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
 Verify AXIOM case files
+Output directory and filename (base for the generetad files, do extension) are required.
+-l/--list lists the partitions contained in the AXIOM case file.
+To compare to a file structure, give the partition with -p/--partition,
+e.g. "Test-SD.E01 - Entire Disk (exFAT, 1,86 GB) Test-SD".
+When a text file is given by -d/--diff, the tool handles the content as a file list
+and tries to compare it to the given AXIOM partition from "Case.mfdb".
+-c/--column has to point to the paths if the text file is in TSV format,
+e.g. "Full path" for TSV file generated with X-Ways (German: "Vollpfad").
 '''
 
 from pathlib import Path
@@ -254,7 +262,6 @@ class AxCheckerGui:
 			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
 		StringSelector(root, frame, root.PARTITION, root.PARTITION,
 			command=self._select_partition)	
-		self.partition_window = None
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION, columnspan=2)
 		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
@@ -273,11 +280,12 @@ class AxCheckerGui:
 		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
 		GridSeparator(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		root.child_win_active = False
 		self.root = root
 
 	def _select_partition(self):
 		'''Select partition in the AXIOM case'''
-		if self.partition_window:
+		if self.root.child_win_active:
 			return
 		self.root.settings.section = self.CMD
 		mfdb = self.root.settings.get(self.root.CASE_FILE)
@@ -307,13 +315,12 @@ class AxCheckerGui:
 		frame = ExpandedFrame(self.root, self.partition_window)
 		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
 		RightButton(self.root, frame, self.root.QUIT, self.partition_window.destroy)
-		self.partition_window = None
 
 	def _get_partition(self):
 		'''Get the selected partition'''
 		self.root.settings.section = self.CMD
 		self.root.settings.raw(self.root.PARTITION).set(self._selected_part.get())
-		self._destroy_partition_window()
+		self.partition_window.destroy()
 
 	def _select_file_structure(self):
 		'''Select file structure to compare'''

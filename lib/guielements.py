@@ -225,21 +225,19 @@ class ChildWindow(Toplevel):
 
 	def __init__(self, root, title):
 		'''Open child window'''
-		try:
-			if self._active:
-				return
-		except AttributeError:
-			pass
+		if root.child_win_active:
+			return
 		super().__init__(root)
 		self.title(title)
 		self.resizable(0, 0)
 		self.iconbitmap(root.icon_path)
 		self.protocol('WM_DELETE_WINDOW', self.destroy)
-		self._active = True
+		root.child_win_active = True
+		self.root = root
 
 	def destroy(self):
 		'''Destroy the child window'''
-		self._active = False
+		self.root.child_win_active = False
 		super().destroy()
 
 class SelectTsvColumn(ChildWindow):
@@ -247,11 +245,8 @@ class SelectTsvColumn(ChildWindow):
 
 	def __init__(self, root, cmd):
 		'''Open child window'''
-		try:
-			if self._active:
-				return
-		except AttributeError:
-			pass
+		if root.child_win_active:
+			return
 		self.root = root
 		self.cmd = cmd
 		self.root.settings.section = self.cmd
