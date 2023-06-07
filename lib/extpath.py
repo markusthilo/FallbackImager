@@ -46,7 +46,7 @@ class ExtPath:
 	@staticmethod
 	def normalize(path):
 		'''Normalize path for better comparison'''
-		return ExtPath.decode(path).rstrip('\\/ \t\n').replace('\n', ' ').replace(':', '_')
+		return ExtPath.decode(path).strip('\\/\t\n').rstrip('\n').replace('\n', ' ').replace('\t', ' ').replace('/', ':')
 
 	@staticmethod
 	def to_posix(path):

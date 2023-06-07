@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.5_2023-06-03'
+__version__ = '0.0.6_2023-06-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -115,7 +115,7 @@ class AxChecker:
 					break
 		else:
 			part_id = list(self.mfdb.partitions)[0]
-		self.log.info('Comparing files in AXIOM to {self.diff_path.name}', echo=True)
+		self.log.info(f'Comparing files in AXIOM to {self.diff_path.name}', echo=True)
 		not_file_cnt = 0
 		not_hit_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
@@ -141,11 +141,11 @@ class AxChecker:
 						print(path, file=not_files_fh)
 						not_file_cnt += 1
 		elif self.diff_path.is_file:	# compare to file
-			normalized_paths = {ExtPath.normalize(self.mfdb.short_paths[source_id][1]): source_id
+			all_paths = {ExtPath.normalize(self.mfdb.short_paths[source_id][1]): source_id
 				for source_id, path in self.mfdb.short_paths.items()
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
-			tsv = TsvReader(self.diff_path)
+			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
 			if tsv.column < 0:
 				self.log.error('Column out of range/undetected')
 			self.echo(f'Processing {self.diff_path}')
@@ -159,8 +159,10 @@ class AxChecker:
 					if not path:
 						print(line, file=diff_paths_fh)
 						print(line, file=diff_hits_fh)
-					elif path in normalized_paths:
-						source_id = normalized_paths[path]
+						continue
+					normalized_path = ExtPath.normalize(path)
+					if normalized_path in all_paths:
+						source_id = all_paths[normalized_path]
 						if source_id in self.mfdb.hit_ids:
 							continue
 						print(line, file=diff_hits_fh)

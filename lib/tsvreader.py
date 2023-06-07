@@ -38,14 +38,14 @@ class TsvReader:
 		'''Read line by line and decode'''
 		with self.path.open('r', encoding=self.encoding) as fh:
 			if not self.nohead:
-				yield None, fh.readline()
+				yield None, fh.readline().rstrip('\n')
 			for line in fh:
-				line = line.rstrip('\n')
-				columns = line.split('\t')
+				stripped_line = line.rstrip('\n')
+				columns = stripped_line.split('\t')
 				while len(columns) < self.columns_len:
-					line += ' ' + next(fh).rstrip('\n')
-					columns = line.split('\t')
+					stripped_line += ' ' + next(fh).rstrip('\n')
+					columns = stripped_line.split('\t')
 				try:
-					yield ExtPath.normalize(columns[self.column]), line
+					yield columns[self.column], stripped_line
 				except:
 					self.errors.append(line)

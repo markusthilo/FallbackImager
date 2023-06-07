@@ -306,6 +306,7 @@ class SelectTsvColumn(ChildWindow):
 				text.configure(state='disabled')
 		if columns > self.root.MAX_COLUMN_QUANT:
 			columns = self.root.MAX_COLUMN_QUANT
+		row += 1
 		for column in range(columns):
 			Button(frame,
 				text = f'{column+1}',

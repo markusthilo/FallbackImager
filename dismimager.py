@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.5_2023-06-03'
+__version__ = '0.0.6_2023-06-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -129,19 +129,23 @@ class DismImager:
 
 	def copy_exe(self, path=None):
 		'''Copy WimMount.exe into destination directory'''
+		dest_path = self.outdir/self.WIMMOUNT
+		if dest_path.exists():
+			self.log.warning(f'{self.WIMMOUNT} already exists in destination directory')
+			return
 		if not path:
 			if Path(__executable__).name.lower() == 'python.exe':
 				parent = Path(__file__).parent
 			else:
 				parent = Path(__executable__).parent
 			path = parent/self.WIMMOUNT
-		dest_path = self.outdir/self.WIMMOUNT
-		if not dest_path.exists():
-			if path and path.is_file():
-				copyfile(path, dest_path)
-				self.log.info(f'Copied {self.WIMMOUNT} to destination directory', echo=True)
-			else:
-				self.log.warning(f'Did not find {self.WIMMOUNT} in the script/executable directory')
+			if not path.is_file():
+				path = parent/'bin'/self.WIMMOUNT
+				if not path.is_file():
+					self.log.warning(f'Did not find executable {self.WIMMOUNT}')
+					return
+		copyfile(path, dest_path)
+		self.log.info(f'Copied {self.WIMMOUNT} to destination directory', echo=True)
 
 class DismImagerCli(ArgumentParser):
 	'''CLI for the imager'''
