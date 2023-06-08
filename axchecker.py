@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.6_2023-06-07'
+__version__ = '0.0.7_2023-06-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -78,11 +78,22 @@ class AxChecker:
 			).open('w', encoding='utf-8') for source_id, partition in self.mfdb.get_partition_fnames()
 		}
 		for source_id in source_ids:
-			print(f'{self.mfdb.short_paths[source_id][1]}',
+			print(f'{self.mfdb.short_paths[source_id][2]}',
 				file = fh_dict[self.mfdb.short_paths[source_id][0]]
 			)
 		for fh in fh_dict.values():
 			fh.close()
+
+	def write_tsv_file(self, source_ids, type_str):
+		'''Write TSV file by given iterable source_ids'''
+		partition = self.mfdb.re_filename.sub('_', self.partition)
+		with ExtPath.child(
+				f'{self.filename}_{type_str}_{partition}.txt',
+				parent = self.outdir
+			).open('w', encoding='utf-8') as fh:
+			for source_id in source_ids:
+				if self.mfdb.short_paths[source_id][1] == self.partition:
+					print(f'{self.mfdb.short_paths[source_id][2]}', file = fh)
 
 	def check(self):
 		'''Check AXIOM case file'''
@@ -91,8 +102,12 @@ class AxChecker:
 				head='axchecker.AxChecker', echo=self.echo)
 		self.log.info(f'Reading paths from {self.mfdb_path.name} and writing text files', echo=True)
 		self.mfdb.fetch_paths()
-		self.write_tsv_files(self.mfdb.file_ids, 'Files')
-		self.write_tsv_files(self.mfdb.folder_ids, 'Folders')
+		if self.partition:
+			self.write_tsv_file(self.mfdb.file_ids, 'Files')
+			self.write_tsv_file(self.mfdb.folder_ids, 'Folders')
+		else:
+			self.write_tsv_files(self.mfdb.file_ids, 'Files')
+			self.write_tsv_files(self.mfdb.folder_ids, 'Folders')
 		self.log.info(
 			f'AXIOM processed {len(self.mfdb.file_ids)} file(s) and  {len(self.mfdb.folder_ids)} folder(s)',
 			echo = True
@@ -119,7 +134,7 @@ class AxChecker:
 		not_file_cnt = 0
 		not_hit_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
-			file_paths = {self.mfdb.short_paths[source_id][1]: source_id
+			file_paths = {self.mfdb.short_paths[source_id][2]: source_id
 				for source_id in self.mfdb.file_ids
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
@@ -141,7 +156,7 @@ class AxChecker:
 						print(path, file=not_files_fh)
 						not_file_cnt += 1
 		elif self.diff_path.is_file:	# compare to file
-			all_paths = {ExtPath.normalize(self.mfdb.short_paths[source_id][1]): source_id
+			all_paths = {ExtPath.normalize(self.mfdb.short_paths[source_id][2]): source_id
 				for source_id, path in self.mfdb.short_paths.items()
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
@@ -309,11 +324,12 @@ class AxCheckerGui:
 			return
 		self.partition_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
 		self._selected_part = StringVar()
-		for partition in mfdb.partitions.values():
+		for source, partition in mfdb.partitions.values():
+			partition_path = f'{source} - {partition}'
 			frame = ExpandedFrame(self.root, self.partition_window)
-			Radiobutton(frame, variable=self._selected_part, value=partition).pack(
+			Radiobutton(frame, variable=self._selected_part, value=partition_path).pack(
 				side='left', padx=self.root.PAD)
-			LeftLabel(self.root, frame, partition)
+			LeftLabel(self.root, frame, partition_path)
 		frame = ExpandedFrame(self.root, self.partition_window)
 		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
 		RightButton(self.root, frame, self.root.QUIT, self.partition_window.destroy)
@@ -343,19 +359,32 @@ class AxCheckerGui:
 		self.root.settings.section = self.CMD
 		mfdb = self.root.settings.get(self.root.CASE_FILE)
 		partition = self.root.settings.get(self.root.PARTITION)
-		if not mfdb or not partition:
+		if not mfdb:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.CASE_AND_PARTITION_REQUIRED
+				message = self.root.CASE_REQUIRED
 			)
 			return
 		outdir = self.root.settings.get(self.root.OUTDIR) 
-		verify = self.root.settings.get(self.root.VERIFY_FILE)
 		filename = self.root.settings.get(self.root.FILENAME)
+		if not outdir or not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.SOURCED_DEST_REQUIRED
+			)
+			return
+		verify = self.root.settings.get(self.root.VERIFY_FILE)
+		if not partition and verify != self.root.DO_NOT_COMPARE:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.PARTITION_REQUIRED
+			)
+			return
 		file_structure = self.root.settings.get(self.root.FILE_STRUCTURE)
 		tsv = self.root.settings.get(self.root.TSV)
 		column = self.root.settings.get(self.root.COLUMN)
 		cmd = self.root.settings.section.lower()
+		cmd += f' --partition "{partition}"'
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
 		if verify == self.root.FILE_STRUCTURE:

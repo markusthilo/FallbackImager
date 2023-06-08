@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.6_2023-06-07'
+__version__ = '0.0.7_2023-06-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -144,7 +144,8 @@ class Gui(GuiBase):
 	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
 	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
 	SELECT_COLUMN = 'Select column with path to compare'
-	CASE_AND_PARTITION_REQUIRED = 'AXIOM case file and partition are required'
+	CASE_REQUIRED = 'AXIOM case file is required'
+	PARTITION_REQUIRED = 'Partition in the AXIOM case is required'
 	ROOT_DIR_REQUIRED = 'Root directory is required' 
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 

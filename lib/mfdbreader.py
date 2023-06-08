@@ -54,6 +54,11 @@ class MfdbReader(SQLiteReader):
 		}
 		self.re_filename = re_compile(' (\([^\)]*\) )|([ *.;:#"/\\\])')
 
+	def get_partitions(self):
+		'''One string for each partition'''
+		for source_id, (image, partition) in self.partitions.items():
+			yield source_id, f'{image} - {partition}'
+
 	def fetch_paths(self):
 		'''Read all needed data from case file'''
 		self.paths = {source_id: source_path
@@ -66,7 +71,11 @@ class MfdbReader(SQLiteReader):
 			part_len = len(partition)
 			for source_id, path in self.paths.items():
 				if len(path) > part_len and path[:part_len] == partition:
-					self.short_paths[source_id] = (partition_id, path[part_len:])
+					self.short_paths[source_id] = (
+						partition_id,
+						path[:part_len],
+						path[part_len:]
+					)
 		self.file_ids = {source_id for source_id in self.fetch_table('source',
 				fields = 'source_id',
 				where = ('source_type', 'File')
@@ -83,11 +92,6 @@ class MfdbReader(SQLiteReader):
 		}
 		self.ignored_file_ids = self.file_ids-self.hit_ids
 
-	def get_partitions(self):
-		'''One string for each partition'''
-		for source_id, (image, partition) in self.partitions.items():
-			yield source_id, f'{image} - {partition}'
-
 	def get_partition_fnames(self):
 		'''One string that would work as file name for each partition'''
 		for source_id, partition in self.get_partitions():
@@ -95,4 +99,4 @@ class MfdbReader(SQLiteReader):
 
 	def normalized_path(self, source_id):
 		'''Return a normalized path'''
-		return self.short_paths[source_id][1].replace('\\', '/').strip('/')
+		return self.short_paths[source_id][2].replace('\\', '/').strip('/')
