@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.0.1_20230609";
+const char *VERSION = "2.0.1_20230610";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,7 +42,7 @@ void print_help() {
 	printf("TARGET:\n");
 	printf("    File or physical drive\n\n");
 	printf("BLOCK_SIZE (optional):\n");
-	printf("    Size of blocks to write\n\n");
+	printf("    Block size for read and write (default is 4096)\n\n");
 	printf("OPTIONS (optional):\n");
 	printf("    /a - Write every block, regardless if it is already zeroed\n");
 	printf("    /x - Two pass wipe, write blocks with random values as 1st pass, implies /a\n");

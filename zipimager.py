@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.6_2023-06-07'
+__version__ = '0.0.8_2023-06-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -40,7 +40,8 @@ class ZipImager:
 		drop = GrepLists.false,
 		filename = None,
 		outdir = None,
-		echo = print
+		echo = print,
+		log = None
 	):
 		'''Prepare to create zip file'''
 		self.echo = echo
@@ -55,8 +56,11 @@ class ZipImager:
 		self.image_path = ExtPath.child(f'{self.filename}.zip', parent=self.outdir)
 		self.files_path = ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir)
 		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
-		self.log = Logger(filename=self.filename, outdir=self.outdir,
-			head='zipimager.ZipImager', echo=echo)
+		if log:
+			self.log = log
+		else:
+			self.log = Logger(filename=self.filename, outdir=self.outdir,
+				head='zipimager.ZipImager', echo=echo)
 
 	def create(self):
 		'''Create zip file'''
