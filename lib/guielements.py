@@ -5,9 +5,9 @@ from pathlib import Path
 from functools import partial
 from tkinter import Toplevel, StringVar
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
-from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton
+from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu
 from tkinter.scrolledtext import ScrolledText
-from tkinter.filedialog import askopenfilename, askdirectory
+from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
 from tkinter.messagebox import showerror
 from .timestamp import TimeStamp
 from .extpath import ExtPath
@@ -81,6 +81,17 @@ class GridSeparator:
 	def __init__(self, root, parent, column=0, columnspan=3):
 		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD)
+		root.row += 1
+
+class GridIntMenu(OptionMenu):
+	'''| | OptionMenu | | |'''
+	def __init__(self, root, parent, key, text, values,
+		default=None, column=0, columnspan=1):
+		self.variable = root.settings.init_intvar(key, default=default)
+		Label(parent, text=text).grid(
+			sticky='w', row=root.row, column=column, columnspan=columnspan)
+		super().__init__(parent, self.variable, default, *values)
+		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan)
 		root.row += 1
 
 class GridLabel:
@@ -167,7 +178,7 @@ class FileSelector(Button):
 		super().__init__(parent, text=text, command=self._select)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
 		Entry(parent, textvariable=self.file_str, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=2, sticky='w', padx=root.PAD)
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 		self.root = root
 		self.ask = ask
@@ -177,6 +188,37 @@ class FileSelector(Button):
 		new_filename = askopenfilename(title=self.ask, filetypes=(self.filetype, ('All files', '*.*')))
 		if new_filename:
 			self.file_str.set(new_filename)
+		if self.command:
+			self.command()
+
+class FilesSelector(ScrolledText):
+	'''ScrolledText to select files'''
+	def __init__(self, root, parent, key, text, ask, command=None, width=None, height=None,
+		filetypes=(('All files', '*.*'),), column=1, columnspan=1):
+		if not width:
+			width = root.FILES_FIELD_WIDTH
+		if not height:
+			height = root.INFO_HEIGHT
+		self.button = Button(parent, text=text, command=self._select)
+		self.button.grid(row=root.row, column=column, sticky='nw', padx=root.PAD, pady=root.PAD)
+		super().__init__(parent,
+			padx = root.PAD,
+			pady = root.PAD,
+			width = width,
+			height = height
+		)
+		self.grid(row=root.row, column=column+1, columnspan=columnspan,
+			sticky='nw', padx=root.PAD, pady=root.PAD)
+		root.row += 1
+		self.root = root
+		self.ask = ask
+		self.filetypes = filetypes
+		self.command = command
+	def _select(self):
+		new_filenames = askopenfilenames(title=self.ask, filetypes=self.filetypes)
+		if new_filenames:
+			self.delete('1.0', 'end')
+			self.insert('end', '\n'.join(new_filenames))
 		if self.command:
 			self.command()
 

@@ -113,6 +113,29 @@ class ExtPath:
 			except UnicodeError:
 				continue
 
+	@staticmethod
+	def readable_size(self, size):
+		'Genereate readable size string'
+		try:
+			size = int(size)
+		except (TypeError, ValueError):
+			return self.conf['TEXT']['undetected']
+		strings = list()
+		for base in (
+			{'PiB': 2**50, 'TiB': 2**40, 'GiB': 2**30, 'MiB': 2**20, 'kiB': 2**10},
+			{'PB': 10**15, 'TB': 10**12, 'GB': 10**9, 'MB': 10**6, 'kB': 10**3}
+		):
+			for u, b in base.items():
+				rnd = round(size/b, 2)
+				if rnd >= 1:
+					break
+			if rnd >= 10:
+				rnd = round(rnd, 1)
+			if rnd >= 100:
+				rnd = round(rnd)
+			strings.append(f'{rnd} {u}')
+		return ' / '.join(strings)
+
 class FilesPercent:
 	'''Show progress when going through file structure'''
 

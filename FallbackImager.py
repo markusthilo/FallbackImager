@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.8_2023-06-10'
+__version__ = '0.0.8_2023-06-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,6 +22,7 @@ from isoverify import IsoVerifyGui, IsoVerifyCli
 from dismimager import DismImagerGui, DismImagerCli
 from zipimager import ZipImagerGui, ZipImagerCli
 from axchecker import AxCheckerGui, AxCheckerCli
+from hdzero import HdZeroGui, HdZeroCli
 
 ### MODULES ###
 if __os_name__ == 'nt':
@@ -32,7 +33,8 @@ if __os_name__ == 'nt':
 			IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
 			ZipImagerGui: ZipImagerCli,
-			AxCheckerGui: AxCheckerCli
+			AxCheckerGui: AxCheckerCli,
+			HdZeroGui: HdZeroCli
 		}
 	else:
 		__modules__ = {
@@ -68,6 +70,7 @@ class Gui(GuiBase):
 	MAX_ENTRY_HEIGHT = 8
 	MAX_ROW_QUANT = 8
 	MAX_COLUMN_QUANT = 10
+	FILES_FIELD_WIDTH = 94
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
 	HELP = 'Help'
@@ -148,6 +151,18 @@ class Gui(GuiBase):
 	PARTITION_REQUIRED = 'Partition in the AXIOM case is required'
 	ROOT_DIR_REQUIRED = 'Root directory is required' 
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
+	WIPE_WARNING = 'Wipe drive or files(s)'
+	DRIVE = 'Drive'
+	FILES = 'File(s)'
+	ASK_FILES = 'Select file(s) to process'
+	NORMAL_WIPE = 'Normal wipe'
+	ALL_BLOCKS = 'All blocks'
+	EXTRA_PASS = 'Extra pass'
+	CHECK = 'Check'
+	BLOCKSIZE = 'Block size'
+	USE_FF = 'Use 0xFF to wipe'
+	LOG_HEAD = 'Head of log file'
+	SELECT_TEXT_FILE = 'Select text file'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

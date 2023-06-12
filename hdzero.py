@@ -3,7 +3,7 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.7_2023-06-10'
+__version__ = '0.0.8_2023-06-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,12 +12,6 @@ Erases disks while not touching empty blocks/pages.
 The tool is also capable of overwriting files but slack and files system artefacts
 will remain. It is designed to securely wipe HDDs/SSDs and generate a protocol.
 '''
-
-from tkinter import Tk, Toplevel, StringVar, BooleanVar, PhotoImage, CENTER, NORMAL, DISABLED
-from tkinter.ttk import Frame, Notebook, Label, Button, Entry, Radiobutton, Checkbutton
-from tkinter.ttk import LabelFrame, Progressbar, OptionMenu
-from tkinter.messagebox import askquestion, showwarning, showerror, showinfo
-from tkinter.filedialog import askopenfilenames, asksaveasfilename
 
 from sys import executable as __executable__
 from pathlib import Path
@@ -28,7 +22,7 @@ from functools import partial
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
 from argparse import ArgumentParser
 from tkinter import StringVar
-from tkinter.ttk import Radiobutton, Button, Checkbutton
+from tkinter.ttk import Frame, Radiobutton, Button, Checkbutton
 from tkinter.messagebox import showerror
 from tkinter.scrolledtext import ScrolledText
 from lib.extpath import ExtPath, FilesPercent
@@ -36,8 +30,8 @@ from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.mfdbreader import MfdbReader
 from lib.tsvreader import TsvReader
-from lib.guielements import SourceDirSelector, Checker, LeftLabel
-from lib.guielements import ChildWindow, SelectTsvColumn
+from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu
+from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
@@ -45,10 +39,8 @@ from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
 __executable__ = Path(__executable__)
 __file__ = Path(__file__)
 if __executable__.stem.lower() == __file__.stem.lower():
-	__app_name__ = __executable__.stem
 	__parent_path__ = __executable__.parent
 else:
-	__app_name__ = __file__.stem
 	__parent_path__ = __file__.parent
 for __zerod_exe_path__ in (
 		__parent_path__/'zerod.exe',
@@ -314,6 +306,9 @@ class HdZeroGui:
 
 	CMD = __app_name__
 	DESCRIPTION = __description__
+	DEF_BLOCKSIZE = 4096
+	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768,
+		65536, 131072, 262144, 524288, 1048576)
 
 	def __init__(self, root):
 		'''Notebook page'''
@@ -321,36 +316,35 @@ class HdZeroGui:
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
+		GridLabel(root, frame, root.WIPE_WARNING, columnspan=3)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.AXIOM, columnspan=3)
-		FileSelector(root, frame, root.CASE_FILE, root.CASE_FILE,
-			f'{root.OPEN_CASE_FILE} ({root.AXIOM_CASE_FILE})',
-			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
-		StringSelector(root, frame, root.PARTITION, root.PARTITION,
-			command=self._select_partition)	
+		StringSelector(root, frame, root.DRIVE, root.DRIVE,
+			command=self._select_drive)
+		self.files_selector = FilesSelector(root, frame, root.FILES, root.FILES,
+			root.ASK_FILES)
+		StringRadiobuttons(root, frame, root.TO_DO,
+			(root.NORMAL_WIPE, root.ALL_BLOCKS, root.EXTRA_PASS, root.CHECK),
+			root.NORMAL_WIPE)
+		GridLabel(root, frame, root.NORMAL_WIPE, column=1, columnspan=2)
+		GridLabel(root, frame, root.ALL_BLOCKS, column=1, columnspan=2)
+		GridLabel(root, frame, root.EXTRA_PASS, column=1, columnspan=2)
+		GridLabel(root, frame, root.CHECK, column=1, columnspan=2)
+		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
+			default=self.DEF_BLOCKSIZE, column=1, columnspan=2)
+		Checker(root, frame, root.USE_FF, root.USE_FF, column=1, columnspan=2)
+		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
+			command=None)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
-		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.VERIFY_FILE, columnspan=2)
-		StringRadiobuttons(root, frame, root.VERIFY_FILE,
-			(root.DO_NOT_COMPARE, root.FILE_STRUCTURE, root.TSV), root.DO_NOT_COMPARE)
-		GridLabel(root, frame, root.DO_NOT_COMPARE, column=1, columnspan=2)
-		DirSelector(root, frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE,
-			command=self._select_file_structure)
-		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
-			command=self._select_tsv_file)
-		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
-		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
-		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
-		root.child_win_active = False
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=2)
 		self.root = root
 
-	def _select_partition(self):
-		'''Select partition in the AXIOM case'''
+	def notepad_log_header(self):
+		'Edit log header file with Notepad'
+		proc = Popen(['notepad', self.log_header_path])
+		proc.wait()
+
+	def _select_drive(self):
+		'''Select drive to wipe'''
 		if self.root.child_win_active:
 			return
 		self.root.settings.section = self.CMD
@@ -383,25 +377,7 @@ class HdZeroGui:
 		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
 		RightButton(self.root, frame, self.root.QUIT, self.partition_window.destroy)
 
-	def _get_partition(self):
-		'''Get the selected partition'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.PARTITION).set(self._selected_part.get())
-		self.partition_window.destroy()
 
-	def _select_file_structure(self):
-		'''Select file structure to compare'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.FILE_STRUCTURE)
-
-	def _select_tsv_file(self):
-		'''Select TSV file to compare'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.TSV)
-
-	def _select_column(self):
-		'''Select column in TSV file to compare'''
-		SelectTsvColumn(self.root, self.CMD)
 
 	def _add_job(self):
 		'''Generate command line'''
@@ -457,7 +433,7 @@ class HdZeroGui:
 		cmd += f' "{mfdb}"'
 		self.root.append_job(cmd)
 
-class Gui(Tk, WinUtils):
+class Gui:
 	'GUI look and feel'
 
 	PAD = 4
