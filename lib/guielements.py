@@ -89,9 +89,9 @@ class GridIntMenu(OptionMenu):
 		default=None, column=0, columnspan=1):
 		self.variable = root.settings.init_intvar(key, default=default)
 		Label(parent, text=text).grid(
-			sticky='w', row=root.row, column=column, columnspan=columnspan)
+			sticky='e', row=root.row, column=column, columnspan=columnspan)
 		super().__init__(parent, self.variable, default, *values)
-		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan)
+		self.grid(sticky='w', row=root.row, column=column+columnspan)
 		root.row += 1
 
 class GridLabel:
@@ -295,7 +295,10 @@ class SelectTsvColumn(ChildWindow):
 		tsv = self.root.settings.get(self.root.TSV)
 		if tsv:
 			encoding, head = ExtPath.read_utf_head(Path(tsv), after=self.root.MAX_ROW_QUANT)
-			columns = len(head[0].split('\t'))
+			try:
+				columns = len(head[0].split('\t'))
+			except IndexError:
+				columns = 1
 			if columns == 1:
 				self.root.settings.raw(self.root.COLUMN).set('1')
 				return

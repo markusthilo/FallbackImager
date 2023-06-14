@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.8_2023-06-12'
+__version__ = '0.0.8_2023-06-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -151,9 +151,10 @@ class Gui(GuiBase):
 	PARTITION_REQUIRED = 'Partition in the AXIOM case is required'
 	ROOT_DIR_REQUIRED = 'Root directory is required' 
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
-	WIPE_WARNING = 'Wipe drive or files(s)'
+	WIPE = 'Wipe'
 	DRIVE = 'Drive'
 	FILES = 'File(s)'
+	SELECT_DRIVE = 'Select drive'
 	ASK_FILES = 'Select file(s) to process'
 	NORMAL_WIPE = 'Normal wipe'
 	ALL_BLOCKS = 'All blocks'
@@ -163,6 +164,8 @@ class Gui(GuiBase):
 	USE_FF = 'Use 0xFF to wipe'
 	LOG_HEAD = 'Head of log file'
 	SELECT_TEXT_FILE = 'Select text file'
+	ZEROD_EXE = 'ZEROD'
+	SELECT_ZEROD_EXE = 'Select ZEROD executable'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

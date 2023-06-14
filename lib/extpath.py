@@ -114,12 +114,12 @@ class ExtPath:
 				continue
 
 	@staticmethod
-	def readable_size(self, size):
+	def readable_size(size):
 		'Genereate readable size string'
 		try:
 			size = int(size)
 		except (TypeError, ValueError):
-			return self.conf['TEXT']['undetected']
+			return 'undetected'
 		strings = list()
 		for base in (
 			{'PiB': 2**50, 'TiB': 2**40, 'GiB': 2**30, 'MiB': 2**20, 'kiB': 2**10},

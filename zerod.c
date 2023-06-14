@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.0.1_20230610";
+const char *VERSION = "2.0.2_20230614";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +48,6 @@ void print_help() {
 	printf("    /x - Two pass wipe, write blocks with random values as 1st pass, implies /a\n");
 	printf("    /f - Fill with binary ones / 0xFF instad of zeros\n");
 	printf("    /c - Check, do not wipe (zeros or 0xFF with /f)\n");
-	printf("    /p - Print size, do not wipe\n");
 	printf("    /v - Verbose, print all warnings\n\n");
 	printf("Example:\n");
 	printf("zerod.exe \\\\.\\PHYSICALDRIVE1\n\n");
@@ -129,7 +128,7 @@ void list_bad_blocks(FILE *stream, Z_TARGET *target) {
 /* Read/write error */
 void error_rw(Z_TARGET *target) {
 	close_target(target);
-	fprintf(stderr, "Error: ");
+	fprintf(stderr, "\nError: ");
 	list_bad_blocks(stderr, target);
 	fprintf(stderr,"Too many bad blocks, aborting\n");
 	exit(1);
@@ -137,14 +136,14 @@ void error_rw(Z_TARGET *target) {
 
 /* Warning bad blocks */
 void warning_bad_blocks(Z_TARGET *target) {
-	fprintf(stderr, "Warning: ");
+	fprintf(stderr, "\nWarning: ");
 	list_bad_blocks(stderr, target);
 }
 
 /* Warning bad block on write */
 void warning_unable_to_write(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
 	if ( config->Verbose )
-		fprintf(stderr, "Warning: could not write block of %lu bytes at offset %lld\n",
+		fprintf(stderr, "\nWarning: could not write block of %lu bytes at offset %lld\n",
 		blocksize, target->Pointer);
 	target->BadBlocks[target->BadBlockCnt++] = target->Pointer;
 	if ( target->BadBlockCnt == MAXBADBLOCKS ) error_rw(target);
@@ -154,7 +153,7 @@ void warning_unable_to_write(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize
 /* Warning bad block on read*/
 void warning_unable_to_read(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
 	if ( config->Verbose )
-		fprintf(stderr, "Warning: could not read block of %lu bytes at offset %lld\n",
+		fprintf(stderr, "\nWarning: could not read block of %lu bytes at offset %lld\n",
 		blocksize, target->Pointer);
 	target->BadBlocks[target->BadBlockCnt++] = target->Pointer;
 	if ( target->BadBlockCnt == MAXBADBLOCKS ) error_rw(target);
@@ -164,7 +163,7 @@ void warning_unable_to_read(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize)
 /* Warning block not wiped */
 void warning_not_wiped(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
 	if ( config->Verbose )
-		fprintf(stderr, "Warning: block of %lu bytes at offset %lld is not completely wiped\n",
+		fprintf(stderr, "\nWarning: block of %lu bytes at offset %lld is not completely wiped\n",
 		blocksize, target->Pointer);
 	target->BadBlocks[target->BadBlockCnt++] = target->Pointer;
 	if ( target->BadBlockCnt == MAXBADBLOCKS ) error_rw(target);
@@ -323,18 +322,18 @@ int main(int argc, char **argv) {
 	DWORD blocksize = 0;	// block size to write
 	BOOL xtrasave = FALSE;	// randomized overwrite
 	BOOL write_all = FALSE; // overwrite every block
-	BOOL pure_check = FALSE;	// only check if blocks are zeroed
+	BOOL pure_check = FALSE;	// check, do not wipe
 	BOOL wipe_ff = FALSE;	// use 0xff insted of zeros
 	BOOL verbose = FALSE;	// verbose imfos/warnings
 	BOOL print_size = FALSE; // only print size
 	for (int i=2; i<argc; i++) {
 		if ( argv[i][0] == '/' && argv[i][2] == 0 ) {	// swith?
 			if ( argv[i][1] == 'x' || argv[i][1] == 'X' ) {	// x for two pass mode
-				if ( xtrasave || pure_check ) error_toomany();
+				if ( pure_check || xtrasave ) error_toomany();
 				xtrasave = TRUE;
 
 			} else if ( argv[i][1] == 'a' || argv[i][1] == 'A' ) {	// a to write every block
-				if ( write_all || pure_check ) error_toomany();
+				if ( pure_check || write_all ) error_toomany();
 				write_all = TRUE;
 			} else if ( argv[i][1] == 'c' || argv[i][1] == 'C' ) {	// c for pure check
 				if ( pure_check || write_all || xtrasave ) error_toomany();
@@ -345,9 +344,6 @@ int main(int argc, char **argv) {
 			} else if ( argv[i][1] == 'v' || argv[i][1] == 'V' ) {	// verbose infos/warnings
 				if ( verbose ) error_toomany();
 				verbose = TRUE;
-			} else if ( argv[i][1] == 'p' || argv[i][1] == 'P' ) {	// p to get size
-				if ( argc > 3 ) error_toomany();
-				print_size = TRUE;
 			} else error_wrong(argv[i]);
 		} else {	// not a swtich, may be blocksize?
 			int ptr = 0;
@@ -370,47 +366,10 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
-	if ( print_size ) {	// print size, do nothing more
-		HANDLE fHandle = CreateFile(	// open file or device to read
-			argv[1],
-			FILE_READ_DATA,
-			FILE_SHARE_READ,
-			NULL,
-			OPEN_EXISTING,
-			0,
-			NULL
-		);
-		if ( fHandle == INVALID_HANDLE_VALUE ) {
-			fprintf(stderr, "Error: could not open %s to get size\n", argv[1]);
-			exit(1);
-			}
-		LONGLONG size;
-		DISK_GEOMETRY_EX dge;	// disk?
-		if ( DeviceIoControl(
-			fHandle,
-			IOCTL_DISK_GET_DRIVE_GEOMETRY_EX,
-			NULL,
-			0,
-			&dge,
-			sizeof(dge),
-			NULL,
-			NULL
-		) ) size = dge.DiskSize.QuadPart; 
-		else {
-			LARGE_INTEGER filesize;	// file?
-			if ( GetFileSizeEx(fHandle, &filesize) ) size = filesize.QuadPart;
-			else {
-				fprintf(stderr, "Error: could not determin size of %s\n", argv[1]);
-				exit(1);
-			}
-		}
-		printf("Size of %s is %llu bytes\n", argv[1], size);
-		exit(0);
-	}
-	Z_TARGET target;	// wipe, not /p
+	Z_TARGET target;
 	target.Path = argv[1];
 	target.Pointer = 0;
-	if ( pure_check ) target.Handle = CreateFile(
+	if ( pure_check ) target.Handle = CreateFile(	// open ro
 		target.Path,
 		FILE_READ_DATA,
 		FILE_SHARE_READ,
@@ -418,8 +377,7 @@ int main(int argc, char **argv) {
 		OPEN_EXISTING,
 		0,
 		NULL
-	);
-	else target.Handle = CreateFile(
+	); else target.Handle = CreateFile(	// open rw
 		target.Path,
 		FILE_READ_DATA | FILE_WRITE_DATA,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
