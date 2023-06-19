@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.8_2023-06-14'
+__version__ = '0.0.8_2023-06-19'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -132,7 +132,7 @@ class AxChecker:
 				self.log.error(f'Unable to find partiton "{self.partition}" in AXIOM case file')
 		else:
 			part_id = list(self.mfdb.partitions)[0]
-			self.partition = self.mfdb.partitions[0][1]
+			self.partition = list(self.mfdb.partitions.values())[0][1]
 		self.log.info(f'Comparing AXIOM partition "{self.partition}" to {self.diff_path.name}', echo=True)
 		not_file_cnt = 0
 		not_hit_cnt = 0
@@ -187,7 +187,6 @@ class AxChecker:
 						not_hit_cnt += 1
 					else:
 						print(line, file=diff_paths_fh)
-						print(normalized_path)
 						not_file_cnt += 1
 			if tsv.errors:
 				self.log.warning(
