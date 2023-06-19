@@ -82,9 +82,11 @@ class GuiBase(Tk):
 		self.worker = Worker(self)
 		self.worker.start()
 
-	def append_info(self, *msg):
+	def append_info(self, *msg, overwrite=False):
 		'''Append message in info box'''
 		self.infos_text.configure(state='normal')
+		if overwrite:
+			self.infos_text.delete('end-2l', 'end')
 		self.infos_text.insert('end', ' '.join(f'{string}' for string in msg) + '\n')
 		self.infos_text.configure(state='disabled')
 		self.infos_text.yview('end')

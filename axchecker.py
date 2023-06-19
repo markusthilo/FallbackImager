@@ -128,9 +128,12 @@ class AxChecker:
 			for part_id, partition in self.mfdb.get_partitions():
 				if partition == self.partition:
 					break
+			if partition != self.partition:
+				self.log.error(f'Unable to find partiton "{self.partition}" in AXIOM case file')
 		else:
 			part_id = list(self.mfdb.partitions)[0]
-		self.log.info(f'Comparing files in AXIOM to {self.diff_path.name}', echo=True)
+			self.partition = self.mfdb.partitions[0][1]
+		self.log.info(f'Comparing AXIOM partition "{self.partition}" to {self.diff_path.name}', echo=True)
 		not_file_cnt = 0
 		not_hit_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
@@ -184,6 +187,7 @@ class AxChecker:
 						not_hit_cnt += 1
 					else:
 						print(line, file=diff_paths_fh)
+						print(normalized_path)
 						not_file_cnt += 1
 			if tsv.errors:
 				self.log.warning(

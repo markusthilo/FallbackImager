@@ -171,7 +171,8 @@ class Checker(Checkbutton):
 class FileSelector(Button):
 	'''Button to select file to read'''
 	def __init__(self, root, parent, key, text, ask, command=None,
-		filetype=('Text files', '*.txt'), default=None, column=1, columnspan=1):
+		filetype=('Text files', '*.txt'), default=None, initialdir=None,
+		column=1, columnspan=1):
 		self.file_str = root.settings.init_stringvar(key)
 		if default:
 			self.file_str.set(default)
@@ -183,9 +184,14 @@ class FileSelector(Button):
 		self.root = root
 		self.ask = ask
 		self.filetype = filetype
+		self.initialdir = initialdir
 		self.command = command
 	def _select(self):
-		new_filename = askopenfilename(title=self.ask, filetypes=(self.filetype, ('All files', '*.*')))
+		new_filename = askopenfilename(
+			title = self.ask,
+			filetypes = (self.filetype, ('All files', '*.*')),
+			initialdir = self.initialdir
+		)
 		if new_filename:
 			self.file_str.set(new_filename)
 		if self.command:
@@ -267,8 +273,6 @@ class ChildWindow(Toplevel):
 
 	def __init__(self, root, title):
 		'''Open child window'''
-		if root.child_win_active:
-			return
 		super().__init__(root)
 		self.title(title)
 		self.resizable(0, 0)
