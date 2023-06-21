@@ -17,6 +17,7 @@ from os import name as __os_name__
 from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
+from mkisoimager import MkIsoImagerGui, MkIsoImagerCli
 from oscdimager import OscdimgGui, OscdimgCli
 from isoverify import IsoVerifyGui, IsoVerifyCli
 from dismimager import DismImagerGui, DismImagerCli
@@ -29,6 +30,7 @@ if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
 	if IsUserAnAdmin():
 		__modules__ = {
+			MkIsoImagerGui: MkIsoImagerCli,
 			OscdimgGui: OscdimgCli,
 			IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
@@ -38,6 +40,7 @@ if __os_name__ == 'nt':
 		}
 	else:
 		__modules__ = {
+			MkIsoImagerGui: MkIsoImagerCli,
 			OscdimgGui: OscdimgCli,
 			IsoVerifyGui: IsoVerifyCli,
 			ZipImagerGui: ZipImagerCli,
@@ -97,6 +100,8 @@ class Gui(GuiBase):
 	SELECT_IMAGE = 'Select image file'
 	IMAGE_NAME = 'Name'
 	IMAGE_DESCRIPTION = 'Description'
+	MKISOFS = 'mkisofs'
+	SELECT_MKISOFS = 'Select mkisofs executable/binary'
 	OSCDIMG_EXE = 'OSCDIMG'
 	SELECT_OSCDIMG_EXE = 'Select OSCDIMG executable'
 	TO_DO = 'To do'

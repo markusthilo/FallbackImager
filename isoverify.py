@@ -3,11 +3,13 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.6_2023-06-07'
+__version__ = '0.0.9_2023-06-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Comparing ISO with UDF to file structure'
+__description__ = '''
+Compare ISO image (UDF) to file structure
+'''
 
 from pathlib import Path
 from pycdlib import PyCdlib
@@ -30,7 +32,10 @@ class IsoReader(PyCdlib):
 		'''Open ISO image'''
 		self.path = path
 		super().__init__()
-		self.open(self.path)
+		try:
+			self.open(self.path)
+		except:
+			raise RuntimeError(f'PyCdlib is unable to open {self.path}')
 
 	def get_udf(self):
 		'''Get UDF fyle system structure, files and dirs'''

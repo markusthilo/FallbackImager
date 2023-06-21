@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'OscdImager'
+__app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
 __version__ = '0.0.9_2023-06-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Create ISO image from a file structure using MS OSCDIMG
+Create ISO image from a file structure using mkisofs
 '''
 
+from os import name as __os_name__
 from pathlib import Path
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
@@ -24,24 +25,22 @@ from lib.guielements import ExpandedFrame, SourceDirSelector, GridLabel, Filenam
 from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector, GridButton
 from isoverify import IsoVerify
 
-__oscdimg_exe_path__ = None
-__oscdimg_exe_name__ = 'oscdimg.exe'
-for __oscdimg_exe_path__ in (
-		Path.cwd()/__oscdimg_exe_name__,
-		Path.cwd()/'bin'/__oscdimg_exe_name__,
-		Path(__file__)/__oscdimg_exe_name__,
-		Path(__file__)/'bin'/__oscdimg_exe_name__,
-		(Path('C:')/
-			'Program Files (x86)'/'Windows Kits'/
-			'10'/'Assessment and Deployment Kit'/'Deployment Tools'/'amd64'/'Oscdimg'/
-			__oscdimg_exe_name__
-		)
-	):
-	if __oscdimg_exe_path__.is_file():
+__mkisofs_path__ = None
+if __os_name__ == 'nt':
+	__mkisofs_name__ = 'mkisofs.exe'
+else:
+	__mkisofs_name__ = 'mkisofs'
+for __mkisofs_path__ in (
+		Path.cwd()/__mkisofs_name__,
+		Path.cwd()/'bin'/__mkisofs_name__,
+		Path(__file__)/__mkisofs_name__,
+		Path(__file__)/'bin'/__mkisofs_name__
+):
+	if __mkisofs_path__.is_file():
 		break
 
-class Oscdimg:
-	'''OSCDIMG via subprocess (oscdimg.exe -h -m -l$label -u2 $source $image)'''
+class MkIsoImager:
+	'''MAKEISOFS via subprocess (mkisofs -udf -o $image -V %label $source)'''
 
 	@staticmethod
 	def _label(string):
@@ -52,7 +51,7 @@ class Oscdimg:
 			filename = None,
 			outdir = None,
 			name = None,
-			exe = None,
+			mkisofs = None,
 			log = None,
 			echo = print
 		):
@@ -64,26 +63,26 @@ class Oscdimg:
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
 		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
-		self.args_str = f'-h -k -m -l"{self.label}" -u2 "{self.root_path}" "{self.image_path}"'
+		self.args_str = f'-udf -o "{self.image_path}" -V "{self.label}" "{self.root_path}"'
 		self.echo = echo
 		if log:
 			self.log = log
 		else:
-			self.log = Logger(self.filename, outdir=self.outdir, head='oscdimager.Oscdimg', echo=echo)
-		if exe:
-			self.exe_path = exe
+			self.log = Logger(self.filename, outdir=self.outdir, head='mkisoimager.MkIsoImager', echo=echo)
+		if mkisofs:
+			self.mkisofs_path = Path(mkisofs)
 		else:
-			if __oscdimg_exe_path__:
-				self.exe_path = __oscdimg_exe_path__
+			if __mkisofs_path__:
+				self.mkisofs_path = __mkisofs_path__
 			else:
-				self.log.error(f'Path to {__oscdimg_exe_name__} is not given and cannot be found')
-		self.cmd_str = f'{self.exe_path} {self.args_str}'
+				self.log.error(f'Path to {__mkisofs_name__} is not given and cannot be found')
+		self.cmd_str = f'{self.mkisofs_path} {self.args_str}'
 		self.startupinfo = STARTUPINFO()
 		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
 
 	def create_iso(self):
 		'''Create image'''
-		self.log.info(f'> {self.exe_path.name} {self.args_str}', echo=True)
+		self.log.info(f'> {self.mkisofs_path.name} {self.args_str}', echo=True)
 		proc = Popen(self.cmd_str,
 			shell = True,
 			stdout = PIPE,
@@ -104,7 +103,7 @@ class Oscdimg:
 			self.log.finished(proc, error=': Could not create image\n')
 		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}', echo=True)
 
-class OscdimgCli(ArgumentParser):
+class MkIsoImagerCli(ArgumentParser):
 	'''CLI for the imager'''
 
 	def __init__(self, **kwargs):
@@ -119,8 +118,8 @@ class OscdimgCli(ArgumentParser):
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('-x', '--exe', type=Path,
-			help='Path to oscdimg.exe (use if not found automatically)', metavar='FILE'
+		self.add_argument('-x', '--mkisofs', type=Path,
+			help='Path to mkisofs executable/binary (use if not found automatically)', metavar='FILE'
 		)
 		self.add_argument('root', nargs=1, type=Path,
 			help='Source', metavar='DIRECTORY'
@@ -133,15 +132,15 @@ class OscdimgCli(ArgumentParser):
 		self.filename = args.filename
 		self.name = args.name
 		self.outdir = args.outdir
-		self.exe = args.exe
+		self.mkisofs = args.mkisofs
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		image = Oscdimg(self.root,
+		image = MkIsoImager(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
 			name = self.name,
-			exe = self.exe,
+			mkisofs = self.mkisofs,
 			echo = echo
 		)
 		image.create_iso()
@@ -154,7 +153,7 @@ class OscdimgCli(ArgumentParser):
 		).posix_verify()
 		image.log.close()
 
-class OscdimgGui:
+class MkIsoImagerGui:
 	'''Notebook page'''
 
 	CMD = __app_name__
@@ -174,8 +173,8 @@ class OscdimgGui:
 		self.name_str = StringSelector(root, frame, root.IMAGE_NAME, root.IMAGE_NAME,
 			command=self._gen_name)
 		GridSeparator(root, frame)	
-		FileSelector(root, frame, root.OSCDIMG_EXE, root.OSCDIMG_EXE, root.SELECT_OSCDIMG_EXE,
-			filetype=(root.OSCDIMG_EXE, 'oscdimg.exe'), default=__oscdimg_exe_path__)
+		FileSelector(root, frame, root.MKISOFS, root.MKISOFS, root.SELECT_MKISOFS,
+			filetype=(root.MKISOFS, __mkisofs_name__), default=__mkisofs_path__)
 		GridSeparator(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
 		self.root = root
@@ -185,7 +184,7 @@ class OscdimgGui:
 		self.root.settings.section = self.CMD
 		if not self.name_str.string.get() and self.root.settings.get(self.root.SOURCE):
 			self.name_str.string.set(
-				Oscdimg._label(Path(self.root.settings.get(self.root.SOURCE)).stem))
+				MkIsoImager._label(Path(self.root.settings.get(self.root.SOURCE)).stem))
 	
 	def _add_job(self):
 		'''Generate command line'''
@@ -194,7 +193,7 @@ class OscdimgGui:
 		outdir = self.root.settings.get(self.root.OUTDIR)
 		filename = self.root.settings.get(self.root.FILENAME)
 		name = self.root.settings.get(self.root.IMAGE_NAME)
-		oscdimg_exe = self.root.settings.get(self.root.OSCDIMG_EXE)
+		mkisofs = self.root.settings.get(self.root.MKISOFS)
 		if not source or not outdir or not filename:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
@@ -202,8 +201,8 @@ class OscdimgGui:
 			)
 			return
 		cmd = self.root.settings.section.lower()
-		if oscdimg_exe and Path(oscdimg_exe) != __oscdimg_exe_path__:
-			cmd += f' --exe "{oscdimg_exe}"'
+		if mkisofs and Path(mkisofs) != __mkisofs_path__:
+			cmd += f' --mkisofs "{mkisofs}"'
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
 		if name:
@@ -212,6 +211,6 @@ class OscdimgGui:
 		self.root.append_job(cmd)
 
 if __name__ == '__main__':	# start here if called as application
-	app = OscdimgCli()
+	app = MkIsoImagerCli()
 	app.parse()
 	app.run()

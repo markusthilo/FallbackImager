@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.0.2_20230614";
+const char *VERSION = "2.0.3_20230621";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -100,9 +100,9 @@ void close_target(Z_TARGET *target) {
 		0,
 		NULL,
 		NULL
-	) ) printf("Warning: could not update %s\n", target->Path);
+	) ) printf("\nWarning: could not update %s\n", target->Path);
 	if ( !CloseHandle(target->Handle) )
-		printf("Warning: could not close %s\n", target->Path);
+		printf("\nWarning: could not close %s\n", target->Path);
 }
 
 /* Set file pointer */
@@ -273,7 +273,7 @@ void print_block(Z_TARGET *target, Z_CONFIG *config) {
 	DWORD new;
 	if ( !ReadFile(target->Handle, byteblock, blocksize, &new, NULL)
 		|| new != blocksize ) {
-		printf("Warning: could not read block of %lu bytes at offset %lld",
+		printf("\nWarning: could not read block of %lu bytes at offset %lld",
 			blocksize, target->Pointer);
 		return;
 	}
@@ -291,7 +291,7 @@ void print_block(Z_TARGET *target, Z_CONFIG *config) {
 	}
 	printf("\n");
 	fflush(stdout);
-	if ( badbyte > -1 ) fprintf(stderr, "Warning: block is not completely wiped\n");
+	if ( badbyte > -1 ) fprintf(stderr, "\nWarning: block is not completely wiped\n");
 }
 
 /* Print error to stderr and exit */
