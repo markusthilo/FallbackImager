@@ -363,14 +363,14 @@ class HdZeroCli(ArgumentParser):
 		args = super().parse_args(*cmd)
 		self.targets = args.targets
 		self.blocksize = args.blocksize
-		self.create = create
+		self.create = args.create
 		self.ff = args.ff
 		self.writelog = args.log
 		self.mount = args.mount
 		self.name = args.name
 		self.task = args.task
 		self.verbose = args.verbose
-		self.mbr = mbr
+		self.mbr = args.mbr
 
 	def run(self, echo=print):
 		'''Run AxChecker'''
@@ -451,8 +451,29 @@ class HdZeroGui(WinUtils):
 
 	def notepad_log_head(self):
 		'Edit log header file with Notepad'
-		proc = Popen(['notepad', self.log_head_path])
+		proc = Popen(['notepad', self.root.settings.get(self.root.LOG_HEAD, section=self.CMD)])
 		proc.wait()
+
+	def gen_drive_list_frame(self):
+		'''Generate drame with list of available drives'''
+		try:
+			self.drive_list_inner_frame.destroy()
+		except AttributeError:
+			pass
+		self.root.row = 0
+		self.drive_list_inner_frame = Frame(self.drive_list_outer_frame)
+		self.drive_list_inner_frame.pack()
+		for drive_id, drive_info, drive_letters in self.list_drives():
+			Button(self.drive_list_inner_frame,
+				text = f'{drive_id}',
+				command = partial(self._process_drive, drive_id, drive_letters)
+			).grid(sticky='nw', row=self.root.row, column=0, padx=self.root.PAD, pady=self.root.PAD)
+			text = ScrolledText(self.drive_list_inner_frame, height=self.root.JOB_HEIGHT)
+			text.grid(row=self.root.row, column=1, padx=self.root.PAD, pady=self.root.PAD)
+			text.bind('<Key>', lambda dummy: 'break')
+			text.insert('end', drive_info)
+			text.configure(state='disabled')
+			self.root.row += 1
 
 	def _select_drive(self):
 		'''Select drive to wipe'''
@@ -460,20 +481,10 @@ class HdZeroGui(WinUtils):
 			return
 		self.drive_window = ChildWindow(self.root, self.root.SELECT_DRIVE)
 		self.root.settings.section = self.CMD
+		self.drive_list_outer_frame = ExpandedFrame(self.root, self.drive_window)
+		self.gen_drive_list_frame()
 		frame = ExpandedFrame(self.root, self.drive_window)
-		self.root.row = 0
-		for drive_id, drive_info, drive_letters in self.list_drives():
-			Button(frame,
-				text = f'{drive_id}',
-				command = partial(self._process_drive, drive_id, drive_letters)
-			).grid(sticky='nw', row=self.root.row, column=0, padx=self.root.PAD, pady=self.root.PAD)
-			text = ScrolledText(frame, height=self.root.JOB_HEIGHT)
-			text.grid(row=self.root.row, column=1, padx=self.root.PAD, pady=self.root.PAD)
-			text.bind('<Key>', lambda dummy: 'break')
-			text.insert('end', drive_info)
-			text.configure(state='disabled')
-			self.root.row += 1
-		frame = ExpandedFrame(self.root, self.drive_window)
+		LeftButton(self.root, frame, self.root.REFRESH, self.gen_drive_list_frame)
 		RightButton(self.root, frame, self.root.QUIT, self.drive_window.destroy)
 
 	def _process_drive(self, drive_id, drive_letters):

@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.8_2023-06-19'
+__version__ = '0.0.9_2023-06-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -65,35 +65,9 @@ class AxChecker:
 		self.mfdb = MfdbReader(self.mfdb_path)
 
 	def list_mfdb(self):
-		'''List the images and partitions'''
+		'''List the evidences and partitions'''
 		for partition in self.mfdb.get_partitions():
 			self.echo(partition[1])
-
-	def write_tsv_files(self, source_ids, type_str):
-		'''Write TSV file by given iterable source_ids'''
-		fh_dict = {source_id:
-			ExtPath.child(
-				f'{self.filename}_{type_str}_{partition}.txt',
-				parent = self.outdir
-			).open('w', encoding='utf-8') for source_id, partition in self.mfdb.get_partition_fnames()
-		}
-		for source_id in source_ids:
-			print(f'{self.mfdb.short_paths[source_id][2]}',
-				file = fh_dict[self.mfdb.short_paths[source_id][0]]
-			)
-		for fh in fh_dict.values():
-			fh.close()
-
-	def write_tsv_file(self, source_ids, type_str):
-		'''Write TSV file by given iterable source_ids'''
-		partition = self.mfdb.re_filename.sub('_', self.partition)
-		with ExtPath.child(
-				f'{self.filename}_{type_str}_{partition}.txt',
-				parent = self.outdir
-			).open('w', encoding='utf-8') as fh:
-			for source_id in source_ids:
-				if self.mfdb.short_paths[source_id][1] == self.partition:
-					print(f'{self.mfdb.short_paths[source_id][2]}', file = fh)
 
 	def check(self):
 		'''Check AXIOM case file'''
@@ -102,22 +76,33 @@ class AxChecker:
 				head='axchecker.AxChecker', echo=self.echo)
 		self.log.info(f'Reading paths from {self.mfdb_path.name} and writing text files', echo=True)
 		self.mfdb.fetch_paths()
-		if self.partition:
-			self.write_tsv_file(self.mfdb.file_ids, 'Files')
-			self.write_tsv_file(self.mfdb.folder_ids, 'Folders')
-		else:
-			self.write_tsv_files(self.mfdb.file_ids, 'Files')
-			self.write_tsv_files(self.mfdb.folder_ids, 'Folders')
-		self.log.info(
-			f'AXIOM processed {len(self.mfdb.file_ids)} file(s) and  {len(self.mfdb.folder_ids)} folder(s)',
-			echo = True
-		)
-		if self.mfdb.ignored_file_ids:
-			self.log.info('All file paths are represented in hits/artifacts', echo=True)
-		else:
-			self.write_tsv_files(self.mfdb.ignored_file_ids, 'Ignored')
-			self.log.warning(f'Found {len(self.mfdb.ignored_file_ids)} ignored file path(s) not in hits/artifacts')
 		if not self.diff_path:
+			with ExtPath.child(
+				f'{self.filename}_all_files_in_case.txt',
+				parent = self.outdir
+			).open('w', encoding='utf-8') as fh:
+				for source_id in self.mfdb.file_ids:
+					print(f'{self.mfdb.paths[source_id]}', file = fh)
+			with ExtPath.child(
+				f'{self.filename}_files_in_artifacts.txt',
+				parent = self.outdir
+			).open('w', encoding='utf-8') as fh:
+				for source_id in self.mfdb.hit_ids:
+					print(f'{self.mfdb.paths[source_id]}', file = fh)
+			self.log.info(
+				f'The AXIOM casecontains {len(self.mfdb.file_ids)} files, {len(self.mfdb.hit_ids)} are found in the artifacts',
+				echo = True
+			)
+			if self.mfdb.ignored_file_ids:
+				with ExtPath.child(
+					f'{self.filename}_not_in_artifacts.txt',
+					parent = self.outdir
+				).open('w', encoding='utf-8') as fh:
+					for source_id in self.mfdb.ignored_file_ids:
+						print(f'{self.mfdb.paths[source_id]}', file = fh)
+				self.log.warning(f'Found {len(self.mfdb.ignored_file_ids)} files not represented in hits/artifacts')
+			else:
+				self.log.info('All file paths are represented in hits/artifacts', echo=True)
 			return
 		if not self.partition:
 			if len(self.mfdb.partitions) == 1:
@@ -163,6 +148,10 @@ class AxChecker:
 				for source_id, path in self.mfdb.short_paths.items()
 				if self.mfdb.short_paths[source_id][0] == part_id
 			}
+			
+			#print(all_paths)
+			
+			
 			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
 			if tsv.column < 0:
 				self.log.error('Column out of range/undetected')

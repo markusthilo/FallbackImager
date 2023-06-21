@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.8_2023-06-19'
+__version__ = '0.0.9_2023-06-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -33,8 +33,8 @@ if __os_name__ == 'nt':
 			IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
 			ZipImagerGui: ZipImagerCli,
-			AxCheckerGui: AxCheckerCli#,
-			#HdZeroGui: HdZeroCli
+			AxCheckerGui: AxCheckerCli,
+			HdZeroGui: HdZeroCli
 		}
 	else:
 		__modules__ = {
@@ -166,6 +166,7 @@ class Gui(GuiBase):
 	SELECT_TEXT_FILE = 'Select text file'
 	ZEROD_EXE = 'ZEROD'
 	SELECT_ZEROD_EXE = 'Select ZEROD executable'
+	REFRESH = 'Refresh'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
