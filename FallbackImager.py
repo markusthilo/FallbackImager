@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-21'
+__version__ = '0.0.9_2023-06-22'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -69,7 +69,7 @@ class Gui(GuiBase):
 	INFO_HEIGHT = 8
 	ENTRY_WIDTH = 128
 	MIN_ENTRY_WIDTH = 16
-	MAX_ENTRY_WIDTH = 64
+	MAX_ENTRY_WIDTH = 48
 	MAX_ENTRY_HEIGHT = 8
 	MAX_ROW_QUANT = 8
 	MAX_COLUMN_QUANT = 10
