@@ -3,7 +3,7 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-22'
+__version__ = '0.0.9_2023-06-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -296,7 +296,6 @@ class HdZero(WinUtils):
 			self.echo_drives()
 			return
 		for target in self.targets:
-		
 			proc = self.zerod_launch(target)
 			for line in proc.stdout:
 				msg = line.strip()
@@ -306,7 +305,6 @@ class HdZero(WinUtils):
 					else:
 						self.echo(msg, overwrite=True)
 				else:
-					self.echo('\n')
 					if self.log:
 						self.log.info(msg, echo=True)
 					else:
@@ -324,7 +322,6 @@ class HdZero(WinUtils):
 				mbr = self.mbr,
 				fs = self.create
 			)
-			print('letter:', letter)
 			if self.log:
 				self.log.close()
 			if self.writelog and letter:
@@ -350,8 +347,7 @@ class HdZeroCli(ArgumentParser):
 			help='Block size', metavar='INTEGER'
 		)
 		self.add_argument('-c', '--create', type=str, choices=['ntfs', 'fat32', 'exfat'],
-			default = 'ntfs', help='Create partition (when target is a physical drive)',
-			metavar='STRING'
+			help='Create partition (when target is a physical drive)', metavar='STRING'
 		)
 		self.add_argument('-f', '--ff', action='store_true',
 			help='Fill with binary ones / 0xFF instad of zeros'
@@ -421,20 +417,40 @@ class HdZeroCli(ArgumentParser):
 class DriveWorker(Thread):
 	'''Wipe drive'''
 
-	def __init__(self, gui, drive_id, drive_letters):
+	def __init__(self, gui, drive_id, mount):
 		'''Give job list and info handler to Worker object'''
 		super().__init__()
 		self.gui = gui
 		self.drive_id = drive_id
-		self.drive_letters = drive_letters
+		self.mount = mount
 
 	def run(self):
 		'''Start the work'''
 		self.gui.disable_start()
 		echo = self.gui.append_info
-		echo('drive_id:', self.drive_id)
-		echo('drive_letters:', self.drive_letters)
-		
+
+		echo(self.gui.settings.get(self.gui.TO_DO))
+		echo(self.gui.settings.get(self.gui.USE_FF))
+		echo(self.gui.settings.get(self.gui.LOG_HEAD))
+		echo(self.gui.settings.get(self.gui.ZEROD_EXE))
+
+		'''
+		hdzero = HdZero(self.drive_id,
+			blocksize = self.gui.settings[self.gui.BLOCKSIZE].get(),
+			create = self.gui.settings[self.gui.,
+			ff = self.ff,
+			loghead = self.loghead,
+			writelog = self.writelog,
+			mount = self.mount,
+			name = self.name,
+			task = self.task,
+			verbose = self.verbose,
+			mbr = self.mbr,
+			echo = echo
+		)
+		hdzero.run()
+		'''
+
 		self.gui.enable_start()
 
 class HdZeroGui(WinUtils):
@@ -518,10 +534,13 @@ class HdZeroGui(WinUtils):
 
 	def _process_drive(self, drive_id, drive_letters):
 		'''Is run when dirive got selected'''
-		self.log_head_path = self.root.settings.get(self.root.LOG_HEAD)
-		self.zerod_path = self.root.settings.get(self.root.ZEROD_EXE)
 		self.root.settings.write()
-		self.worker = DriveWorker(self.root, drive_id, drive_letters)
+		if drive_letters:
+			mount = drive_letters[0]
+		else:
+			mount = None
+		self.root.settings.section = self.CMD
+		self.worker = DriveWorker(self.root, drive_id, mount)
 		self.worker.start()
 		self.drive_window.destroy()
 

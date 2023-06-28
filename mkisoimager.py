@@ -3,7 +3,7 @@
 
 __app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-21'
+__version__ = '0.0.9_2023-06-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -19,7 +19,6 @@ from tkinter.messagebox import showerror
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.greplists import GrepLists
 from lib.hashes import FileHashes
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridLabel, FilenameSelector
 from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector, GridButton
@@ -34,10 +33,14 @@ for __mkisofs_path__ in (
 		Path.cwd()/__mkisofs_name__,
 		Path.cwd()/'bin'/__mkisofs_name__,
 		Path(__file__)/__mkisofs_name__,
-		Path(__file__)/'bin'/__mkisofs_name__
+		Path(__file__)/'bin'/__mkisofs_name__,
+		Path('/usr/bin')/__mkisofs_name__,
+		Path('/usr/local/bin')/__mkisofs_name__,
 ):
 	if __mkisofs_path__.is_file():
 		break
+	else:
+		__mkisofs_path__ = None
 
 class MkIsoImager:
 	'''MAKEISOFS via subprocess (mkisofs -udf -o $image -V %label $source)'''

@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-22'
+__version__ = '0.0.9_2023-06-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -47,7 +47,12 @@ if __os_name__ == 'nt':
 			AxCheckerGui: AxCheckerCli
 		}
 else:
-	raise NotImplementedError('Right now there is only a Win Version')
+		__modules__ = {
+			MkIsoImagerGui: MkIsoImagerCli,
+			IsoVerifyGui: IsoVerifyCli,
+			ZipImagerGui: ZipImagerCli,
+			AxCheckerGui: AxCheckerCli
+		}
 ###############
 
 __executable__ = Path(__executable__)
