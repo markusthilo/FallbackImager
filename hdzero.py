@@ -3,7 +3,7 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-28'
+__version__ = '0.1.0_2023-06-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -221,6 +221,7 @@ class HdZero(WinUtils):
 			raise FileNotFoundError('Unable to locate zerod.exe')
 		not_admin = not IsUserAnAdmin()
 		self.verbose = verbose
+		self.log = None
 		self.echo = echo
 		self.task = task
 		if task == 'list':
@@ -258,7 +259,6 @@ GNU General Public License Version 3
 						if loghead:
 							self.loghead = Path(loghead)
 				else:
-					self.log = None
 					self.create = None
 				self.wipe_drive = True
 			else:
@@ -300,7 +300,8 @@ GNU General Public License Version 3
 			self.echo_drives()
 			return
 		error = False
-		for target in []:#self.targets:
+		for target in self.targets:
+			self.echo()
 			proc = self.zerod_launch(target)
 			for line in proc.stdout:
 				msg = line.strip()
@@ -339,8 +340,8 @@ GNU General Public License Version 3
 						pass
 				with log_path.open('w') as fh:
 					fh.write(head + self.log.path.read_text())
-			if self.log:
-				self.log.path.unlink()
+		if self.log:
+			self.log.path.unlink()
 
 class HdZeroCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -417,40 +418,19 @@ class HdZeroCli(ArgumentParser):
 			zerod = self.zerod
 		).run()
 
-class DriveWorker(Thread):
-	'''Wipe drive'''
+class Worker(Thread):
+	'''Run HdZero as task'''
 
-	def __init__(self, gui, drive_id, mount):
-		'''Give job list and info handler to Worker object'''
-		self.gui = gui
-		self.gui.disable_start()
+	def __init__(self, root, hdzero):
+		'''Give GUI and HdZero to worker'''
+		self.root = root
+		self.hdzero = hdzero
 		super().__init__()
-		if self.gui.settings.get(self.gui.PARTITION_TABLE) == 'GPT':
-			create = self.gui.settings.get(self.gui.FILESYSTEM)
-			mbr = False
-		elif self.gui.settings.get(self.gui.PARTITION_TABLE) == 'MBR':
-			create = self.gui.settings.get(self.gui.FILESYSTEM)
-			mbr = True
-		else:
-			create = None
-			mbr = False
-		self.hdzero = HdZero(drive_id,
-			task = self.gui.settings.get(self.gui.TO_DO),
-			ff = self.gui.settings.get(self.gui.USE_FF),
-			blocksize = self.gui.settings.get(self.gui.BLOCKSIZE),
-			loghead = self.gui.settings.get(self.gui.LOG_HEAD),
-			name = self.gui.settings.get(self.gui.PARTITION_NAME),
-			mbr = mbr,
-			create = create,
-			mount = mount,
-			echo = self.gui.append_info,
-			zerod = self.gui.settings.get(self.gui.ZEROD_EXE)
-		)
 
 	def run(self):
 		'''Start the work'''
 		self.hdzero.run()
-		self.gui.enable_start()
+		self.root.enable_start()
 
 class HdZeroGui(WinUtils):
 	'''Notebook page'''
@@ -560,24 +540,58 @@ class HdZeroGui(WinUtils):
 	def _process_drive(self, drive_id, drive_letters):
 		'''Is run when dirive got selected'''
 		self.root.settings.write()
+		if self.root.start_disabled:
+			return
+		self.root.child_win_active = False
+		self.drive_window.destroy()
 		if askyesno(title=f'{self.root.WIPE} {drive_id}', message=self.root.AREYOUSURE):
+			self.root.disable_start()
 			if drive_letters:
 				mount = drive_letters[0]
 			else:
 				mount = None
 			self.root.settings.section = self.CMD
-			self.worker = DriveWorker(self.root, drive_id, mount)
-			self.worker.start()
-		self.drive_window.destroy()
+			if self.root.settings.get(self.root.PARTITION_TABLE) == 'GPT':
+				create = self.root.settings.get(self.root.FILESYSTEM)
+				mbr = False
+			elif self.root.settings.get(self.root.PARTITION_TABLE) == 'MBR':
+				create = self.root.settings.get(self.root.FILESYSTEM)
+				mbr = True
+			else:
+				create = None
+				mbr = False
+			hdzero = HdZero([drive_id],
+				task = self.root.settings.get(self.root.TO_DO),
+				ff = self.root.settings.get(self.root.USE_FF),
+				blocksize = self.root.settings.get(self.root.BLOCKSIZE),
+				loghead = self.root.settings.get(self.root.LOG_HEAD),
+				name = self.root.settings.get(self.root.PARTITION_NAME),
+				mbr = mbr,
+				create = create,
+				mount = mount,
+				echo = self.root.append_info,
+				zerod = self.root.settings.get(self.root.ZEROD_EXE)
+			)
+			Worker(self.root, hdzero).start()
 
 	def _select_files(self):
-		if self.root.child_win_active:
+		self.root.settings.write()
+		if self.root.child_win_active or self.root.start_disabled:
 			return
 		filenames = askopenfilenames(title=self.root.ASK_FILES)
 		if not filenames:
 			return
-		print(filenames)
-		self.zerod_path = self.root.settings.get(self.root.ZEROD_EXE)
+		if askyesno(title=f'{self.root.WIPE} {len(filenames)} {self.root.FILES}',
+			message=self.root.AREYOUSURE):
+			self.root.disable_start()
+			hdzero = HdZero(filenames,
+				task = self.root.settings.get(self.root.TO_DO),
+				ff = self.root.settings.get(self.root.USE_FF),
+				blocksize = self.root.settings.get(self.root.BLOCKSIZE),
+				echo = self.root.append_info,
+				zerod = self.root.settings.get(self.root.ZEROD_EXE)
+			)
+			Worker(self.root, hdzero).start()
 
 if __name__ == '__main__':	# start here if called as application
 	app = HdZeroCli()

@@ -39,6 +39,7 @@ class GuiBase(Tk):
 		self.infos_text.bind('<Key>', lambda dummy: 'break')
 		self.infos_text.configure(state='disabled')
 		frame = ExpandedFrame(self, self)
+		self.start_disabled = False
 		self.start_button = LeftButton(self, frame, self.START_JOBS, self.start_jobs)
 		self.quit_button = RightButton(self, frame, self.QUIT, self.quit_app)
 
@@ -76,7 +77,7 @@ class GuiBase(Tk):
 
 	def start_jobs(self):
 		'''Start working job list'''
-		if self.worker and self.worker.is_alive():
+		if self.start_disabled or (self.worker and self.worker.is_alive()):
 			return
 		self.settings.write()
 		self.worker = Worker(self)
@@ -100,10 +101,12 @@ class GuiBase(Tk):
 	def enable_start(self):
 		'''Enable start button'''
 		self.start_button.configure(state='normal', text=self.START_JOBS)
+		self.start_disabled = False
 
 	def disable_start(self):
 		'''Disable start button'''
 		self.start_button.configure(state='disabled', text=f'{self.RUNNING}...')
+		self.start_disabled = True
 
 	def	quit_app(self):
 		'''Store configuration and quit application'''
