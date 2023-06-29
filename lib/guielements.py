@@ -94,6 +94,17 @@ class GridIntMenu(OptionMenu):
 		self.grid(sticky='w', row=root.row, column=column+columnspan)
 		root.row += 1
 
+class GridStringMenu(OptionMenu):
+	'''| | OptionMenu | | |'''
+	def __init__(self, root, parent, key, text, values,
+		default=None, column=0, columnspan=1):
+		self.variable = root.settings.init_stringvar(key, default=default)
+		Label(parent, text=text).grid(
+			sticky='e', row=root.row, column=column, columnspan=columnspan)
+		super().__init__(parent, self.variable, default, *values)
+		self.grid(sticky='w', row=root.row, column=column+columnspan)
+		root.row += 1
+
 class GridLabel:
 	'''| Label |'''
 	def __init__(self, root, parent, text, column=0, columnspan=1):
@@ -135,7 +146,6 @@ class SourceDirSelector(Button):
 	'''Select source'''
 	def __init__(self, root, parent, column=1, columnspan=1):
 		self.source_str = root.settings.init_stringvar(root.SOURCE)
-		
 		GridSeparator(root, parent)
 		GridLabel(root, parent, root.SOURCE, column=column, columnspan=columnspan)
 		super().__init__(parent, text=root.SOURCE, command=self._select)
@@ -152,11 +162,14 @@ class SourceDirSelector(Button):
 
 class StringSelector(Button):
 	'''String for names, descriptions etc.'''
-	def __init__(self, root, parent, key, text, command=None, column=1, columnspan=1):
+	def __init__(self, root, parent, key, text, command=None,
+		column=1, columnspan=1, width=None):
 		self.string = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=command)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
-		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
+		if not width:
+			width = root.ENTRY_WIDTH
+		Entry(parent, textvariable=self.string, width=width).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 

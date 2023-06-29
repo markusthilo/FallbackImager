@@ -25,7 +25,7 @@ from threading import Thread
 from argparse import ArgumentParser
 from tkinter import StringVar
 from tkinter.ttk import Frame, Radiobutton, Button, Checkbutton
-from tkinter.messagebox import showerror
+from tkinter.messagebox import askyesno
 from tkinter.filedialog import askopenfilenames
 from tkinter.scrolledtext import ScrolledText
 from lib.extpath import ExtPath, FilesPercent
@@ -34,7 +34,7 @@ from lib.logger import Logger
 from lib.mfdbreader import MfdbReader
 from lib.tsvreader import TsvReader
 from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu
-from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector
+from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector, ExpandedLabelFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
@@ -57,24 +57,17 @@ else:
 class WinUtils:
 	'Needed Windows functions'
 
-	WINCMD_TIMEOUT = 30
-	WINCMD_RETRIES = 10
+	WINCMD_TIMEOUT = 60
+	WINCMD_RETRIES = 20
 	WINCMD_DELAY = 1
 
-	def __init__(self, zerod=None):
+	def __init__(self):
 		'''Generate Windows tools'''
-		if zerod:
-			self.zerod_path = Path(zerod)
-		elif __zerod_exe_path__:
-			self.zerod_path = __zerod_exe_path__
-		else:
-			raise FileNotFoundError('Unable to locate zerod.exe')
 		self.conn = WMI()
 		self.cmd_startupinfo = STARTUPINFO()
 		self.cmd_startupinfo.dwFlags |= STARTF_USESHOWWINDOW
 		self.process_id = GetCurrentProcessId()
 		self.tmpscriptpath = __parent_path__/f'_script_{self.process_id}.tmp'
-		self.this_drive = self.zerod_path.drive
 
 	def cmd_launch(self, cmd):
 		'''Start command line subprocess without showing a terminal window'''
@@ -211,21 +204,25 @@ class HdZero(WinUtils):
 			create = 'ntfs',
 			ff = False,
 			loghead = None,
-			writelog = True,
 			mount = None,
 			name = 'Volume',
 			task = 'normal',
 			verbose = False,
 			mbr = False,
+			zerod = __zerod_exe_path__,
 			echo = print,
-			log = None
 		):
 		super().__init__()
+		if zerod:
+			self.zerod_path = Path(zerod)
+		elif __zerod_exe_path__:
+			self.zerod_path = __zerod_exe_path__
+		else:
+			raise FileNotFoundError('Unable to locate zerod.exe')
 		not_admin = not IsUserAnAdmin()
 		self.verbose = verbose
 		self.echo = echo
 		self.task = task
-		self.log = None
 		if task == 'list':
 			if not_admin:
 				raise RuntimeError('Admin rights required to list block devices')
@@ -233,40 +230,47 @@ class HdZero(WinUtils):
 			if len(targets) < 1:
 				raise ValueError('No target to wipe was given')
 			if str(targets[0]).startswith('\\\\.\\PHYSICALDRIVE'):
+				if not_admin:
+					raise RuntimeError('Admin rights required to access block devices')
 				if len(targets) > 1:
 					raise ValueError('Only one physical drive at a time')
 				if blocksize and blocksize % self.MIN_BLOCKSIZE != 0:
 					raise ValueError(f'{target} is a block device and needs block size n*512 bytes')
+				if create:
+					self.create = create.lower()
+					if create == 'none':
+						self.create = None
+					else:
+						self.log = Logger(
+							filename = f'_log_{self.process_id}.log',
+							outdir = __parent_path__,
+							echo = echo,
+							head = f'''hdzero.HdZero
+
+HDZero Version {__version__}
+Author: Markus Thilo
+This wipe tool is part of the FallbackImager Project:
+https://github.com/markusthilo/FallbackImager
+GNU General Public License Version 3
+
+'''
+						)
+						if loghead:
+							self.loghead = Path(loghead)
+				else:
+					self.log = None
+					self.create = None
 				self.wipe_drive = True
 			else:
-				if writelog:
-					raise NotImplementedError('Logging only when wipeing files')
 				self.wipe_drive = False
-			if not_admin and self.wipe_drive:
-				raise RuntimeError('Admin rights required to access block devices')
 			if blocksize <= 0 or blocksize > self.MAX_BLOCKSIZE:
 				raise ValueError(f'Block size out of range (max. {self.MAX_BLOCKSIZE} bytes)')
 			self.targets = targets
 			self.blocksize = blocksize
-			self.create = create
 			self.ff = ff
 			self.mount = mount
 			self.name = name
 			self.mbr = mbr
-			if writelog:
-				if log:
-					raise NotImplementedError('Logger already given, double logging not implemented')
-				self.log = Logger(
-					filename= f'_log_{self.process_id}.log',
-					outdir = __parent_path__,
-					head = 'hdzero.HdZero', echo=echo
-				)
-				self.writelog = True
-				if loghead:
-					self.loghead = Path(loghead)
-			else:
-				self.log = log
-				self.writelog = False
 
 	def echo_drives(self):
 		'''List drives and show infos'''
@@ -295,7 +299,8 @@ class HdZero(WinUtils):
 		if self.task == 'list':
 			self.echo_drives()
 			return
-		for target in self.targets:
+		error = False
+		for target in []:#self.targets:
 			proc = self.zerod_launch(target)
 			for line in proc.stdout:
 				msg = line.strip()
@@ -306,7 +311,7 @@ class HdZero(WinUtils):
 						self.echo(msg, overwrite=True)
 				else:
 					if self.log:
-						self.log.info(msg, echo=True)
+						self.log.write_ln(msg, echo=True)
 					else:
 						self.echo(msg)
 			error = proc.stderr.read()
@@ -322,9 +327,9 @@ class HdZero(WinUtils):
 				mbr = self.mbr,
 				fs = self.create
 			)
-			if self.log:
-				self.log.close()
-			if self.writelog and letter:
+			self.log.info('End of wipe process')
+			self.log.close()
+			if letter:
 				log_path = Path(f'{letter}:\\hdzero-log.txt')
 				head = ''
 				if self.loghead:
@@ -346,7 +351,8 @@ class HdZeroCli(ArgumentParser):
 		self.add_argument('-b', '--blocksize', default=4096, type=int,
 			help='Block size', metavar='INTEGER'
 		)
-		self.add_argument('-c', '--create', type=str, choices=['ntfs', 'fat32', 'exfat'],
+		self.add_argument('-c', '--create', type=str,
+			choices=['ntfs', 'fat32', 'exfat', 'none'], default='ntfs',
 			help='Create partition (when target is a physical drive)', metavar='STRING'
 		)
 		self.add_argument('-f', '--ff', action='store_true',
@@ -372,12 +378,10 @@ class HdZeroCli(ArgumentParser):
 		self.add_argument('-v', '--verbose', action='store_true',
 			help='Verbose, print all warnings'
 		)
-		self.add_argument('-w', '--writelog', action='store_true',
-			help='Write log to new drive (does not work when wipeing files)'
-		)
 		self.add_argument('-r', '--mbr', action='store_true',
 			help='Use mbr instead of gpt Partition table (when target is a physical drive)'
 		)
+		self.add_argument('-z', '--zerod', type=Path, help='Path to zerod.exe', metavar='FILE')
 		self.add_argument('targets', nargs='*', type=Path,
 			help='AXIOM Case (.mfdb) / SQLite data base file', metavar='FILE'
 		)
@@ -390,67 +394,62 @@ class HdZeroCli(ArgumentParser):
 		self.create = args.create
 		self.ff = args.ff
 		self.loghead = args.loghead
-		self.writelog = args.writelog
 		self.mount = args.mount
 		self.name = args.name
 		self.task = args.task
 		self.verbose = args.verbose
 		self.mbr = args.mbr
+		self.zerod = args.zerod
 
 	def run(self, echo=print):
 		'''Run AxChecker'''
-		hdzero = HdZero(self.targets,
+		HdZero(self.targets,
 			blocksize = self.blocksize,
 			create = self.create,
 			ff = self.ff,
 			loghead = self.loghead,
-			writelog = self.writelog,
 			mount = self.mount,
 			name = self.name,
 			task = self.task,
 			verbose = self.verbose,
 			mbr = self.mbr,
-			echo = echo
-		)
-		hdzero.run()
+			echo = echo,
+			zerod = self.zerod
+		).run()
 
 class DriveWorker(Thread):
 	'''Wipe drive'''
 
 	def __init__(self, gui, drive_id, mount):
 		'''Give job list and info handler to Worker object'''
-		super().__init__()
 		self.gui = gui
-		self.drive_id = drive_id
-		self.mount = mount
+		self.gui.disable_start()
+		super().__init__()
+		if self.gui.settings.get(self.gui.PARTITION_TABLE) == 'GPT':
+			create = self.gui.settings.get(self.gui.FILESYSTEM)
+			mbr = False
+		elif self.gui.settings.get(self.gui.PARTITION_TABLE) == 'MBR':
+			create = self.gui.settings.get(self.gui.FILESYSTEM)
+			mbr = True
+		else:
+			create = None
+			mbr = False
+		self.hdzero = HdZero(drive_id,
+			task = self.gui.settings.get(self.gui.TO_DO),
+			ff = self.gui.settings.get(self.gui.USE_FF),
+			blocksize = self.gui.settings.get(self.gui.BLOCKSIZE),
+			loghead = self.gui.settings.get(self.gui.LOG_HEAD),
+			name = self.gui.settings.get(self.gui.PARTITION_NAME),
+			mbr = mbr,
+			create = create,
+			mount = mount,
+			echo = self.gui.append_info,
+			zerod = self.gui.settings.get(self.gui.ZEROD_EXE)
+		)
 
 	def run(self):
 		'''Start the work'''
-		self.gui.disable_start()
-		echo = self.gui.append_info
-
-		echo(self.gui.settings.get(self.gui.TO_DO))
-		echo(self.gui.settings.get(self.gui.USE_FF))
-		echo(self.gui.settings.get(self.gui.LOG_HEAD))
-		echo(self.gui.settings.get(self.gui.ZEROD_EXE))
-
-		'''
-		hdzero = HdZero(self.drive_id,
-			blocksize = self.gui.settings[self.gui.BLOCKSIZE].get(),
-			create = self.gui.settings[self.gui.,
-			ff = self.ff,
-			loghead = self.loghead,
-			writelog = self.writelog,
-			mount = self.mount,
-			name = self.name,
-			task = self.task,
-			verbose = self.verbose,
-			mbr = self.mbr,
-			echo = echo
-		)
-		hdzero.run()
-		'''
-
+		self.hdzero.run()
 		self.gui.enable_start()
 
 class HdZeroGui(WinUtils):
@@ -461,6 +460,8 @@ class HdZeroGui(WinUtils):
 	DEF_BLOCKSIZE = 4096
 	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768,
 		65536, 131072, 262144, 524288, 1048576)
+	PARTITIONS = ('GPT', 'MBR', 'Do not create partition')
+	FILESYSTEMS = ('NTFS', 'exFAT', 'FAT32')
 
 	def __init__(self, root):
 		'''Notebook page'''
@@ -520,6 +521,12 @@ class HdZeroGui(WinUtils):
 			text.configure(state='disabled')
 			self.root.row += 1
 
+	def _set_default_name(self):
+		'''Set the default partition name'''
+		self.root.settings.section = self.CMD
+		if not self.root.settings.get(self.root.PARTITION_NAME):
+			self.root.settings.raw(self.root.PARTITION_NAME).set(self.root.DEFAULT_PARTITION_NAME)
+
 	def _select_drive(self):
 		'''Select drive to wipe'''
 		if self.root.child_win_active:
@@ -528,6 +535,24 @@ class HdZeroGui(WinUtils):
 		self.root.settings.section = self.CMD
 		self.drive_list_outer_frame = ExpandedFrame(self.root, self.drive_window)
 		self.gen_drive_list_frame()
+		frame = ExpandedLabelFrame(self.root, self.drive_window, self.root.CREATE)
+		self.root.row = 0
+		StringSelector(self.root, frame, self.root.PARTITION_NAME, self.root.PARTITION_NAME,
+			width=self.root.PARTITION_NAME_WIDTH, command=self._set_default_name, column=0)
+		self.root.row = 0
+		GridLabel(self.root, frame, self.root.PARTITION_TABLE, column=2, columnspan=2)
+		StringRadiobuttons(self.root, frame, self.root.PARTITION_TABLE, self.PARTITIONS,
+			self.PARTITIONS[0], column=2)
+		GridLabel(self.root, frame, self.PARTITIONS[0], column=3)
+		GridLabel(self.root, frame, self.PARTITIONS[1], column=3)
+		GridLabel(self.root, frame, self.PARTITIONS[2], column=3)
+		self.root.row = 0
+		GridLabel(self.root, frame, self.root.FILESYSTEM, column=4, columnspan=2)
+		StringRadiobuttons(self.root, frame, self.root.FILESYSTEM, self.FILESYSTEMS,
+			self.FILESYSTEMS[0], column=4)
+		GridLabel(self.root, frame, self.FILESYSTEMS[0], column=5)
+		GridLabel(self.root, frame, self.FILESYSTEMS[1], column=5)
+		GridLabel(self.root, frame, self.FILESYSTEMS[2], column=5)
 		frame = ExpandedFrame(self.root, self.drive_window)
 		LeftButton(self.root, frame, self.root.REFRESH, self.gen_drive_list_frame)
 		RightButton(self.root, frame, self.root.QUIT, self.drive_window.destroy)
@@ -535,20 +560,24 @@ class HdZeroGui(WinUtils):
 	def _process_drive(self, drive_id, drive_letters):
 		'''Is run when dirive got selected'''
 		self.root.settings.write()
-		if drive_letters:
-			mount = drive_letters[0]
-		else:
-			mount = None
-		self.root.settings.section = self.CMD
-		self.worker = DriveWorker(self.root, drive_id, mount)
-		self.worker.start()
+		if askyesno(title=f'{self.root.WIPE} {drive_id}', message=self.root.AREYOUSURE):
+			if drive_letters:
+				mount = drive_letters[0]
+			else:
+				mount = None
+			self.root.settings.section = self.CMD
+			self.worker = DriveWorker(self.root, drive_id, mount)
+			self.worker.start()
 		self.drive_window.destroy()
 
 	def _select_files(self):
+		if self.root.child_win_active:
+			return
 		filenames = askopenfilenames(title=self.root.ASK_FILES)
-		if filenames:
-			print(filenames)
-			self.zerod_path = self.root.settings.get(self.root.ZEROD_EXE)
+		if not filenames:
+			return
+		print(filenames)
+		self.zerod_path = self.root.settings.get(self.root.ZEROD_EXE)
 
 if __name__ == '__main__':	# start here if called as application
 	app = HdZeroCli()

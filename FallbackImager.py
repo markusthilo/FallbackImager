@@ -79,6 +79,7 @@ class Gui(GuiBase):
 	MAX_ROW_QUANT = 8
 	MAX_COLUMN_QUANT = 10
 	FILES_FIELD_WIDTH = 94
+	PARTITION_NAME_WIDTH = 24
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
 	HELP = 'Help'
@@ -176,7 +177,13 @@ class Gui(GuiBase):
 	SELECT_TEXT_FILE = 'Select text file'
 	ZEROD_EXE = 'ZEROD'
 	SELECT_ZEROD_EXE = 'Select ZEROD executable'
+	CREATE = 'Create'
+	PARTITION_TABLE = 'Partition table'
+	FILESYSTEM = 'File system'
+	PARTITION_NAME = 'Partition name'
+	DEFAULT_PARTITION_NAME = 'Volume'
 	REFRESH = 'Refresh'
+	AREYOUSURE = 'Are you sure?'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

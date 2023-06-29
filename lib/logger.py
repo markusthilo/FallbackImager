@@ -22,6 +22,12 @@ class Logger:
 		'''Write string to log as it is'''
 		self._fh.write(string)
 
+	def write_ln(self, *args, echo=False):
+		'''Write/print one line to log'''
+		print(*args, file=self._fh)
+		if echo and args:
+			self.echo(*args)
+
 	def info(self, *args, echo=False):
 		'''Print info to log'''
 		print(TimeStamp.now(), 'INFO', *args, file=self._fh)
