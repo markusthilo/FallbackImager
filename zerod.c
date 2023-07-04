@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.0.3_20230622";
+const char *VERSION = "2.0.4_20230704";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,7 +21,6 @@ const clock_t ONESEC = 1000000 / CLOCKS_PER_SEC;
 const DWORD DEFAULTBLOCKSIZE = 0x1000;	// default flash memory page size
 const DWORD MINBLOCKSIZE = 0x200;	// minimal block size for drives
 const int MAXBADBLOCKS = 1000;	// maximal number of bad blocks before abort
-const ULONGLONG MINCALCSIZE = 0x100000000;
 const int VERIFYPRINTLENGTH = 32;
 
 /* Print help text */
@@ -79,11 +78,13 @@ typedef struct Z_CONFIG {
 	BOOL Verbose;	// to trigger verbose output
 } Z_CONFIG;
 
+/* Return true if every byte of array is equal given byte */
 BOOL matches_bytes(BYTE *v, BYTE b, int len) {
 	for (int i=0; i<len; i++) if ( v[i] != b ) return FALSE;
 	return TRUE;
 }
 
+/* Return true if every ULONGLONG of array is equal given ULONGLONG */
 BOOL matches_ulls(ULONGLONG *v, ULONGLONG u, int len) {
 	for (int i=0; i<len; i++) if ( v[i] != u ) return FALSE;
 	return TRUE;
@@ -119,17 +120,17 @@ void set_pointer(Z_TARGET *target, ULONGLONG position) {
 }
 
 /* List bad blocks */
-void list_bad_blocks(FILE *stream, Z_TARGET *target) {
-	fprintf(stream, "%lld unwiped block(s), offset(s) in bytes:\n", target->BadBlockCnt);
-	for (int i=0; i<target->BadBlockCnt-1; i++) printf("%lld, ", target->BadBlocks[i]);
-	printf("%lld\n", target->BadBlocks[target->BadBlockCnt-1]);
+void list_bad_blocks(Z_TARGET *target) {
+	fprintf(stderr, "%lld unwiped block(s), offset(s) in bytes:\n", target->BadBlockCnt);
+	for (int i=0; i<target->BadBlockCnt-1; i++) fprintf(stderr, "%lld, ", target->BadBlocks[i]);
+	fprintf(stderr, "%lld\n", target->BadBlocks[target->BadBlockCnt-1]);
 }
 
 /* Read/write error */
 void error_rw(Z_TARGET *target) {
 	close_target(target);
 	fprintf(stderr, "\nError: ");
-	list_bad_blocks(stderr, target);
+	list_bad_blocks(target);
 	fprintf(stderr,"Too many bad blocks, aborting\n");
 	exit(1);
 }
@@ -137,7 +138,7 @@ void error_rw(Z_TARGET *target) {
 /* Warning bad blocks */
 void warning_bad_blocks(Z_TARGET *target) {
 	fprintf(stderr, "\nWarning: ");
-	list_bad_blocks(stderr, target);
+	list_bad_blocks(target);
 }
 
 /* Warning bad block on write */
