@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.0.4_20230704";
+const char *VERSION = "2.0.5_20230924";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,7 +16,6 @@ const char *VERSION = "2.0.4_20230704";
 /* Definitions */
 const int TTYPE_DISK = 1;	// types of targets
 const int TTYPE_FILE = 2;
-const clock_t MAXCLOCK = 0x7fffffff;
 const clock_t ONESEC = 1000000 / CLOCKS_PER_SEC;
 const DWORD DEFAULTBLOCKSIZE = 0x1000;	// default flash memory page size
 const DWORD MINBLOCKSIZE = 0x200;	// minimal block size for drives
@@ -34,7 +33,7 @@ void print_help() {
 	printf(" 0000    0000     000    00000000 0000 000\n");
 	printf("00000000  000000  000     000000   0000000\n\n");
 	printf("v%s\n\n", VERSION);
-	printf("Overwrite file or device with zeros\n\n");
+	printf("Wipe drive or file\n\n");
 	printf("Usage:\n");
 	printf("zerod.exe TARGET [BLOCK_SIZE] [OPTIONS]\n");
 	printf("(or zerod.exe /h for this help)\n\n");
@@ -246,7 +245,7 @@ void verify_blocks(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
 	if ( blocksize < MINBLOCKSIZE ) {
 		blocksize = target->Size - target->Pointer;
 		BYTE *readblock = malloc(blocksize);
-		if ( ReadFile(target->Handle, readblock, blocksize, &new, NULL)	// zeroed?
+		if ( ReadFile(target->Handle, readblock, blocksize, &new, NULL)	// 00 or ff?
 			&& new == blocksize && matches_bytes(readblock, config->WipeByte, blocksize) )
 			target->Pointer += new;
 		else warning_not_wiped(target, config, blocksize);
@@ -332,7 +331,6 @@ int main(int argc, char **argv) {
 			if ( argv[i][1] == 'x' || argv[i][1] == 'X' ) {	// x for two pass mode
 				if ( pure_check || xtrasave ) error_toomany();
 				xtrasave = TRUE;
-
 			} else if ( argv[i][1] == 'a' || argv[i][1] == 'A' ) {	// a to write every block
 				if ( pure_check || write_all ) error_toomany();
 				write_all = TRUE;
@@ -497,30 +495,38 @@ int main(int argc, char **argv) {
 	free(config.ByteBlock);	// full verify checks every byte
 	printf("Verifying %s using block size of %ld bytes\n", target.Path, blocksize);
 	fflush(stdout);
-	set_pointer(&target, 0);
-	target.BadBlockCnt = 0;
-	start = clock();
-	verify_blocks(&target, &config, blocksize);
-	verify_blocks(&target, &config, MINBLOCKSIZE);
-	verify_blocks(&target, &config, 0);
-	duration = clock() - start;
-	printf("\r... 100%% of%*lld bytes                       \n", 20, target.Size);
-	printf("Verifying took %f second(s) / %ld clock units\n",
-		(float)duration/CLOCKS_PER_SEC, duration);
-	if ( target.BadBlockCnt > 0 ) warning_bad_blocks(&target);
-	printf("Sample:\n");	// Read sample block(s) to show result
-	set_pointer(&target, 0);	// print first block
-	print_block(&target, &config);
-	LONGLONG halfblocks = target.Size / ( MINBLOCKSIZE << 1 );	// block in the middle?
-	if ( halfblocks >= 4 ) {
-		set_pointer(&target, halfblocks*MINBLOCKSIZE);
-		print_block(&target, &config);
+	if ( pure_check || write_all || xtrasave ) {	// check every byte
+		set_pointer(&target, 0);
+		target.BadBlockCnt = 0;
+		start = clock();
+		verify_blocks(&target, &config, blocksize);
+		verify_blocks(&target, &config, MINBLOCKSIZE);
+		verify_blocks(&target, &config, 0);
+		duration = clock() - start;
+		printf("\r... 100%% of%*lld bytes                       \n", 20, target.Size);
+		printf("Verifying took %f second(s) / %ld clock units\n",
+			(float)duration/CLOCKS_PER_SEC, duration);
 	}
-	if ( target.Pointer < target.Size) {	// last block?
-		set_pointer(&target, target.Size - MINBLOCKSIZE);
+	if ( target.BadBlockCnt > 0 ) {
+		warning_bad_blocks(&target);
+		close_target(&target);
+		printf("All done\n");
+		exit(1);
+	} else {
+		printf("Sample:\n");	// Read sample block(s) to show result
+		set_pointer(&target, 0);	// print first block
 		print_block(&target, &config);
+		LONGLONG halfblocks = target.Size / ( MINBLOCKSIZE << 1 );	// block in the middle?
+		if ( halfblocks >= 4 ) {
+			set_pointer(&target, halfblocks*MINBLOCKSIZE);
+			print_block(&target, &config);
+		}
+		if ( target.Pointer < target.Size) {	// last block?
+			set_pointer(&target, target.Size - MINBLOCKSIZE);
+			print_block(&target, &config);
+		}
+		close_target(&target);
+		printf("All done, processed %lld bytes\n", target.Size);
+		exit(0);
 	}
-	close_target(&target);
-	printf("All done, processed %lld bytes\n", target.Size);
-	exit(0);
 }

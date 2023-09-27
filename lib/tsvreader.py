@@ -6,7 +6,7 @@ from .extpath import ExtPath
 class TsvReader:
 	'''Read TSV files UTF-8 or UTF-16'''
 
-	def __init__(self, path, column=1, nohead=False):
+	def __init__(self, path, column=None, nohead=False):
 		'''Read first line and detetct dencoding'''
 		self.path = path
 		self.encoding, self.head = ExtPath.read_utf_head(self.path, after=0)
@@ -14,6 +14,8 @@ class TsvReader:
 		self.nohead = nohead
 		self.columns = self.head.split('\t')
 		self.columns_len = len(self.columns)
+		if not column:
+			column = 1
 		if self.columns_len == 1:
 			self.column = 0
 		else:
@@ -38,7 +40,7 @@ class TsvReader:
 		'''Read line by line and decode'''
 		with self.path.open('r', encoding=self.encoding) as fh:
 			if not self.nohead:
-				yield None, fh.readline().rstrip('\n')
+				fh.readline()
 			for line in fh:
 				stripped_line = line.rstrip('\n')
 				columns = stripped_line.split('\t')

@@ -40,48 +40,39 @@ class MfdbReader(SQLiteReader):
 	def __init__(self, mfdb):
 		'''Read what you need from Case.mfdb'''
 		super().__init__(mfdb)
-		self.evidences = {source_id: source_evidence_number
-			for source_id, source_evidence_number in self.fetch_table('source_evidence',
-				fields = ('source_id', 'source_evidence_number')
-			)
-		}
-		self.partitions = {source_id: (self.evidences[root_source_id], source_friendly_value)
-			for source_id, root_source_id, source_friendly_value in self.fetch_table('source',
-				fields = ('source_id', 'root_source_id', 'source_friendly_value'),
-				where = ('source_type', 'Partition')
-			)
-		}
-		self.re_filename = re_compile(' (\([^\)]*\) )|([ *.;:#"/\\\])')
-
-	def get_partitions(self):
-		'''One string for each partition'''
-		for source_id, (image, partition) in self.partitions.items():
-			yield source_id, f'{image} - {partition}'
-
-	def fetch_paths(self):
-		'''Read all needed data from case file'''
 		self.paths = {source_id: source_path
 			for source_id, source_path in self.fetch_table('source_path',
 				fields = ('source_id', 'source_path')
 			)
 		}
-		self.short_paths = dict()
-		for partition_id, partition in self.get_partitions():
-			part_len = len(partition)
-			for source_id, path in self.paths.items():
-				if len(path) > part_len and path[:part_len] == partition:
-					self.short_paths[source_id] = (
-						partition_id,
-						path[:part_len],
-						path[part_len:]
-					)
-		self.file_ids = {source_id for source_id in self.fetch_table('source',
-				fields = 'source_id',
-				where = ('source_type', 'File')
+		self.types = {source_id: source_type
+			for source_id, source_type in self.fetch_table('source',
+				fields = ('source_id', 'source_type')
 			)
 		}
-		self.hit_ids = {source_id for source_id in self.fetch_table('hit_location',
-				fields = 'source_id'
-			)
+		self.partitions = {source_id: self.paths[source_id]
+			for source_id, source_type in self.types.items()
+			if source_type == 'Partition'
 		}
-		self.ignored_file_ids = self.file_ids-self.hit_ids
+		self.files = {source_id: self.paths[source_id]
+			for source_id, source_type in self.types.items()
+			if source_type == 'File'
+		}
+		self.hits = {source_id: self.paths[source_id]
+			for source_id in self.fetch_table('hit_location', fields = 'source_id')
+		}
+
+	def get_files_of_partition(self, partition):
+		'''Get hits in files'''
+		len_partition = len(partition)
+		return {source_id: self.paths[source_id]
+			for source_id, source_path in self.files.items()
+			if source_path[:len_partition] == partition
+		}
+
+	def get_no_hit_files(self):
+		'''Get hits in files'''
+		return {source_id: self.paths[source_id]
+			for source_id in self.files
+			if not source_id in self.hits
+		}

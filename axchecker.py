@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-21'
+__version__ = '0.1.0_2023-09-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -57,140 +57,116 @@ class AxChecker:
 			self.diff_path = Path(diff)
 		else:
 			self.diff_path = None
-		self.partition = partition
+		if partition:
+			try:
+				self.partition = int(partition)
+			except ValueError:
+				self.partition = partition
+		else:
+			self.partition = None
 		self.column = column
 		self.nohead = nohead
 		self.echo = echo
 		self.log = log
-		self.mfdb = MfdbReader(self.mfdb_path)
 
-	def list_mfdb(self):
-		'''List the evidences and partitions'''
-		for partition in self.mfdb.get_partitions():
-			self.echo(partition[1])
+	def list_partitions(self):
+		'''List the partitions'''
+		self.mfdb = MfdbReader(self.mfdb_path)
+		for partition in self.all_partitions:
+			self.echo(partition)
 
 	def check(self):
 		'''Check AXIOM case file'''
 		if not self.log:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='axchecker.AxChecker', echo=self.echo)
-		self.log.info(f'Reading paths from {self.mfdb_path.name} and writing text files', echo=True)
-		self.mfdb.fetch_paths()
-		if not self.diff_path:
-			with ExtPath.child(
-				f'{self.filename}_all_files_in_case.txt',
-				parent = self.outdir
-			).open('w', encoding='utf-8') as fh:
-				for source_id in self.mfdb.file_ids:
-					print(f'{self.mfdb.paths[source_id]}', file = fh)
-			with ExtPath.child(
-				f'{self.filename}_files_in_artifacts.txt',
-				parent = self.outdir
-			).open('w', encoding='utf-8') as fh:
-				for source_id in self.mfdb.hit_ids:
-					print(f'{self.mfdb.paths[source_id]}', file = fh)
-			self.log.info(
-				f'The AXIOM casecontains {len(self.mfdb.file_ids)} files, {len(self.mfdb.hit_ids)} are found in the artifacts',
-				echo = True
-			)
-			if self.mfdb.ignored_file_ids:
-				with ExtPath.child(
-					f'{self.filename}_not_in_artifacts.txt',
-					parent = self.outdir
+		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
+		self.mfdb = MfdbReader(self.mfdb_path)
+		self.all_partitions = list(self.mfdb.partitions.values())
+		msg = f'AXIOM case contains {len(self.all_partitions)} partitions,'
+		msg += f' {len(self.mfdb.files)} file paths and {len(self.mfdb.hits)} hits'
+		self.log.info(msg, echo=True)
+		if self.partition:
+			if isinstance(self.partition, int):
+				try:
+					self.partition = self.all_partitions[self.partition]
+				except IndexError:
+					self.log.error(f'Only {len(self.all_partitions)} partition(s) in AXIOM case file')
+			elif not self.partition in self.mfdb.partitions.values():
+				self.log.error(f'Unable to find partiton "{self.partition}" in AXIOM case file')
+			self.log.info('Dropping file paths in unselected partitions', echo=True)
+			self.mfdb.files = self.mfdb.get_files_of_partition(self.partition)
+			self.log.info('Checking files of {self.partition}', echo=True)
+		else:
+			self.log.info('Writing partitions', echo=True)
+			with ExtPath.child(f'{self.filename}_partitions.txt', parent=self.outdir
 				).open('w', encoding='utf-8') as fh:
-					for source_id in self.mfdb.ignored_file_ids:
-						print(f'{self.mfdb.paths[source_id]}', file = fh)
-				self.log.warning(f'Found {len(self.mfdb.ignored_file_ids)} files not represented in hits/artifacts')
-			else:
-				self.log.info('All file paths are represented in hits/artifacts', echo=True)
+				for partition in self.all_partitions:
+					print(partition, file=fh)
+		msg = f'Writing {len(self.mfdb.files)} file paths of '
+		if self.partition:
+			msg += f'partition {self.partition}'
+		else:
+			msg += 'entire case file'
+		self.log.info(msg, echo=True)
+		with ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir
+			).open('w', encoding='utf-8') as fh:
+			for source_path in self.mfdb.files.values():
+				print(source_path, file=fh)
+		no_hit_files = self.mfdb.get_no_hit_files()
+		if no_hit_files:
+			msg = f'{len(no_hit_files)} file(s) is/are not represented in hits,'
+			msg += ' writing list'
+			self.log.info(msg, echo=True)
+			with ExtPath.child(f'{self.filename}_not_in_hits.txt', parent=self.outdir
+			).open('w', encoding='utf-8') as fh:
+				for source_path in no_hit_files.values():
+					print(source_path, file=fh)
+		if not self.diff_path:	# end here if nothing to compare is given
 			return
 		if not self.partition:
-			if len(self.mfdb.partitions) == 1:
-				self.partition = list(self.mfdb.partitions.values())[0][1]
+			if len(self.all_partitions) == 1:
+				self.partition = self.all_partitions[0]
 			else:
-				self.log.error('Misssing partition/root path')
-		if len(self.mfdb.partitions) > 1:
-			for part_id, partition in self.mfdb.get_partitions():
-				if partition == self.partition:
-					break
-			if partition != self.partition:
-				self.log.error(f'Unable to find partiton "{self.partition}" in AXIOM case file')
-		else:
-			part_id = list(self.mfdb.partitions)[0]
-			self.partition = list(self.mfdb.partitions.values())[0][1]
-		self.log.info(f'Comparing AXIOM partition "{self.partition}" to {self.diff_path.name}', echo=True)
-		not_file_cnt = 0
-		not_hit_cnt = 0
-		if self.diff_path.is_dir():	# compare to dir
-			file_paths = {self.mfdb.short_paths[source_id][2]: source_id
-				for source_id in self.mfdb.file_ids
-				if self.mfdb.short_paths[source_id][0] == part_id
-			}
-			progress = FilesPercent(self.diff_path, echo=self.echo)
-			with (
-				ExtPath.child(f'{self.filename}_not_in_files.txt',
-					parent=self.outdir).open('w') as not_files_fh,
-				ExtPath.child(f'{self.filename}_not_in_artifacts.txt',
-					parent=self.outdir).open('w') as not_hits_fh
-			):
-				for path, relative_path in ExtPath.walk_files(self.diff_path):
+				self.log.error('Misssing partition to compare')
+		self.log.info(
+			f'Comparing AXIOM partition {self.partition} to {self.diff_path.name}',
+			echo=True)
+		len_partition = len(self.partition)
+		files_short_paths = {source_path[len_partition:]
+			for source_path in self.mfdb.files.values()
+		}
+		missing_cnt = 0
+		with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
+			).open('w') as fh:
+			if self.diff_path.is_dir():	# compare to dir
+				progress = FilesPercent(self.diff_path, echo=self.echo)
+				for absolut_path, relative_path in ExtPath.walk_files(self.diff_path):
 					progress.inc()
-					if ExtPath.windowize(relative_path) in file_paths:
-						source_id = file_paths[relative_path]
-						if not source_id in self.mfdb.hit_ids:
-							print(self.mfdb.paths[source_id], file=not_hits_fh)
-							not_hit_cnt += 1
-					else:
-						print(path, file=not_files_fh)
-						not_file_cnt += 1
-		elif self.diff_path.is_file:	# compare to file
-			all_paths = {ExtPath.normalize(self.mfdb.short_paths[source_id][2]): source_id
-				for source_id, path in self.mfdb.short_paths.items()
-				if self.mfdb.short_paths[source_id][0] == part_id
-			}
-			
-			#print(all_paths)
-			
-			
-			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
-			if tsv.column < 0:
-				self.log.error('Column out of range/undetected')
-			self.echo(f'Processing {self.diff_path}')
-			with (
-				ExtPath.child(f'{self.filename}_diff_paths.txt',
-					parent=self.outdir).open('w', encoding=tsv.encoding) as diff_paths_fh,
-				ExtPath.child(f'{self.filename}_diff_artifacts.txt',
-					parent=self.outdir).open('w', encoding=tsv.encoding) as diff_hits_fh
-			):
-				for path, line in tsv.read_lines():
-					if not path:
-						print(line, file=diff_paths_fh)
-						print(line, file=diff_hits_fh)
-						continue
-					normalized_path = ExtPath.normalize(path)
-					if normalized_path in all_paths:
-						source_id = all_paths[normalized_path]
-						if source_id in self.mfdb.hit_ids:
-							continue
-						print(line, file=diff_hits_fh)
-						not_hit_cnt += 1
-					else:
-						print(line, file=diff_paths_fh)
-						not_file_cnt += 1
-			if tsv.errors:
-				self.log.warning(
-					f'Found unprocessable line in {diff_path.name}:\n'+
-					'\n'.join(tsv.errors)
-				)
-		else:
-			self.log.error(f'Unable to read/open {diff_path.name}')
-		if not_file_cnt == 0 and not_hit_cnt == 0:
-			self.log.info(f'All {len(self.mfdb.file_ids)} file paths were found in the AXIOM artifacts')
-		else:
-			msg = 'Not every file path is represented in the AXIOM artifacts\n'
-			msg += f'Completely missing in AXIOM: {not_file_cnt}\n'
-			msg += f'Not represented in the artifacts but present in the case file: {not_hit_cnt}\n'
-			self.log.warning(msg)
+					path = ExtPath.windowize(relative_path)
+					if not path in files_short_paths:
+						print(absolut_path, file=fh)
+						missing_cnt += 1
+			elif self.diff_path.is_file:	# compare to file
+				tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
+				if tsv.column < 0:
+					self.log.error('Column out of range/undetected')
+				self.echo(f'Processing {self.diff_path}')
+				for full_path, line in tsv.read_lines():
+					path = ExtPath.normalize(full_path)
+					if not path in files_short_paths:
+						print(full_path, file=fh)
+						missing_cnt += 1
+				if tsv.errors:
+					self.log.warning(
+						f'Found unprocessable line(s) in {diff_path.name}:\n'+
+						'\n'.join(tsv.errors)
+					)
+			else:
+				self.log.error(f'Unable to read/open {diff_path.name}')
+		if missing_cnt > 0:
+			self.log.info(f'Found {missing_cnt} missing file path(s) in AXIOM case file',
+				echo=True)
 
 class AxCheckerCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -214,7 +190,7 @@ class AxCheckerCli(ArgumentParser):
 			help='TSV file has no head line with names of columns (e.g. "Full path" etc.)'
 		)
 		self.add_argument('-o', '--outdir', type=Path,
-			help='Directory to write generated missing files', metavar='DIRECTORY'
+			help='Directory to write log and CSV list(s)', metavar='DIRECTORY'
 		)
 		self.add_argument('-p', '--partition', type=str,
 			help='Image and partiton to compare (--diff DIRECTORY)', metavar='STRING'
@@ -247,7 +223,7 @@ class AxCheckerCli(ArgumentParser):
 			echo = echo,
 		)
 		if self.list:
-			axchecker.list_mfdb()
+			axchecker.list_partitions()
 			return
 		axchecker.check()
 		axchecker.log.close()
@@ -312,16 +288,15 @@ class AxCheckerGui:
 			)
 			return
 		if len(mfdb.partitions) == 1:
-			self.root.settings.raw(self.root.PARTITION).set(list(mfdb.partitions.values())[0][1])
+			self.root.settings.raw(self.root.PARTITION).set(list(mfdb.partitions.values())[0])
 			return
 		self.partition_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
 		self._selected_part = StringVar()
-		for source, partition in mfdb.partitions.values():
-			partition_path = f'{source} - {partition}'
+		for partition in mfdb.partitions.values():
 			frame = ExpandedFrame(self.root, self.partition_window)
-			Radiobutton(frame, variable=self._selected_part, value=partition_path).pack(
+			Radiobutton(frame, variable=self._selected_part, value=partition).pack(
 				side='left', padx=self.root.PAD)
-			LeftLabel(self.root, frame, partition_path)
+			LeftLabel(self.root, frame, partition)
 		frame = ExpandedFrame(self.root, self.partition_window)
 		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
 		RightButton(self.root, frame, self.root.QUIT, self.partition_window.destroy)

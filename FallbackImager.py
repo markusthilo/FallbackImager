@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.1.0_2023-06-29'
+__version__ = '0.2.0_2023-09-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -36,7 +36,7 @@ if __os_name__ == 'nt':
 			DismImagerGui: DismImagerCli,
 			ZipImagerGui: ZipImagerCli,
 			AxCheckerGui: AxCheckerCli,
-			HdZeroGui: HdZeroCli
+	###		HdZeroGui: HdZeroCli	### under construction ###
 		}
 	else:
 		__modules__ = {
@@ -73,10 +73,10 @@ class Gui(GuiBase):
 	JOB_HEIGHT = 4
 	INFO_HEIGHT = 8
 	ENTRY_WIDTH = 128
-	MIN_ENTRY_WIDTH = 16
-	MAX_ENTRY_WIDTH = 48
+	MIN_ENTRY_WIDTH = 8
+	MAX_ENTRY_WIDTH = 32
 	MAX_ENTRY_HEIGHT = 8
-	MAX_ROW_QUANT = 8
+	MAX_ROW_QUANT = 5
 	MAX_COLUMN_QUANT = 10
 	FILES_FIELD_WIDTH = 94
 	PARTITION_NAME_WIDTH = 24

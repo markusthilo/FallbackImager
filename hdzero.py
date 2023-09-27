@@ -3,14 +3,14 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.1.0_2023-06-29'
+__version__ = '0.1.0_2023-09-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
 Erases disks while not touching empty blocks/pages.
 The tool is also capable of overwriting files but slack and files system artefacts
-will remain. It is designed to securely wipe HDDs/SSDs and generate a protocol.
+will remain. It is designed to securely wipe HDDs/SSDs and generate a log file.
 '''
 
 from sys import executable as __executable__
@@ -384,7 +384,7 @@ class HdZeroCli(ArgumentParser):
 		)
 		self.add_argument('-z', '--zerod', type=Path, help='Path to zerod.exe', metavar='FILE')
 		self.add_argument('targets', nargs='*', type=Path,
-			help='AXIOM Case (.mfdb) / SQLite data base file', metavar='FILE'
+			help='Target drive or file (e.g. \\.\\\\PHYSICALDRIVE1)', metavar='DRIVE/FILE'
 		)
 
 	def parse(self, *cmd):
