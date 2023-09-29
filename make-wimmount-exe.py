@@ -16,7 +16,7 @@ PyInstaller.__main__.run([
 	'--uac-admin',
 	'--icon', 'appicon.ico'
 ])
-move('dist/WimMount.exe', 'WimMount.exe')
+move('dist/WimMount.exe', 'bin/WimMount.exe')
 rmtree('build')
 rmtree('dist')
 remove('WimMount.spec')

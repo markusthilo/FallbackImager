@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.1.0_2023-09-27'
+__version__ = '0.2.1_2023-09-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -72,7 +72,7 @@ class AxChecker:
 	def list_partitions(self):
 		'''List the partitions'''
 		self.mfdb = MfdbReader(self.mfdb_path)
-		for partition in self.all_partitions:
+		for partition in self.mfdb.partitions.values():
 			self.echo(partition)
 
 	def check(self):
@@ -100,7 +100,7 @@ class AxChecker:
 		else:
 			self.log.info('Writing partitions', echo=True)
 			with ExtPath.child(f'{self.filename}_partitions.txt', parent=self.outdir
-				).open('w', encoding='utf-8') as fh:
+				).open(mode='w', encoding='utf-8') as fh:
 				for partition in self.all_partitions:
 					print(partition, file=fh)
 		msg = f'Writing {len(self.mfdb.files)} file paths of '
@@ -110,7 +110,7 @@ class AxChecker:
 			msg += 'entire case file'
 		self.log.info(msg, echo=True)
 		with ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir
-			).open('w', encoding='utf-8') as fh:
+			).open(mode='w', encoding='utf-8') as fh:
 			for source_path in self.mfdb.files.values():
 				print(source_path, file=fh)
 		no_hit_files = self.mfdb.get_no_hit_files()
@@ -119,10 +119,11 @@ class AxChecker:
 			msg += ' writing list'
 			self.log.info(msg, echo=True)
 			with ExtPath.child(f'{self.filename}_not_in_hits.txt', parent=self.outdir
-			).open('w', encoding='utf-8') as fh:
+			).open(mode='w', encoding='utf-8') as fh:
 				for source_path in no_hit_files.values():
 					print(source_path, file=fh)
 		if not self.diff_path:	# end here if nothing to compare is given
+			self.log.info('Done', echo=True)
 			return
 		if not self.partition:
 			if len(self.all_partitions) == 1:
@@ -137,33 +138,37 @@ class AxChecker:
 			for source_path in self.mfdb.files.values()
 		}
 		missing_cnt = 0
-		with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
-			).open('w') as fh:
-			if self.diff_path.is_dir():	# compare to dir
-				progress = FilesPercent(self.diff_path, echo=self.echo)
+		if self.diff_path.is_dir():	# compare to dir
+			progress = FilesPercent(self.diff_path, echo=self.echo)
+			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
+				).open(mode='w', encoding='utf-8') as fh:
 				for absolut_path, relative_path in ExtPath.walk_files(self.diff_path):
 					progress.inc()
 					path = ExtPath.windowize(relative_path)
 					if not path in files_short_paths:
 						print(absolut_path, file=fh)
 						missing_cnt += 1
-			elif self.diff_path.is_file:	# compare to file
-				tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
-				if tsv.column < 0:
-					self.log.error('Column out of range/undetected')
-				self.echo(f'Processing {self.diff_path}')
+		elif self.diff_path.is_file:	# compare to file
+			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
+			if tsv.column < 0:
+				self.log.error('Column out of range/undetected')
+			self.echo(f'Processing {self.diff_path}')
+			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
+				).open(mode='w', encoding='utf-8') as fh:
+				if not self.nohead:
+					print(tsv.head, file=fh)
 				for full_path, line in tsv.read_lines():
 					path = ExtPath.normalize(full_path)
 					if not path in files_short_paths:
-						print(full_path, file=fh)
+						print(line, file=fh)
 						missing_cnt += 1
 				if tsv.errors:
 					self.log.warning(
 						f'Found unprocessable line(s) in {diff_path.name}:\n'+
 						'\n'.join(tsv.errors)
 					)
-			else:
-				self.log.error(f'Unable to read/open {diff_path.name}')
+		else:
+			self.log.error(f'Unable to read/open {diff_path.name}')
 		if missing_cnt > 0:
 			self.log.info(f'Found {missing_cnt} missing file path(s) in AXIOM case file',
 				echo=True)

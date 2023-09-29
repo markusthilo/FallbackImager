@@ -3,7 +3,7 @@
 
 __app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.9_2023-06-28'
+__version__ = '0.2.1_2023-09-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
