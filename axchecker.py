@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.2_2023-09-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -72,8 +72,8 @@ class AxChecker:
 	def list_partitions(self):
 		'''List the partitions'''
 		self.mfdb = MfdbReader(self.mfdb_path)
-		for partition in self.mfdb.partitions.values():
-			self.echo(partition)
+		for n, partition in enumerate(self.mfdb.partitions.values(), start=1):
+			self.echo(f'{n}: {partition}')
 
 	def check(self):
 		'''Check AXIOM case file'''
@@ -89,10 +89,10 @@ class AxChecker:
 		if self.partition:
 			if isinstance(self.partition, int):
 				try:
-					self.partition = self.all_partitions[self.partition]
+					self.partition = self.all_partitions[self.partition-1]
 				except IndexError:
 					self.log.error(f'Only {len(self.all_partitions)} partition(s) in AXIOM case file')
-			elif not self.partition in self.mfdb.partitions.values():
+			elif not self.partition in self.all_partitions:
 				self.log.error(f'Unable to find partiton "{self.partition}" in AXIOM case file')
 			self.log.info('Dropping file paths in unselected partitions', echo=True)
 			self.mfdb.files = self.mfdb.get_files_of_partition(self.partition)
@@ -137,6 +137,10 @@ class AxChecker:
 		files_short_paths = {source_path[len_partition:]
 			for source_path in self.mfdb.files.values()
 		}
+		### DEBUG ###
+		#for source_path in self.mfdb.files.values():
+		#	print('DEBUG\n', source_path[len_partition:])# self.mfdb.files.values())#files_short_paths)
+		### DEBUG ###
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
 			progress = FilesPercent(self.diff_path, echo=self.echo)
@@ -159,6 +163,9 @@ class AxChecker:
 					print(tsv.head, file=fh)
 				for full_path, line in tsv.read_lines():
 					path = ExtPath.normalize(full_path)
+					### DEBUG ###
+					#print(path)
+					### DEBUG ###
 					if not path in files_short_paths:
 						print(line, file=fh)
 						missing_cnt += 1

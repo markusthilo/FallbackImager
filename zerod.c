@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.0.5_20230924";
+const char *VERSION = "2.2.2_20231001";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -471,10 +471,10 @@ int main(int argc, char **argv) {
 		write_all_blocks(&target, &config, MINBLOCKSIZE);
 		write_all_blocks(&target, &config, 0);
 		duration = clock() - start;
-		printf("\r... 100%% of%*lld bytes                       \n", 20, target.Size);
+		printf("\r... 100%% of%*lld bytes                       \n\n", 20, target.Size);
 		if ( xtrasave ) printf("2nd pass");
 		else printf("Wiping");
-		printf(" took %f second(s) / %ld clock units\n", (float)duration/CLOCKS_PER_SEC, duration);
+		printf(" took %f second(s) / %ld clock units\n\n", (float)duration/CLOCKS_PER_SEC, duration);
 		if ( target.BadBlockCnt > 0 ) warning_bad_blocks(&target);
 	} else if ( !pure_check ) {	// overwrite only blocks that are not zeroed
 		printf("Looking for unwiped blocks and overwriting with 0x%02X using block size of %ld bytes\n",
@@ -486,16 +486,16 @@ int main(int argc, char **argv) {
 		selective_write_blocks(&target, &config, blocksize);
 		selective_write_blocks(&target, &config, MINBLOCKSIZE);
 		selective_write_blocks(&target, &config, 0);
-		printf("\r... 100%% of%*lld bytes                       \n", 20, target.Size);
+		printf("\r... 100%% of%*lld bytes                       \n\n", 20, target.Size);
 		duration = clock() - start;
-		printf("Verifying and wiping took %f second(s) / %ld clock units\n",
+		printf("Verifying and wiping took %f second(s) / %ld clock units\n\n",
 			(float)duration/CLOCKS_PER_SEC, duration);
 		if ( target.BadBlockCnt > 0 ) warning_bad_blocks(&target);
 	}
-	free(config.ByteBlock);	// full verify checks every byte
-	printf("Verifying %s using block size of %ld bytes\n", target.Path, blocksize);
-	fflush(stdout);
+	free(config.ByteBlock);	// collect garbage
 	if ( pure_check || write_all || xtrasave ) {	// check every byte
+		printf("Verifying %s using block size of %ld bytes\n", target.Path, blocksize);
+		fflush(stdout);
 		set_pointer(&target, 0);
 		target.BadBlockCnt = 0;
 		start = clock();
@@ -503,8 +503,8 @@ int main(int argc, char **argv) {
 		verify_blocks(&target, &config, MINBLOCKSIZE);
 		verify_blocks(&target, &config, 0);
 		duration = clock() - start;
-		printf("\r... 100%% of%*lld bytes                       \n", 20, target.Size);
-		printf("Verifying took %f second(s) / %ld clock units\n",
+		printf("\r... 100%% of%*lld bytes                       \n\n", 20, target.Size);
+		printf("Verifying took %f second(s) / %ld clock units\n\n",
 			(float)duration/CLOCKS_PER_SEC, duration);
 	}
 	if ( target.BadBlockCnt > 0 ) {
