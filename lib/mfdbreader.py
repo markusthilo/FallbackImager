@@ -1,38 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from sqlite3 import connect as SqliteConnect
-from re import compile as re_compile
-
-class SQLiteReader:
-	'''Read SQLite files'''
-
-	def __init__(self, sqlite_path):
-		'''Open database'''
-		self.db = SqliteConnect(sqlite_path)
-		self.cursor = self.db.cursor()
-
-	def fetch_table(self, table, fields, where=None):
-		'''Fetch one table row by row'''
-		cmd = 'SELECT '
-		if isinstance(fields, str):
-			cmd += f'"{fields}"'
-		else:
-			cmd += ', '.join(f'"{field}"' for field in fields)
-		cmd += f' FROM "{table}"'
-		if where:
-			cmd += f' WHERE "{where[0]}"='
-			cmd += f"'{where[1]}'"
-		if isinstance(fields, str):
-			for row in self.cursor.execute(cmd):
-				yield row[0]
-		else:
-			for row in self.cursor.execute(cmd):
-				yield row
-
-	def close(self):
-		'Close SQLite database'
-		self.db.close()
+from .sqliteutils import SQLiteReader
 
 class MfdbReader(SQLiteReader):
 	'''Extend SqliteReader for AXIOM data base'''
