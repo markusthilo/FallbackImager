@@ -39,14 +39,20 @@ class SQLiteExec:
 	def alter(self, statements_path):
 		'''Change data base'''
 		if self.echo == print:
-			for cnt, statement in enumerate(self.read_file(statements_path)):
-				print(f'\r{cnt}', end='')
+			print('1', end='')
+			for cnt, statement in enumerate(self.read_file(statements_path), start=1):
 				self.cursor.execute(statement)
+				if cnt % 10000 == 0:
+					print(f'\r{cnt}', end='')
+					self.db.commit()
 			print('\r', end='')
 		else:
-			for cnt, statement in enumerate(self.read_file(statements_path)):	
-				self.echo(cnt, overwrite=True)
+			self.echo('1')
+			for cnt, statement in enumerate(self.read_file(statements_path), start=1):	
 				self.cursor.execute(statement)
+				if cnt % 10000 == 0:
+					self.echo(cnt, overwrite=True)
+					self.db.commit()
 		self.db.commit()  
 		self.db.close()
 		return cnt
@@ -63,9 +69,9 @@ class SQLiteReader:
 		'''List tables from scheme'''
 		self.cursor.execute("SELECT name FROM sqlite_schema WHERE type = 'table';")
 		for table in self.cursor.fetchall():
-			self.cursor.execute(f'SELECT * FROM {table[0]};')
-			rows = self.cursor.fetchall()
-			yield table[0], list(map(lambda des: des[0], self.cursor.description))
+			self.cursor.execute(f"SELECT name FROM PRAGMA_TABLE_INFO('{table[0]}');")
+			rows = (des[0] for des in self.cursor.fetchall())
+			yield table[0], rows
 
 	def fetch_table(self, table, fields, where=None):
 		'''Fetch one table row by row'''

@@ -3,12 +3,12 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-09'
+__version__ = '0.2.2_2023-10-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Work with SQLite
+Work with SQLite (for RDSv3 e.g.)
 '''
 
 from pathlib import Path
@@ -42,7 +42,7 @@ class SQLite:
 				head='sqlite.SQLite', echo=self.echo)
 
 	def schema(self):
-		'''Get fatabase schema'''
+		'''Get database schema'''
 		self.echo('Getting schema from database')
 		reader = SQLiteReader(self.db_path)
 		for name, columns in reader.list_tables():
