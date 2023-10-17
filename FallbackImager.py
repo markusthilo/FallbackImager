@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.2_2023-10-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -24,6 +24,7 @@ from dismimager import DismImagerGui, DismImagerCli
 from zipimager import ZipImagerGui, ZipImagerCli
 from axchecker import AxCheckerGui, AxCheckerCli
 from hdzero import HdZeroGui, HdZeroCli
+from sqlite import SQLiteGui, SQLiteCli
 
 ### MODULES ###
 if __os_name__ == 'nt':
@@ -35,8 +36,9 @@ if __os_name__ == 'nt':
 			IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
 			ZipImagerGui: ZipImagerCli,
+			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli,
-	###		HdZeroGui: HdZeroCli	### under construction ###
+			HdZeroGui: HdZeroCli	### under construction ###
 		}
 	else:
 		__modules__ = {
@@ -44,6 +46,7 @@ if __os_name__ == 'nt':
 			OscdimgGui: OscdimgCli,
 			IsoVerifyGui: IsoVerifyCli,
 			ZipImagerGui: ZipImagerCli,
+			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli
 		}
 else:
@@ -51,6 +54,7 @@ else:
 			MkIsoImagerGui: MkIsoImagerCli,
 			IsoVerifyGui: IsoVerifyCli,
 			ZipImagerGui: ZipImagerCli,
+			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli
 		}
 ###############
@@ -184,6 +188,9 @@ class Gui(GuiBase):
 	DEFAULT_PARTITION_NAME = 'Volume'
 	REFRESH = 'Refresh'
 	AREYOUSURE = 'Are you sure?'
+	SQLITE_DB = 'SQLite DB'
+	SELECT_DB = 'Select DB'
+	SCHEMA = 'Schema'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
