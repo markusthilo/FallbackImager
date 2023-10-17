@@ -191,6 +191,13 @@ class Gui(GuiBase):
 	SQLITE_DB = 'SQLite DB'
 	SELECT_DB = 'Select DB'
 	SCHEMA = 'Schema'
+	EXECUTE_SQL = 'Execute SQL'
+	ALTERNATIVE = 'Alternative'
+	DUMP_SCHEMA = 'Dump schema'
+	DUMP_CONTENT = 'Dump content'
+	TABLE = 'Table'
+	SQL_FILE = 'SQL file'
+	SELECT_SQL_FILE = 'Select SQL file'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

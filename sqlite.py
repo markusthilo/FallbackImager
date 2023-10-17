@@ -248,20 +248,29 @@ class SQLiteGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.SQLITE_DB, columnspan=3)
+		#GridLabel(root, frame, root.SQLITE_DB, columnspan=3)
 		FileSelector(root, frame, root.SQLITE_DB, root.SQLITE_DB,
 			f'{root.SELECT_DB} ({root.SELECT_DB})',
-			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
-		GridButton(root, frame, root.SCHEMA , self._list_schema, columnspan=3)
-		#StringSelector(root, frame, root.TABLE, root.TABLE,
-		#	command=self._select_partition)	
+			filetype=(root.SQLITE_DB, '*.db'))
+		GridButton(root, frame, root.SCHEMA , self._list_schema, column=1)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
-		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
+
+		StringRadiobuttons(root, frame, root.TO_DO,
+			(root.EXECUTE_SQL, root.ALTERNATIVE, root.DUMP_SCHEMA, root.DUMP_CONTENT),
+			root.EXECUTE_SQL)
+		GridLabel(root, frame, root.EXECUTE_SQL, column=1)
+		GridLabel(root, frame, root.ALTERNATIVE, column=1)
+		GridLabel(root, frame, root.DUMP_SCHEMA, column=1)
+		GridLabel(root, frame, root.DUMP_CONTENT, column=1)
 		'''
+
+		FileSelector(root, frame, root.SQL_FILE, root.SQL_FILE,
+			f'{root.SELECT_SQL_FILE} ({root.SELECT_SQL_FILE})',
+			filetype=(root.SQL_FILE, '*.sql'))
+		
+		StringSelector(root, frame, root.TABLE, root.TABLE,
+			command=self._select_partition)	
+		
 		GridLabel(root, frame, root.VERIFY_FILE, columnspan=2)
 		StringRadiobuttons(root, frame, root.VERIFY_FILE,
 			(root.DO_NOT_COMPARE, root.FILE_STRUCTURE, root.TSV), root.DO_NOT_COMPARE)
