@@ -71,7 +71,7 @@ class RightButton(Button):
 
 class GridButton(Button):
 	'''| | Button | | |'''
-	def __init__(self, root, parent, text, command, column=0, columnspan=1):
+	def __init__(self, root, parent, text, command, column=1, columnspan=1):
 		super().__init__(parent, text=text, command=command)
 		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
@@ -80,7 +80,7 @@ class GridSeparator:
 	'''|-------|'''
 	def __init__(self, root, parent, column=0, columnspan=3):
 		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
-			sticky='w', padx=root.PAD)
+			sticky='w', padx=root.PAD, pady=root.PAD)
 		root.row += 1
 
 class GridIntMenu(OptionMenu):
@@ -107,9 +107,15 @@ class GridStringMenu(OptionMenu):
 
 class GridLabel:
 	'''| Label |'''
-	def __init__(self, root, parent, text, column=0, columnspan=1):
+	def __init__(self, root, parent, text, column=0, columnspan=3):
 		Label(parent, text=text).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD)
+		root.row += 1
+
+class GridBlank:
+	'''| |'''
+	def __init__(self, root, parent, column=0):
+		Label(parent, text='      ').grid(row=root.row, column=column, padx=root.PAD)
 		root.row += 1
 
 class StringField(Button):
@@ -130,6 +136,18 @@ class StringRadiobuttons:
 			Radiobutton(parent, variable=self.variable, value=value).grid(
 				row=root.row+row, column=column, sticky='w', padx=root.PAD)
 
+class StringRadiobuttonsFrame:
+	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
+	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=2):
+		frame = Frame(parent)
+		frame.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		self.variable = root.settings.init_stringvar(key, default=default)
+		for value in buttons:
+			Radiobutton(frame, variable=self.variable, value=value).pack(
+				side='left', padx=(root.PAD, 0))
+			Label(frame, text=value).pack(side='left', padx=(0, 4*root.PAD))
+		root.row += 1
+
 class VerticalButtons:
 	'''---|Radiobutton|Radiobutton|Radiobutton|---'''
 	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=1):
@@ -144,14 +162,14 @@ class VerticalButtons:
 
 class SourceDirSelector(Button):
 	'''Select source'''
-	def __init__(self, root, parent, column=1, columnspan=1):
+	def __init__(self, root, parent, column=0, columnspan=1):
 		self.source_str = root.settings.init_stringvar(root.SOURCE)
 		GridSeparator(root, parent)
-		GridLabel(root, parent, root.SOURCE, column=column, columnspan=columnspan)
-		super().__init__(parent, text=root.SOURCE, command=self._select)
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		GridLabel(root, parent, root.SOURCE, columnspan=columnspan+2)
+		super().__init__(parent, text=root.DIRECTORY, command=self._select)
+		self.grid(row=root.row, column=column+1, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.source_str, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+			row=root.row, column=column+2, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 		GridSeparator(root, parent)
 		self.root = root
@@ -175,10 +193,10 @@ class StringSelector(Button):
 
 class Checker(Checkbutton):
 	'''Checkbox'''
-	def __init__(self, root, parent, key, text, column=0, columnspan=1):
+	def __init__(self, root, parent, key, text, column=1, columnspan=1):
 		self.int_var = root.settings.init_stringvar(key)
 		super().__init__(parent, variable=self.int_var)
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		self.grid(row=root.row, column=column, sticky='e')
 		GridLabel(root, parent, text, column=column+1, columnspan=columnspan)
 
 class FileSelector(Button):
@@ -433,16 +451,16 @@ class BasicFilterTab:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		GridLabel(root, frame, root.DESTINATION)
 		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
-		Checker(root, frame, root.FLAT, root.FLAT, column=1)
+		Checker(root, frame, root.FLAT, root.FLAT)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.FILTER, columnspan=3)
+		GridLabel(root, frame, root.FILTER)
 		StringRadiobuttons(root, frame, root.FILEFILTER,
 			('', root.TSV), '')
-		GridLabel(root, frame, root.NO_FILEFILTER, column=1, columnspan=2)
+		GridLabel(root, frame, root.NO_FILEFILTER, column=1)#, columnspan=2)
 		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
 			command=self._select_tsv_file)
 		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
@@ -455,7 +473,8 @@ class BasicFilterTab:
 		FileSelector(root, frame,
 			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST, command=self._select_whitelist)
 		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, 
+			column=0, columnspan=3)
 		self.root = root
 
 	def _select_tsv_file(self):
@@ -483,10 +502,22 @@ class BasicFilterTab:
 		source = self.root.settings.get(self.root.SOURCE)
 		outdir = self.root.settings.get(self.root.OUTDIR)
 		filename = self.root.settings.get(self.root.FILENAME)
-		if not source or not outdir or not filename:
+		if not source:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCED_DEST_REQUIRED
+				message = self.root.SOURCE_REQUIRED
+			)
+			return
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
 			)
 			return
 		cmd = self.root.settings.section.lower()

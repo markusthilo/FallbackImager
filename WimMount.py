@@ -3,7 +3,7 @@
 
 __app_name__ = 'WmiMount'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.2_2023-10-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'

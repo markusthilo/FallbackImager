@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-17'
+__version__ = '0.2.2_2023-10-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,6 +13,8 @@ Work with SQLite (e.g. for RDSv3 or SQL dump files)
 
 from pathlib import Path
 from argparse import ArgumentParser
+from tkinter.messagebox import showerror
+from tkinter.scrolledtext import ScrolledText
 from lib.extpath import ExtPath
 from lib.sqliteutils import SQLiteExec, SQLiteReader, SQLDump
 from lib.timestamp import TimeStamp
@@ -22,6 +24,7 @@ from lib.guielements import ChildWindow, SelectTsvColumn
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
+from lib.guielements import GridBlank, StringRadiobuttonsFrame
 
 class SQLite:
 	'''The easy way to work with SQLite'''
@@ -150,21 +153,27 @@ class SQLite:
 		with ExtPath.child(f'{self.filename}_schema.txt', parent=self.outdir
 			).open(mode='w', encoding='utf-8') as fh:
 			print('table (rows):\tcolumns (type)\t...', file=fh)
-			for table in reader.get_tables():
-				line = f'{table} ({reader.count(table)}):\t'
-				line += '\t'.join(f'{column} ({reader.get_type(table, column)})'
-					for column in reader.get_columns(table)
-				)
+			for table, columns in reader.list_tables():
+				line = f'{table} ({reader.count(table)}):'
+				for column in columns:
+					if col_type := reader.get_type(table, column):
+						line += f'\t{column} ({col_type})'
+					else:
+						line += f'\t{column}'
 				print(line, file=fh)
 		self.log.info('Done', echo=True)
 		reader.close()
 		self.log.close()
 
+	def list_tables(self):
+		'''Get tables with columns'''
+		reader = SQLiteReader(self.db_path)
+		for name, columns in reader.list_tables():
+			yield name, columns
+
 	def echo_schema(self):
 		'''Get short version of database schema and print/echo'''
-		reader = SQLiteReader(self.db_path)
-		self.echo('Getting schema from database')
-		for name, columns in reader.list_tables():
+		for name, columns in self.list_tables():
 			col_names = ', '.join(columns)
 			self.echo(f'{name}: {col_names}')
 
@@ -248,150 +257,107 @@ class SQLiteGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		GridSeparator(root, frame)
-		#GridLabel(root, frame, root.SQLITE_DB, columnspan=3)
+		GridLabel(root, frame, root.DATABASE)
 		FileSelector(root, frame, root.SQLITE_DB, root.SQLITE_DB,
 			f'{root.SELECT_DB} ({root.SELECT_DB})',
 			filetype=(root.SQLITE_DB, '*.db'))
-		GridButton(root, frame, root.SCHEMA , self._list_schema, column=1)
 		GridSeparator(root, frame)
-
-		StringRadiobuttons(root, frame, root.TO_DO,
+		GridLabel(root, frame, root.DESTINATION)
+		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, frame, root.OUTDIR,
+			root.DIRECTORY, root.SELECT_DEST_DIR)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.TO_DO)
+		StringRadiobuttonsFrame(root, frame, root.TO_DO,
 			(root.EXECUTE_SQL, root.ALTERNATIVE, root.DUMP_SCHEMA, root.DUMP_CONTENT),
 			root.EXECUTE_SQL)
-		GridLabel(root, frame, root.EXECUTE_SQL, column=1)
-		GridLabel(root, frame, root.ALTERNATIVE, column=1)
-		GridLabel(root, frame, root.DUMP_SCHEMA, column=1)
-		GridLabel(root, frame, root.DUMP_CONTENT, column=1)
-		'''
-
 		FileSelector(root, frame, root.SQL_FILE, root.SQL_FILE,
 			f'{root.SELECT_SQL_FILE} ({root.SELECT_SQL_FILE})',
 			filetype=(root.SQL_FILE, '*.sql'))
-		
-		StringSelector(root, frame, root.TABLE, root.TABLE,
-			command=self._select_partition)	
-		
-		GridLabel(root, frame, root.VERIFY_FILE, columnspan=2)
-		StringRadiobuttons(root, frame, root.VERIFY_FILE,
-			(root.DO_NOT_COMPARE, root.FILE_STRUCTURE, root.TSV), root.DO_NOT_COMPARE)
-		GridLabel(root, frame, root.DO_NOT_COMPARE, column=1, columnspan=2)
-		DirSelector(root, frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE,
-			command=self._select_file_structure)
-		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
-			command=self._select_tsv_file)
-		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
-		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
-		'''
+		StringSelector(root, frame, root.TABLE, root.TABLE, command=self._list_schema)
+		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._list_schema)
 		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
+			self._add_job, column=0, columnspan=3)
 		root.child_win_active = False
 		self.root = root
 
 	def _list_schema(self):
-		'''Select partition in the AXIOM case'''
+		'''Show database schema'''
 		if self.root.child_win_active:
 			return
 		self.root.settings.section = self.CMD
-		mfdb = self.root.settings.get(self.root.CASE_FILE)
-		if not mfdb:
+		db = self.root.settings.get(self.root.SQLITE_DB)
+		if not db:
 			showerror(
-				title = self.root.CASE_FILE,
-				message = self.root.FIRST_CHOOSE_CASE
+				title = self.root.SQLITE_DB,
+				message = self.root.FIRST_CHOOSE_DB
 			)
 			return
-		mfdb = MfdbReader(Path(mfdb))
-		if not mfdb.partitions:
-			showerror(
-				title = self.root.CASE_FILE,
-				message = self.root.UNABLE_DETECT_PARTITIONS
-			)
-			return
-		if len(mfdb.partitions) == 1:
-			self.root.settings.raw(self.root.PARTITION).set(list(mfdb.partitions.values())[0])
-			return
-		self.partition_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
-		self._selected_part = StringVar()
-		for partition in mfdb.partitions.values():
-			frame = ExpandedFrame(self.root, self.partition_window)
-			Radiobutton(frame, variable=self._selected_part, value=partition).pack(
-				side='left', padx=self.root.PAD)
-			LeftLabel(self.root, frame, partition)
-		frame = ExpandedFrame(self.root, self.partition_window)
-		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
-		RightButton(self.root, frame, self.root.QUIT, self.partition_window.destroy)
-
-	def _get_partition(self):
-		'''Get the selected partition'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.PARTITION).set(self._selected_part.get())
-		self.partition_window.destroy()
-
-	def _select_file_structure(self):
-		'''Select file structure to compare'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.FILE_STRUCTURE)
-
-	def _select_tsv_file(self):
-		'''Select TSV file to compare'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.VERIFY_FILE).set(self.root.TSV)
-
-	def _select_column(self):
-		'''Select column in TSV file to compare'''
-		SelectTsvColumn(self.root, self.CMD)
+		db = SQLite(Path(db), echo=lambda line: text.insert('end', f'{line}\n'))
+		window = ChildWindow(self.root, self.root.SCHEMA)
+		text = ScrolledText(window, width=self.root.ENTRY_WIDTH, height=4*self.root.INFO_HEIGHT)
+		text.pack(fill='both', expand=True)
+		text.bind('<Key>', lambda dummy: 'break')
+		db.echo_schema()
+		text.configure(state='disabled')
+		frame = ExpandedFrame(self.root, window)
+		RightButton(self.root, frame, self.root.QUIT, window.destroy)
 
 	def _add_job(self):
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
-		mfdb = self.root.settings.get(self.root.CASE_FILE)
-		partition = self.root.settings.get(self.root.PARTITION)
-		if not mfdb:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.CASE_REQUIRED
-			)
-			return
+		db = self.root.settings.get(self.root.SQLITE_DB)
 		outdir = self.root.settings.get(self.root.OUTDIR) 
 		filename = self.root.settings.get(self.root.FILENAME)
-		if not outdir or not filename:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCED_DEST_REQUIRED
-			)
-			return
-		verify = self.root.settings.get(self.root.VERIFY_FILE)
-		if not partition and verify != self.root.DO_NOT_COMPARE:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.PARTITION_REQUIRED
-			)
-			return
-		file_structure = self.root.settings.get(self.root.FILE_STRUCTURE)
-		tsv = self.root.settings.get(self.root.TSV)
+		to_do = self.root.settings.get(self.root.TO_DO)
+		sql_file = self.root.settings.get(self.root.SQL_FILE)
+		table = self.root.settings.get(self.root.TABLE)
 		column = self.root.settings.get(self.root.COLUMN)
-		cmd = self.root.settings.section.lower()
-		cmd += f' --partition "{partition}"'
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		if verify == self.root.FILE_STRUCTURE:
-			if not file_structure:
+		if not db:
+			if to_do == self.root.EXECUTE_SQL or to_do == self.root.ALTERNATIVE:
+				db = Path(outdir)/f'{filename}.db'
+			else:
 				showerror(
 					title = self.root.MISSING_ENTRIES,
-					message = self.root.ROOT_DIR_REQUIRED
+					message = self.root.SQLITE_DB_REQUIRED
 				)
 				return
-			cmd += f' --diff "{file_structure}"'
-		elif verify == self.root.TSV:
-			if not tsv or not column:
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
+			)
+			return
+		cmd = self.root.settings.section.lower()
+		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
+		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		if to_do == self.root.EXECUTE_SQL or to_do == self.root.ALTERNATIVE:
+			if not sql_file:
 				showerror(
 					title = self.root.MISSING_ENTRIES,
-					message = self.root.TSV_AND_COL_REQUIRED
-					)
+					message = self.root.SQL_FILE_REQUIRED
+				)
 				return
-			cmd += f' --diff "{tsv}" --column {column}'
-			if self.root.settings.get(self.root.TSV_NO_HEAD) == '1':
-				cmd += ' --nohead'
-		cmd += f' "{mfdb}"'
+			if to_do == self.root.EXECUTE_SQL:
+				cmd += f' --execute "{sql_file}"'
+			else:
+				cmd += f' --read "{sql_file}"'
+		elif to_do == self.root.DUMP_SCHEMA:
+			cmd += f' --schema'
+		else:
+			if table:
+				cmd += f' --column "{table}"'
+			if column:
+				cmd += f' --column "{column}"'
+		cmd += f' "{db}"'
 		self.root.append_job(cmd)
 
 if __name__ == '__main__':	# start here if called as application

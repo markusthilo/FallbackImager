@@ -3,7 +3,7 @@
 
 __app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.1_2023-10-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -21,7 +21,8 @@ from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridLabel, FilenameSelector
-from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector, GridButton
+from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector
+from lib.guielements import GridButton, GridBlank
 from isoverify import IsoVerify
 
 __mkisofs_path__ = None
@@ -169,17 +170,20 @@ class MkIsoImagerGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		GridLabel(root, frame, root.DESTINATION)
 		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		self.name_str = StringSelector(root, frame, root.IMAGE_NAME, root.IMAGE_NAME,
 			command=self._gen_name)
-		GridSeparator(root, frame)	
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.MKISOFS, root.MKISOFS, root.SELECT_MKISOFS,
 			filetype=(root.MKISOFS, __mkisofs_name__), default=__mkisofs_path__)
 		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
+			column=0, columnspan=3)
 		self.root = root
 	
 	def _gen_name(self):
@@ -197,10 +201,22 @@ class MkIsoImagerGui:
 		filename = self.root.settings.get(self.root.FILENAME)
 		name = self.root.settings.get(self.root.IMAGE_NAME)
 		mkisofs = self.root.settings.get(self.root.MKISOFS)
-		if not source or not outdir or not filename:
+		if not source:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCED_DEST_REQUIRED
+				message = self.root.SOURCE_REQUIRED
+			)
+			return
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
 			)
 			return
 		cmd = self.root.settings.section.lower()

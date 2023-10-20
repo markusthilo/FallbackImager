@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-17'
+__version__ = '0.2.2_2023-10-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -31,7 +31,7 @@ from lib.logger import Logger
 from lib.mfdbreader import MfdbReader
 from lib.tsvreader import TsvReader
 from lib.guielements import SourceDirSelector, Checker, LeftLabel
-from lib.guielements import ChildWindow, SelectTsvColumn
+from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
@@ -137,10 +137,6 @@ class AxChecker:
 		files_short_paths = {source_path[len_partition:]
 			for source_path in self.mfdb.files.values()
 		}
-		### DEBUG ###
-		#for source_path in self.mfdb.files.values():
-		#	print('DEBUG\n', source_path[len_partition:])# self.mfdb.files.values())#files_short_paths)
-		### DEBUG ###
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
 			progress = FilesPercent(self.diff_path, echo=self.echo)
@@ -163,9 +159,6 @@ class AxChecker:
 					print(tsv.head, file=fh)
 				for full_path, line in tsv.read_lines():
 					path = ExtPath.normalize(full_path)
-					### DEBUG ###
-					#print(path)
-					### DEBUG ###
 					if not path in files_short_paths:
 						print(line, file=fh)
 						missing_cnt += 1
@@ -276,7 +269,9 @@ class AxCheckerGui:
 		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
 		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
 		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
+			self._add_job, column=0, columnspan=3)
 		root.child_win_active = False
 		self.root = root
 
@@ -346,10 +341,16 @@ class AxCheckerGui:
 			return
 		outdir = self.root.settings.get(self.root.OUTDIR) 
 		filename = self.root.settings.get(self.root.FILENAME)
-		if not outdir or not filename:
+		if not outdir:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCED_DEST_REQUIRED
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
 			)
 			return
 		verify = self.root.settings.get(self.root.VERIFY_FILE)

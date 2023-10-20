@@ -23,7 +23,7 @@ from lib.hashes import FileHashes
 from lib.fsreader import FsReader
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridSeparator, GridLabel
 from lib.guielements import FilenameSelector, DirSelector, FileSelector
-from lib.guielements import StringRadiobuttons, GridButton
+from lib.guielements import StringRadiobuttons, GridButton, GridBlank
 
 class IsoReader(PyCdlib):
 	'''Use PyCdlib to get UDF from ISO'''
@@ -199,25 +199,27 @@ class IsoVerifyGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.ISO_IMAGE, columnspan=2)
+		GridLabel(root, frame, root.ISO_IMAGE)
 		FileSelector(root, frame,
 			root.IMAGE, root.IMAGE, root.SELECT_IMAGE, filetype=('ISO files', '*.iso'))
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		GridLabel(root, frame, root.DESTINATION)
 		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.SKIP_PATH_CHECK, columnspan=3)
+		GridLabel(root, frame, root.SKIP_PATH_CHECK)
 		StringRadiobuttons(root, frame, root.REGEXFILTER,
 			(f'{None}', root.BLACKLIST, root.WHITELIST), f'{None}')
-		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=1, columnspan=2)
+		GridLabel(root, frame, root.CHECK_ALL_PATHS)
 		FileSelector(root, frame,
 			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST, command=self._select_blacklist)
 		FileSelector(root, frame,
 			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST, command=self._select_whitelist)
 		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
+			column=0, columnspan=3)
 		self.root = root
 
 	def _select_blacklist(self):
@@ -239,17 +241,35 @@ class IsoVerifyGui:
 		filename = self.root.settings.get(self.root.FILENAME)
 		blacklist = self.root.settings.get(self.root.BLACKLIST)
 		whitelist = self.root.settings.get(self.root.WHITELIST)
-		if not source or not image or not outdir or not filename:
+		if not source:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCED_DEST_REQUIRED
+				message = self.root.SOURCE_REQUIRED
+			)
+			return
+		if not image:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.ISO_REQUIRED
+			)
+			return
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
 			)
 			return
 		cmd = self.root.settings.section.lower()
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
 		cmd += f' --imagepath "{image}"'
-		path_filter = self.root.settings.get(self.root.PATHFILTER)
+		path_filter = self.root.settings.get(self.root.REGEXFILTER)
 		if path_filter == self.root.BLACKLIST:
 			blacklist = self.root.settings.get(self.root.BLACKLIST)
 			if blacklist:

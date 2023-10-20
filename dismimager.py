@@ -25,7 +25,7 @@ from lib.timestamp import TimeStamp
 from lib.guielements import SourceDirSelector, Checker, VerticalButtons
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton
+from lib.guielements import FileSelector, GridButton, GridBlank
 
 class DismImager:
 	'''Create and Verify image with Dism'''
@@ -222,31 +222,37 @@ class DismImagerGui:
 	def __init__(self, root):
 		'''Notebook page'''
 		root.settings.init_section(self.CMD)
-		self.frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(self.frame, text=f' {self.CMD} ')
+		frame = ExpandedFrame(root, root.notebook)
+		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
-		self.source_dir = SourceDirSelector(root, self.frame)
-		GridLabel(root, self.frame, root.DESTINATION, columnspan=2)
-		self.filename_str = FilenameSelector(root, self.frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, self.frame, root.OUTDIR,
+		self.source_dir = SourceDirSelector(root, frame)
+		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
-		self.name_str = StringSelector(root, self.frame, root.IMAGE_NAME, root.IMAGE_NAME,
+		self.name_str = StringSelector(root, frame, root.IMAGE_NAME, root.IMAGE_NAME,
 			command=self._gen_name)
-		self.descr_str = StringSelector(root, self.frame, root.IMAGE_DESCRIPTION, root.IMAGE_DESCRIPTION,
+		self.descr_str = StringSelector(root, frame, root.IMAGE_DESCRIPTION, root.IMAGE_DESCRIPTION,
 			command=self._gen_description)
-		VerticalButtons(root, self.frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
-		GridSeparator(root, self.frame)
-		GridLabel(root, self.frame, root.TO_DO, columnspan=3)
-		StringRadiobuttons(root, self.frame, root.TO_DO,
+		VerticalButtons(root, frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.TO_DO)
+		StringRadiobuttons(root, frame, root.TO_DO,
 			(root.CREATE_AND_VERIFY, root.VERIFY_FILE), root.CREATE_AND_VERIFY)
-		GridLabel(root, self.frame, root.CREATE_AND_VERIFY, column=1, columnspan=2)
-		FileSelector(root, self.frame,
-			root.VERIFY_FILE, root.VERIFY_FILE, root.SELECT_VERIFY_FILE)
-		GridSeparator(root, self.frame)
-		Checker(root, self.frame, root.COPY_EXE, root.COPY_EXE, columnspan=2)
-		GridSeparator(root, self.frame)
-		GridButton(root, self.frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridLabel(root, frame, root.CREATE_AND_VERIFY, column=1, columnspan=2)
+		FileSelector(root, frame, root.VERIFY_FILE, root.VERIFY_FILE, root.SELECT_VERIFY_FILE,
+			command=self._select_verify_file)
+		Checker(root, frame, root.COPY_EXE, root.COPY_EXE, columnspan=2)
+		GridSeparator(root, frame)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
+			column=0, columnspan=3)
 		self.root = root
+
+	def _select_verify_file(self):
+		'''Select verify file'''
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.TO_DO).set(self.root.VERIFY_FILE)
 
 	def _gen_name(self):
 		'''Generate a name for the image'''
@@ -262,13 +268,6 @@ class DismImagerGui:
 				descr += f', {Path(source).name}'
 			self.descr_str.string.set(descr)
 
-	def _error(self):
-		'''Show error for missing entries'''
-		showerror(
-			title = self.root.MISSING_ENTRIES,
-			message = self.root.SOURCED_DEST_REQUIRED
-		)
-
 	def _add_job(self):
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
@@ -279,17 +278,29 @@ class DismImagerGui:
 		compression = self.root.settings.get(self.root.COMPRESSION)
 		image = self.root.settings.get(self.root.VERIFY_FILE)
 		cmd = self.root.settings.section.lower()
+		if not image:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.IMAGE_REQUIRED
+			)
+			return
 		if to_do == self.root.VERIFY_FILE:
-			if not image:
-				self._error()
-				return
 			cmd += f' --verify --{self.root.PATH.lower()} {image}'
 			if not filename:
-				filename = image.stem
+				filename = Path(image).stem
 			if not outdir and image:
 				outdir = image.parent
-		if not source or not outdir or not filename:
-			self._error()
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
+			)
 			return
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'

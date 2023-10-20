@@ -300,7 +300,7 @@ class HdZeroGui(WinUtils):
 
 	def __init__(self, root):
 		'''Notebook page'''
-		super().__init__()
+		super().__init__(__parent_path__)
 		root.settings.init_section(self.CMD)
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')

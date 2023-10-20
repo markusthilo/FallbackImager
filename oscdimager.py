@@ -21,7 +21,8 @@ from lib.logger import Logger
 from lib.greplists import GrepLists
 from lib.hashes import FileHashes
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridLabel, FilenameSelector
-from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector, GridButton
+from lib.guielements import GridSeparator, DirSelector, StringSelector, FileSelector
+from lib.guielements import GridButton, GridBlank
 from isoverify import IsoVerify
 
 __oscdimg_exe_path__ = None
@@ -167,17 +168,19 @@ class OscdimgGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		GridLabel(root, frame, root.DESTINATION)
 		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
+		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR)
 		self.name_str = StringSelector(root, frame, root.IMAGE_NAME, root.IMAGE_NAME,
 			command=self._gen_name)
-		GridSeparator(root, frame)	
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.OSCDIMG_EXE, root.OSCDIMG_EXE, root.SELECT_OSCDIMG_EXE,
 			filetype=(root.OSCDIMG_EXE, 'oscdimg.exe'), default=__oscdimg_exe_path__)
 		GridSeparator(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job, columnspan=3)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
+			column=0, columnspan=3)
 		self.root = root
 	
 	def _gen_name(self):
@@ -195,10 +198,22 @@ class OscdimgGui:
 		filename = self.root.settings.get(self.root.FILENAME)
 		name = self.root.settings.get(self.root.IMAGE_NAME)
 		oscdimg_exe = self.root.settings.get(self.root.OSCDIMG_EXE)
-		if not source or not outdir or not filename:
+		if not source:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCED_DEST_REQUIRED
+				message = self.root.SOURCE_REQUIRED
+			)
+			return
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
 			)
 			return
 		cmd = self.root.settings.section.lower()

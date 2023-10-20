@@ -83,7 +83,7 @@ class SQLiteReader:
 		self.cursor.execute(f'SELECT typeof("{column}") FROM "{table}"')
 		try:
 			return self.cursor.fetchone()[0]
-		except IndexError:
+		except:
 			return None
 		
 	def get_printable(self, table, column):
