@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "2.2.2_20231001";
+const char *VERSION = "3.0.0_20231021";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,11 +42,10 @@ void print_help() {
 	printf("BLOCK_SIZE (optional):\n");
 	printf("    Block size for read and write (default is 4096)\n\n");
 	printf("OPTIONS (optional):\n");
-	printf("    /a - Write every block, regardless if it is already zeroed\n");
-	printf("    /x - Two pass wipe, write blocks with random values as 1st pass, implies /a\n");
-	printf("    /f - Fill with binary ones / 0xFF instad of zeros\n");
-	printf("    /c - Check, do not wipe (zeros or 0xFF with /f)\n");
-	printf("    /v - Verbose, print all warnings\n\n");
+	printf("    /1 - Fill with binary ones / 0xFF instad of zeros\n");
+	printf("    /e - Write every block (do not check before overwriting block)\n");
+	printf("    /v - Verify, do not wipe\n");
+	printf("    /x - Two pass wipe(1st pass writes random bytes)\n\n");
 	printf("Example:\n");
 	printf("zerod.exe \\\\.\\PHYSICALDRIVE1\n\n");
 	printf("Disclaimer:\n");
@@ -66,7 +65,6 @@ typedef struct Z_TARGET {
 	LONGLONG *BadBlocks;	// array for bad blocks
 	int BadBlockCnt;	// counter for bad blocks
 	int Type;	// disk: 1, file: 2, error: -1
-	BOOL VerboseWarnings;	// to trigger verbose output
 } Z_TARGET;
 
 /* Options for the wiping process */
@@ -74,7 +72,6 @@ typedef struct Z_CONFIG {
 	BYTE WipeByte;	// byte to write
 	ULONGLONG WipeULL;	// byte to write expanded to 64 bits
 	BYTE *ByteBlock;	// block to write
-	BOOL Verbose;	// to trigger verbose output
 } Z_CONFIG;
 
 /* Return true if every byte of array is equal given byte */
@@ -142,9 +139,6 @@ void warning_bad_blocks(Z_TARGET *target) {
 
 /* Warning bad block on write */
 void warning_unable_to_write(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
-	if ( config->Verbose )
-		fprintf(stderr, "\nWarning: could not write block of %lu bytes at offset %lld\n",
-		blocksize, target->Pointer);
 	target->BadBlocks[target->BadBlockCnt++] = target->Pointer;
 	if ( target->BadBlockCnt == MAXBADBLOCKS ) error_rw(target);
 	set_pointer(target, target->Pointer + blocksize);
@@ -152,9 +146,6 @@ void warning_unable_to_write(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize
 
 /* Warning bad block on read*/
 void warning_unable_to_read(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
-	if ( config->Verbose )
-		fprintf(stderr, "\nWarning: could not read block of %lu bytes at offset %lld\n",
-		blocksize, target->Pointer);
 	target->BadBlocks[target->BadBlockCnt++] = target->Pointer;
 	if ( target->BadBlockCnt == MAXBADBLOCKS ) error_rw(target);
 	set_pointer(target, target->Pointer + blocksize);
@@ -162,9 +153,6 @@ void warning_unable_to_read(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize)
 
 /* Warning block not wiped */
 void warning_not_wiped(Z_TARGET *target, Z_CONFIG *config, DWORD blocksize) {
-	if ( config->Verbose )
-		fprintf(stderr, "\nWarning: block of %lu bytes at offset %lld is not completely wiped\n",
-		blocksize, target->Pointer);
 	target->BadBlocks[target->BadBlockCnt++] = target->Pointer;
 	if ( target->BadBlockCnt == MAXBADBLOCKS ) error_rw(target);
 	set_pointer(target, target->Pointer + blocksize);
@@ -328,21 +316,18 @@ int main(int argc, char **argv) {
 	BOOL print_size = FALSE; // only print size
 	for (int i=2; i<argc; i++) {
 		if ( argv[i][0] == '/' && argv[i][2] == 0 ) {	// swith?
-			if ( argv[i][1] == 'x' || argv[i][1] == 'X' ) {	// x for two pass mode
-				if ( pure_check || xtrasave ) error_toomany();
-				xtrasave = TRUE;
-			} else if ( argv[i][1] == 'a' || argv[i][1] == 'A' ) {	// a to write every block
-				if ( pure_check || write_all ) error_toomany();
-				write_all = TRUE;
-			} else if ( argv[i][1] == 'c' || argv[i][1] == 'C' ) {	// c for pure check
-				if ( pure_check || write_all || xtrasave ) error_toomany();
-				pure_check = TRUE;
-			} else if ( argv[i][1] == 'f' || argv[i][1] == 'F' ) {	// f to fill with 0xff
+			if ( argv[i][1] == '1' ) {	// 1 to fill with 0xff
 				if ( wipe_ff ) error_toomany();
 				wipe_ff = TRUE;
-			} else if ( argv[i][1] == 'v' || argv[i][1] == 'V' ) {	// verbose infos/warnings
-				if ( verbose ) error_toomany();
-				verbose = TRUE;
+			} else if ( argv[i][1] == 'e' || argv[i][1] == 'E' ) {	// e to write every block
+				if ( pure_check || write_all ) error_toomany();
+				write_all = TRUE;
+			} else if ( argv[i][1] == 'v' || argv[i][1] == 'V' ) {	// v to verify
+				if ( pure_check || write_all || xtrasave ) error_toomany();
+				pure_check = TRUE;
+			} else if ( argv[i][1] == 'x' || argv[i][1] == 'X' ) {	// x for two pass mode
+				if ( pure_check || xtrasave ) error_toomany();
+				xtrasave = TRUE;
 			} else error_wrong(argv[i]);
 		} else {	// not a swtich, may be blocksize?
 			int ptr = 0;
@@ -440,7 +425,6 @@ int main(int argc, char **argv) {
 		config.WipeByte = 0;
 		config.WipeULL = 0;
 	}
-	config.Verbose = verbose;
 	clock_t start, duration;
 	if ( write_all || xtrasave ) {	// write every block
 		if ( xtrasave ) {

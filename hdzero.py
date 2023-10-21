@@ -3,20 +3,19 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-01'
+__version__ = '0.2.2_2023-10-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Erases disks while not touching empty blocks/pages.
-The tool is also capable of overwriting files but slack and files system artefacts
-will remain. It is designed to securely wipe HDDs/SSDs and generate a log file.
+Wipe disk but not touching empty blocks/pages or overwrite all. The tool is also
+capable of overwriting files but slack and files system artefacts will remain.
+It is designed to securely wipe HDDs/SSDs and generate a log file.
 '''
 
 from sys import executable as __executable__
 from pathlib import Path
 from functools import partial
-from threading import Thread
 from win32com.shell.shell import IsUserAnAdmin
 from argparse import ArgumentParser
 from tkinter import StringVar
@@ -54,19 +53,22 @@ class HdZero(WinUtils):
 	MIN_BLOCKSIZE = 512
 	MAX_BLOCKSIZE = 1048576
 
-	def __init__(self, targets,
+	def __init__(self, target,
+			ff = False,
 			blocksize = 4096,
 			create = 'ntfs',
-			ff = False,
+			letter = None,
 			loghead = None,
-			mount = None,
-			name = 'Volume',
-			task = 'normal',
-			verbose = False,
+			every = False,
 			mbr = False,
-			zerod = __zerod_exe_path__,
-			echo = print,
+			name = None,
+			verify = False,
+			extra = False,
+			zerod = None,
+			echo = print
 		):
+		print(target)
+		exit()
 		super().__init__(__parent_path__)
 		if zerod:
 			self.zerod_path = Path(zerod)
@@ -78,48 +80,28 @@ class HdZero(WinUtils):
 		self.verbose = verbose
 		self.log = None
 		self.echo = echo
-		self.task = task
-		if task == 'list':
-			if len(targets) > 0:
-				raise ValueError('Task list does not take a target argument')
-		else:
-			if len(targets) < 1:
-				raise ValueError('No target was given')
-			if str(targets[0]).startswith('\\\\.\\PHYSICALDRIVE'):
-				self.wipe_drive = True
-				if len(targets) > 1:
-					raise ValueError('Only one physical drive at a time')
-				if not_admin:
-					raise RuntimeError('Admin rights are required to access block devices')
-				if blocksize and blocksize % self.MIN_BLOCKSIZE != 0:
-					raise ValueError(f'{target} is a block device and needs block size n*512 bytes')
-				if create:
-					self.create = create.lower()
-					if create == 'none':
-						self.create = None
-					else:
-						self.log = Logger(
-							filename = f'_log_{self.process_id}.log',
-							outdir = __parent_path__,
-							echo = echo,
-							head = f'''hdzero.HdZero
-
-HDZero Version {__version__}
-Author: Markus Thilo
-This wipe tool is part of the FallbackImager Project:
-https://github.com/markusthilo/FallbackImager
-GNU General Public License Version 3
-
-'''
-						)
-						if loghead:
-							self.loghead = Path(loghead)
-				else:
-					self.create = None
+		if str(target[0]).startswith('\\\\.\\PHYSICALDRIVE'):
+			if not_admin:
+				raise RuntimeError('Admin rights are required to access block devices')
+			self.wipe_drive = True
+		
+		if blocksize and blocksize % self.MIN_BLOCKSIZE != 0:
+			raise ValueError(f'{target} is a block device and needs block size n*512 bytes')
+		if create:
+			self.create = create.lower()
+			if create == 'none':
+				self.create = None
 			else:
-				self.wipe_drive = False
-			if blocksize <= 0 or blocksize > self.MAX_BLOCKSIZE:
-				raise ValueError(f'Block size out of range (max. {self.MAX_BLOCKSIZE} bytes)')
+				self.log = Logger(
+					filename = f'_log_{self.process_id}.log',
+					outdir = __parent_path__,
+					echo = echo,
+					head = 'hdzero.HdZero'
+				)
+				if loghead:
+					self.loghead = Path(loghead)
+		if blocksize <= 0 or blocksize > self.MAX_BLOCKSIZE:
+			raise ValueError(f'Block size out of range (max. {self.MAX_BLOCKSIZE} bytes)')
 		self.targets = targets
 		self.blocksize = blocksize
 		self.ff = ff
@@ -204,6 +186,9 @@ class HdZeroCli(ArgumentParser):
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__, **kwargs)
+		self.add_argument('-1', '--ff', action='store_true',
+			help='Write binary ones (0xff bytes) instead of zeros'
+		)
 		self.add_argument('-b', '--blocksize', default=4096, type=int,
 			help='Block size', metavar='INTEGER'
 		)
@@ -211,81 +196,67 @@ class HdZeroCli(ArgumentParser):
 			choices=['ntfs', 'fat32', 'exfat', 'none'], default='ntfs',
 			help='Create partition (when target is a physical drive)', metavar='STRING'
 		)
-		self.add_argument('-f', '--ff', action='store_true',
-			help='Fill with binary ones / 0xFF instad of zeros'
+		self.add_argument('-d', '--letter', type=str,
+			help='Assign letter to drive (when target is a physical drive)',
+			metavar='DRIVE LETTER'
+		)
+		self.add_argument('-e', '--every', action='store_true',
+			help='Write every block (do not check before overwriting block)'
 		)
 		self.add_argument('-l', '--loghead',
 			default=__parent_path__/'hdzero_log_head.txt', type=Path,
 			help='Use the given file as head when writing log to new drive',
 			metavar='FILE'
 		)
-		self.add_argument('-m', '--mount', type=str,
-			help='Assign letter to wiped drive (when target is a physical drive)',
-			metavar='DRIVE LETTER'
+		self.add_argument('-m', '--mbr', action='store_true',
+			help='Use mbr instead of gpt Partition table (when target is a physical drive)'
 		)
 		self.add_argument('-n', '--name', type=str, default='Volume',
 			help='Name/label of the new partition (when target is a physical drive)',
 			metavar='STRING'
 		)
-		self.add_argument('-t', '--task', type=str, default='normal',
-			choices=['normal', 'all', 'extra', 'check', 'list'],
-			help='Task to perform: normal, all, extra, check or list', metavar='STRING'
+		self.add_argument('-v', '--verify', action='store_true',
+			help='Verify for zeros (or 0xff with -f) but do not wipe'
 		)
-		self.add_argument('-v', '--verbose', action='store_true',
-			help='Verbose, print all warnings'
-		)
-		self.add_argument('-r', '--mbr', action='store_true',
-			help='Use mbr instead of gpt Partition table (when target is a physical drive)'
+		self.add_argument('-x', '--extra', action='store_true',
+			help='Overwrite/wipe all blocks twice, write random bytes at 1st pass (for HDDs)'
 		)
 		self.add_argument('-z', '--zerod', type=Path, help='Path to zerod.exe', metavar='FILE')
-		self.add_argument('targets', nargs='*', type=Path,
+		self.add_argument('target', nargs=1, type=Path,
 			help='Target drive or file (e.g. \\.\\\\PHYSICALDRIVE1)', metavar='DRIVE/FILE'
 		)
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.targets = args.targets
+		self.target = args.target
+		self.ff = args.ff
 		self.blocksize = args.blocksize
 		self.create = args.create
-		self.ff = args.ff
+		self.letter = args.letter
+		self.every = args.every
 		self.loghead = args.loghead
-		self.mount = args.mount
-		self.name = args.name
-		self.task = args.task
-		self.verbose = args.verbose
 		self.mbr = args.mbr
+		self.name = args.name
+		self.extra = args.extra
 		self.zerod = args.zerod
 
 	def run(self, echo=print):
-		'''Run AxChecker'''
-		HdZero(self.targets,
+		'''Run HdZero'''
+		HdZero(self.target,
+			ff = self.ff,
 			blocksize = self.blocksize,
 			create = self.create,
-			ff = self.ff,
+			letter = self.letter,
 			loghead = self.loghead,
-			mount = self.mount,
-			name = self.name,
-			task = self.task,
-			verbose = self.verbose,
+			every = self.every,
 			mbr = self.mbr,
-			echo = echo,
-			zerod = self.zerod
+			name = self.name,
+			verify = self.verify,
+			extra = self.extra,
+			zerod = self.zerod,
+			echo = echo
 		).run()
-
-class Worker(Thread):
-	'''Run HdZero as task'''
-
-	def __init__(self, root, hdzero):
-		'''Give GUI and HdZero to worker'''
-		self.root = root
-		self.hdzero = hdzero
-		super().__init__()
-
-	def run(self):
-		'''Start the work'''
-		self.hdzero.run()
-		self.root.enable_start()
 
 class HdZeroGui(WinUtils):
 	'''Notebook page'''
