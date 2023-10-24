@@ -3,8 +3,10 @@
 
 from wmi import WMI
 from win32api import GetCurrentProcessId, GetLogicalDriveStrings
+from string import ascii_uppercase
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
 from time import sleep
+from pathlib import Path
 from lib.extpath import ExtPath, FilesPercent
 
 class WinUtils:
@@ -14,13 +16,14 @@ class WinUtils:
 	WINCMD_RETRIES = 20
 	WINCMD_DELAY = 1
 
-	def __init__(self, parent_path):
+	def __init__(self, outdir=None):
 		'''Generate Windows tools'''
 		self.conn = WMI()
 		self.cmd_startupinfo = STARTUPINFO()
 		self.cmd_startupinfo.dwFlags |= STARTF_USESHOWWINDOW
 		self.process_id = GetCurrentProcessId()
-		self.tmpscriptpath = parent_path/f'_script_{self.process_id}.tmp'
+		if outdir:
+			self.tmpscriptpath = Path(outdir)/f'_script_{self.process_id}.tmp'
 
 	def cmd_launch(self, cmd):
 		'''Start command line subprocess without showing a terminal window'''
@@ -34,6 +37,19 @@ class WinUtils:
 			universal_newlines = True,
 			startupinfo = self.cmd_startupinfo
 		)
+
+	def drive_letter_is_free(self, letter):
+		'''Check if drive letter is free for new assignment'''
+		try:
+			return not Path(str(letter).rstrip(':\\')).exists()
+		except OSError:
+			return True
+
+	def get_free_letters(self):
+		'''Get free drive letters'''
+		for letter in ascii_uppercase:
+			if self.drive_letter_is_free(letter):
+				yield(letter)
 
 	def list_drives(self):
 		'''List drive infos, partitions and logical drives'''
@@ -101,47 +117,42 @@ class WinUtils:
 			pass
 		try:
 			self.tmpscriptpath.unlink()
+			return False
 		except:
-			pass
-		return
+			return True
 
-	def clean_table(self, driveid):
-		'Clean partition table using diskpart'
+	def get_drive_no(self, drive_id):
+		'Get number of physical drive from full drive id'
 		try:
-			driveno = driveid[17:]
-		except:
-			return
-		self.run_diskpart(f'''select disk {driveno}
-clean
-'''
-		)
-
-	def create_partition(self, drive_path, label='Volume', letter=None, mbr=False, fs='ntfs'):
-		'''Create partition using diskpart'''
-		try:
-			drive_no = str(drive_path)[17:].rstrip('\\')
-		except:
-			return
-		if not letter:
-			used_letters = GetLogicalDriveStrings().split(':\\\x00')
-			for char in range(ord('D'),ord('Z')+1):
-				if not chr(char) in used_letters:
-					letter = chr(char)
-					break
-			else:
+			drive_no = drive_id[17:]
+			if int(drive_no) < 0:
 				return
-		if mbr:
-			table = 'mbr'
-		else:
-			table = 'gpt'
-		self.run_diskpart(f'''select disk {drive_no}
+		except:
+			return
+
+	def clean_table(self, drive_id):
+		'Clean partition table using diskpart'
+		if drive_no := self.get_drive_no(drive_id):
+			return self.run_diskpart(f'select disk {drive_no}\nclean')
+
+	def create_partition(self, drive_id, label='Volume', letter=None, mbr=False, fs='ntfs'):
+		'''Create partition using diskpart'''
+		if drive_no := self.get_drive_no(drive_id):
+			if not letter:
+				letter = next(self.get_free_letters())
+			if mbr:
+				table = 'mbr'
+			else:
+				table = 'gpt'
+			self.run_diskpart(f'''select disk {drive_no}
 clean
 convert {table}
 create partition primary
 format quick fs={fs} label={label}
 assign letter={letter}
-''')
-		for cnt in range(self.WINCMD_RETRIES):
-			sleep(self.WINCMD_DELAY)
-			if Path(f'{letter}:').exists():
-				return letter
+'''
+			)
+			for cnt in range(self.WINCMD_RETRIES):
+				sleep(self.WINCMD_DELAY)
+				if Path(f'{letter}:\\').exists():
+					return letter
