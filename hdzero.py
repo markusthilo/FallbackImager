@@ -3,7 +3,7 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-22'
+__version__ = '0.2.2_2023-10-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -31,7 +31,7 @@ from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu
 from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector, ExpandedLabelFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
+from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
 
 __executable__ = Path(__executable__)
 __file__ = Path(__file__)
@@ -140,7 +140,7 @@ class HdZero(WinUtils):
 		'''Run zerod + write log to file'''
 		if not self.log:
 			self.log = Logger(
-				filename = f'{Timestamp.now(path_comp=True, no_ms=True)}_hdzero',
+				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_hdzero',
 				outdir = self.outdir, 
 				head = 'hdzero.HdZero',
 				echo = self.echo
@@ -164,7 +164,6 @@ class HdZero(WinUtils):
 		else:
 			echo = lambda msg: self.echo(msg, overwrite=True)
 		error = False
-		'''
 		for target in self.targets:
 			self.echo()
 			cmd = f'{zerod_str} {target}{opt_str}'
@@ -175,28 +174,30 @@ class HdZero(WinUtils):
 					echo(msg)
 				else:
 					self.log.info(msg, echo=True)
-			if proc.stderr.read():
-				self.log.warning(error)
+			if stderr := proc.stderr.read():
+				self.log.warning(stderr)
 				error = True
-		'''
-		self.log.close()
-		if self.physicaldrive and not error:
+		if self.create and not error:
 			letter = self.create_partition(self.targets[0],
 				label = self.name,
 				letter = self.driveletter,
 				mbr = self.mbr,
 				fs = self.create
 			)
-			if letter:
-				log_path = Path(f'{letter}:\\hdzero-log.txt')
-				head = ''
-				if self.loghead:
-					try:
-						head = self.loghead.read_text()
-					except FileNotFoundError:
-						pass
-				with log_path.open('w') as fh:
-					fh.write(head + self.log.path.read_text())
+		else:
+			letter = None
+			self.log.warning(f'Could not create {self.create} file system')
+		self.log.close()
+		if letter:
+			log_path = Path(f'{letter}:\\hdzero-log.txt')
+			head = ''
+			if self.loghead:
+				try:
+					head = self.loghead.read_text()
+				except FileNotFoundError:
+					pass
+			with log_path.open('w') as fh:
+				fh.write(head + self.log.path.read_text())
 
 class HdZeroCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -307,30 +308,43 @@ class HdZeroGui(WinUtils):
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
-		GridLabel(root, frame, root.WIPE, columnspan=2)
 		GridSeparator(root, frame)
-		Button(frame, text=root.DRIVE, command=self._select_drive).grid(
-			row=root.row, column=1, sticky='w', padx=root.PAD)
-		Button(frame, text=root.FILES, command=self._select_files).grid(
-			row=root.row, column=2, sticky='w', padx=root.PAD)
-		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
-			default=self.DEF_BLOCKSIZE, column=3)
+		GridLabel(root, frame, root.WIPE)
+		StringSelector(root, frame, root.TARGET, root.TARGET,
+			command=self._select_target, columnspan=4)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.LOGGING)
+		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME, columnspan=4)
+		DirSelector(root, frame, root.OUTDIR,
+			root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=4)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.TO_DO)
 		StringRadiobuttons(root, frame, root.TO_DO,
-			(root.NORMAL_WIPE, root.ALL_BLOCKS, root.EXTRA_PASS, root.CHECK),
-			root.NORMAL_WIPE
-		)
+			(root.NORMAL_WIPE, root.ALL_BLOCKS, root.EXTRA_PASS, root.CHECK), root.NORMAL_WIPE)
 		GridLabel(root, frame, root.NORMAL_WIPE, column=1)
 		GridLabel(root, frame, root.ALL_BLOCKS, column=1)
 		GridLabel(root, frame, root.EXTRA_PASS, column=1)
 		GridLabel(root, frame, root.CHECK, column=1)
-		Checker(root, frame, root.USE_FF, root.USE_FF)
+		GridSeparator(root, frame)
+		GridLabel(root, frame, root.CONFIGURATION)
+		root.row -= 1
+		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
+			default=self.DEF_BLOCKSIZE, column=2)
+		root.row -= 1
+		Checker(root, frame, root.USE_FF, root.USE_FF, column=4)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
 			default=__parent_path__/'hdzero_log_head.txt',
-			command=self.notepad_log_head, columnspan=3)
+			command=self.notepad_log_head, columnspan=4)
 		FileSelector(root, frame, root.ZEROD_EXE, root.ZEROD_EXE, root.SELECT_ZEROD_EXE,
-			filetype=(root.ZEROD_EXE, 'zerod.exe'), default=__zerod_exe_path__,columnspan=3)
+			filetype=(root.ZEROD_EXE, 'zerod.exe'), default=__zerod_exe_path__, columnspan=4)
+
+		GridSeparator(root, frame)
+		GridBlank(root, frame)
+		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
+			self._add_job, column=0, columnspan=3)
+		root.child_win_active = False
 		self.root = root
-		self.root.child_win_active = False
+		
 
 	def notepad_log_head(self):
 		'Edit log header file with Notepad'
@@ -364,7 +378,7 @@ class HdZeroGui(WinUtils):
 		if not self.root.settings.get(self.root.PARTITION_NAME):
 			self.root.settings.raw(self.root.PARTITION_NAME).set(self.root.DEFAULT_PARTITION_NAME)
 
-	def _select_drive(self):
+	def _select_target(self):
 		'''Select drive to wipe'''
 		if self.root.child_win_active:
 			return
@@ -394,45 +408,9 @@ class HdZeroGui(WinUtils):
 		LeftButton(self.root, frame, self.root.REFRESH, self.gen_drive_list_frame)
 		RightButton(self.root, frame, self.root.QUIT, self.drive_window.destroy)
 
-	def _process_drive(self, drive_id, drive_letters):
-		'''Is run when dirive got selected'''
-		self.root.settings.write()
-		if self.root.start_disabled:
-			return
-		self.root.child_win_active = False
-		self.drive_window.destroy()
-		if askyesno(title=f'{self.root.WIPE} {drive_id}', message=self.root.AREYOUSURE):
-			self.root.disable_start()
-			if drive_letters:
-				mount = drive_letters[0]
-			else:
-				mount = None
-			self.root.settings.section = self.CMD
-			if self.root.settings.get(self.root.PARTITION_TABLE) == 'GPT':
-				create = self.root.settings.get(self.root.FILESYSTEM)
-				mbr = False
-			elif self.root.settings.get(self.root.PARTITION_TABLE) == 'MBR':
-				create = self.root.settings.get(self.root.FILESYSTEM)
-				mbr = True
-			else:
-				create = None
-				mbr = False
-			hdzero = HdZero([drive_id],
-				task = self.root.settings.get(self.root.TO_DO),
-				ff = self.root.settings.get(self.root.USE_FF),
-				blocksize = self.root.settings.get(self.root.BLOCKSIZE),
-				loghead = self.root.settings.get(self.root.LOG_HEAD),
-				name = self.root.settings.get(self.root.PARTITION_NAME),
-				mbr = mbr,
-				create = create,
-				mount = mount,
-				echo = self.root.append_info,
-				zerod = self.root.settings.get(self.root.ZEROD_EXE)
-			)
-			Worker(self.root, hdzero).start()
-
 	def _select_files(self):
 		self.root.settings.write()
+		return
 		if self.root.child_win_active or self.root.start_disabled:
 			return
 		filenames = askopenfilenames(title=self.root.ASK_FILES)
@@ -448,7 +426,66 @@ class HdZeroGui(WinUtils):
 				echo = self.root.append_info,
 				zerod = self.root.settings.get(self.root.ZEROD_EXE)
 			)
-			Worker(self.root, hdzero).start()
+
+	def _add_job(self):
+		'''Generate command line'''
+		self.root.settings.section = self.CMD
+		mfdb = self.root.settings.get(self.root.CASE_FILE)
+		partition = self.root.settings.get(self.root.PARTITION)
+		if not mfdb:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.CASE_REQUIRED
+			)
+			return
+		outdir = self.root.settings.get(self.root.OUTDIR) 
+		filename = self.root.settings.get(self.root.FILENAME)
+		if not outdir:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_DIR_REQUIRED
+			)
+			return
+		if not filename:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.DEST_FN_REQUIRED
+			)
+			return
+		verify = self.root.settings.get(self.root.VERIFY_FILE)
+		if not partition and verify != self.root.DO_NOT_COMPARE:
+			showerror(
+				title = self.root.MISSING_ENTRIES,
+				message = self.root.PARTITION_REQUIRED
+			)
+			return
+		file_structure = self.root.settings.get(self.root.FILE_STRUCTURE)
+		tsv = self.root.settings.get(self.root.TSV)
+		column = self.root.settings.get(self.root.COLUMN)
+		cmd = self.root.settings.section.lower()
+		cmd += f' --partition "{partition}"'
+		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
+		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		if verify == self.root.FILE_STRUCTURE:
+			if not file_structure:
+				showerror(
+					title = self.root.MISSING_ENTRIES,
+					message = self.root.ROOT_DIR_REQUIRED
+				)
+				return
+			cmd += f' --diff "{file_structure}"'
+		elif verify == self.root.TSV:
+			if not tsv or not column:
+				showerror(
+					title = self.root.MISSING_ENTRIES,
+					message = self.root.TSV_AND_COL_REQUIRED
+					)
+				return
+			cmd += f' --diff "{tsv}" --column {column}'
+			if self.root.settings.get(self.root.TSV_NO_HEAD) == '1':
+				cmd += ' --nohead'
+		cmd += f' "{mfdb}"'
+		self.root.append_job(cmd)
 
 if __name__ == '__main__':	# start here if called as application
 	app = HdZeroCli()

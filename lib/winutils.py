@@ -3,7 +3,6 @@
 
 from wmi import WMI
 from win32api import GetCurrentProcessId, GetLogicalDriveStrings
-from string import ascii_uppercase
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
 from time import sleep
 from pathlib import Path
@@ -47,7 +46,7 @@ class WinUtils:
 
 	def get_free_letters(self):
 		'''Get free drive letters'''
-		for letter in ascii_uppercase:
+		for letter in 'DEFGHIJKLMNOPQRSTUVWXYZ':
 			if self.drive_letter_is_free(letter):
 				yield(letter)
 
@@ -89,24 +88,6 @@ class WinUtils:
 						continue
 			yield drive_id, drive_info, drive_letters
 
-	def dismount_drives(self, driveletters):
-		'Dismount Drives'
-		for driveletter in driveletters:
-			proc = self.cmd_launch(f'mountvol {driveletter} /p')
-			try:
-				proc.wait(timeout=self.WINCMD_TIMEOUT)
-			except:
-				pass
-		stillmounted = driveletters
-		for cnt in range(self.WINCMD_RETRIES):
-			for driveletter in stillmounted:
-				if not Path(driveletter).exists():
-					stillmounted.remove(driveletter)
-			if stillmounted == list():
-				return
-			sleep(self.WINCMD_DELAY)
-		return stillmounted
-
 	def run_diskpart(self, script):
 		'Run diskpart script'
 		self.tmpscriptpath.write_text(script)
@@ -124,16 +105,14 @@ class WinUtils:
 	def get_drive_no(self, drive_id):
 		'Get number of physical drive from full drive id'
 		try:
-			drive_no = drive_id[17:]
-			if int(drive_no) < 0:
-				return
+			return drive_id[17:]
 		except:
 			return
 
 	def clean_table(self, drive_id):
 		'Clean partition table using diskpart'
 		if drive_no := self.get_drive_no(drive_id):
-			return self.run_diskpart(f'select disk {drive_no}\nclean')
+			return self.run_diskpart(f'select disk {drive_no}\nclean\n')
 
 	def create_partition(self, drive_id, label='Volume', letter=None, mbr=False, fs='ntfs'):
 		'''Create partition using diskpart'''
@@ -154,5 +133,8 @@ assign letter={letter}
 			)
 			for cnt in range(self.WINCMD_RETRIES):
 				sleep(self.WINCMD_DELAY)
-				if Path(f'{letter}:\\').exists():
-					return letter
+				try:
+					if Path(f'{letter}:\\').exists():
+						return letter
+				except OSError:
+					pass

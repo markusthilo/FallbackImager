@@ -265,9 +265,9 @@ class FilenameSelector(Button):
 		self.string = root.settings.init_stringvar(key)
 		self.default = default
 		super().__init__(parent, text=text, command=self._command) 
-		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, sticky='w', padx=root.PAD)
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 		self.command = command
 	def _command(self):
@@ -285,9 +285,9 @@ class DirSelector(Button):
 	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=1):
 		self.dir_str = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=self._select)
-		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, sticky='w', padx=root.PAD)
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 		self.root = root
 		self.ask = ask
