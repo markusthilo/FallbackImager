@@ -181,8 +181,10 @@ class SourceDirSelector(Button):
 class StringSelector(Button):
 	'''String for names, descriptions etc.'''
 	def __init__(self, root, parent, key, text, command=None,
-		column=1, columnspan=1, width=None):
-		self.string = root.settings.init_stringvar(key)
+		column=1, columnspan=1, width=None, default=None):
+		self.string = root.settings.init_stringvar(key, default=default)
+		if not command:
+			command = self._command
 		super().__init__(parent, text=text, command=command)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		if not width:
@@ -190,6 +192,12 @@ class StringSelector(Button):
 		Entry(parent, textvariable=self.string, width=width).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
+		self.default = default
+	def _command(self):
+		if self.string.get():
+			return
+		if self.default:
+			self.string.set(self.default)
 
 class Checker(Checkbutton):
 	'''Checkbox'''
@@ -264,7 +272,9 @@ class FilenameSelector(Button):
 	def __init__(self, root, parent, key, text, default=None, command=None, column=1, columnspan=1):
 		self.string = root.settings.init_stringvar(key)
 		self.default = default
-		super().__init__(parent, text=text, command=self._command) 
+		if not command:
+			command = self._command
+		super().__init__(parent, text=text, command=command) 
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
@@ -460,7 +470,7 @@ class BasicFilterTab:
 		GridLabel(root, frame, root.FILTER)
 		StringRadiobuttons(root, frame, root.FILEFILTER,
 			('', root.TSV), '')
-		GridLabel(root, frame, root.NO_FILEFILTER, column=1)#, columnspan=2)
+		GridLabel(root, frame, root.NO_FILEFILTER, column=1)
 		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
 			command=self._select_tsv_file)
 		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)

@@ -50,6 +50,10 @@ class WinUtils:
 			if self.drive_letter_is_free(letter):
 				yield(letter)
 
+	def is_physical_drive(self, path):
+		'''Return True if physical drive'''
+		return str(path).upper().startswith('\\\\.\\PHYSICALDRIVE')
+
 	def list_drives(self):
 		'''List drive infos, partitions and logical drives'''
 		disk2part = {(rel.Antecedent.DeviceID, rel.Dependent.DeviceID)
@@ -78,15 +82,13 @@ class WinUtils:
 			drive_info += f'{drive.MediaType}, {ExtPath.readable_size(drive.Size)}'
 			drives[drive.DeviceID] = drive_info
 		for drive_id, drive_info in sorted(drives.items()):
-			drive_letters = list()
 			for log_id, disk_id in disk2logical.items():
 				if disk_id == drive_id:
 					try:
 						drive_info += log_disks[log_id]
-						drive_letters.append(log_id)
 					except KeyError:
 						continue
-			yield drive_id, drive_info, drive_letters
+			yield drive_id, drive_info
 
 	def run_diskpart(self, script):
 		'Run diskpart script'

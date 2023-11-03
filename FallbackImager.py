@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-29'
+__version__ = '0.2.2_2023-11-01'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -26,7 +26,8 @@ from axchecker import AxCheckerGui, AxCheckerCli
 from hdzero import HdZeroGui, HdZeroCli
 from sqlite import SQLiteGui, SQLiteCli
 
-### MODULES ###
+### MODULES, SYSTEM AND SYSTEM REALTED SETTINGS ###
+__not_admin__ = None
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
 	if IsUserAnAdmin():
@@ -49,6 +50,7 @@ if __os_name__ == 'nt':
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli
 		}
+		__not_admin__ = 'No Admin Privileges'
 else:
 		__modules__ = {
 			MkIsoImagerGui: MkIsoImagerCli,
@@ -57,8 +59,6 @@ else:
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli
 		}
-###############
-
 __executable__ = Path(__executable__)
 __file__ = Path(__file__)
 if __executable__.stem.lower() == __file__.stem.lower():
@@ -69,6 +69,7 @@ else:
 	__parent_path__ = __file__.parent
 __icon_path__ = __parent_path__/'appicon.ico'
 __settings_path__ = __parent_path__/f'{__app_name__.lower()}.json'
+###############
 
 class Gui(GuiBase):
 	'''GUI, not that I need one but there is Windows and Mac folks...'''
@@ -83,7 +84,7 @@ class Gui(GuiBase):
 	MAX_ROW_QUANT = 5
 	MAX_COLUMN_QUANT = 10
 	FILES_FIELD_WIDTH = 94
-	PARTITION_NAME_WIDTH = 24
+	VOLUME_NAME_WIDTH = 24
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
 	HELP = 'Help'
@@ -173,25 +174,31 @@ class Gui(GuiBase):
 	WIPE = 'Wipe'
 	TARGET = 'Target'
 	SELECT_DRIVE = 'Select drive'
-	SELECT_FILE = 'Select file'
+	SELECT_FILES = 'Select file(s) to wipe'
 	LOGGING = 'Logging'
 	NORMAL_WIPE = 'Normal wipe'
-	ALL_BLOCKS = 'All blocks'
-	EXTRA_PASS = 'Extra pass'
-	CHECK = 'Check'
+	EVERY_BLOCK = 'Wipe every block'
+	EXTRA_PASS = 'Extra/2 pass wipe'
+	VERIFY = 'Verify'
 	BLOCKSIZE = 'Block size'
 	USE_FF = 'Use 0xFF to wipe'
 	LOG_HEAD = 'Head of log file'
 	SELECT_TEXT_FILE = 'Select text file'
-	ZEROD_EXE = 'ZEROD'
+	ZEROD_EXE = 'zerod'
 	SELECT_ZEROD_EXE = 'Select ZEROD executable'
-	CREATE = 'Create'
+	FILE_SYSTEM = 'File system'
+	DO_NOT_CREATE = 'Do not create'
 	PARTITION_TABLE = 'Partition table'
-	FILESYSTEM = 'File system'
-	PARTITION_NAME = 'Partition name'
-	DEFAULT_PARTITION_NAME = 'Volume'
+	VOLUME_NAME = 'Volume name'
+	DEFAULT_VOLUME_NAME = 'Volume'
+	DRIVE_LETTER = 'Drive letter'
+	FILE = 'file'
+	FILES = 'files'
+	NEXT_AVAILABLE = 'Next available'
 	REFRESH = 'Refresh'
-	AREYOUSURE = 'Are you sure?'
+	TARGET_REQUIRED = 'Physical drive or file(s) to wipe required'
+	DRIVE_LETTER_IN_USE = 'Drive letter is in use'
+	USE_IT_ANYWAY = 'Use it anyway?'
 	DATABASE = 'Database'
 	SQLITE_DB = 'SQLite DB'
 	SELECT_DB = 'Select DB'
@@ -210,12 +217,13 @@ class Gui(GuiBase):
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
-		super().__init__(__app_name__, __version__, __icon_path__, __settings_path__, debug=debug)
+		super().__init__(__app_name__,__version__, __icon_path__, __settings_path__,
+			not_admin = __not_admin__,
+			debug = debug
+		)
 
 if __name__ == '__main__':  # start here
 	argp = ArgumentParser(description=__description__.strip())
-	argp.add_argument('-d', '--debug', default=False, action='store_true',
-			help='Debug mode'
-		)
+	argp.add_argument('-d', '--debug', default=False, action='store_true', help='Debug mode')
 	args = argp.parse_args()
 	Gui(debug=args.debug).mainloop()

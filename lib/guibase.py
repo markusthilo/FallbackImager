@@ -10,7 +10,7 @@ from .guihelp import Help
 
 class GuiBase(Tk):
 
-	def __init__(self, name, version, icon_path, settings_path, debug=False):
+	def __init__(self, name, version, icon_path, settings_path, not_admin=None, debug=False):
 		'''Add stuff to Tk'''
 		self.app_name = name
 		self.version = version
@@ -19,7 +19,10 @@ class GuiBase(Tk):
 		self.settings = Settings(settings_path)
 		self.worker = None
 		super().__init__()
-		self.title(f'{self.app_name} v{self.version}')
+		title = f'{self.app_name} v{self.version}'
+		if not_admin:
+			title += f' ({not_admin})'
+		self.title(title)
 		self.resizable(0, 0)
 		self.iconbitmap(self.icon_path)
 		frame = ExpandedFrame(self, self)
