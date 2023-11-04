@@ -48,7 +48,7 @@ class Worker(Thread):
 					echo(ex)
 					ex_cnt += 1
 		if cmd:
-			echo(self.gui.ALL_DONE)
+			echo(self.gui.FINISHED_ALL_JOBS)
 			if ex_cnt > 0:
 				echo(self.gui.EXCEPTIONS)
 		else:

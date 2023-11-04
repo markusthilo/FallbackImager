@@ -137,6 +137,7 @@ class Gui(GuiBase):
 	RUNNING = 'Running'
 	NOTHING2DO = 'Add jobs! Nothing to do here.\n'
 	ALL_DONE = 'All done.\n'
+	FINISHED_ALL_JOBS = 'Finished all jobs.\n'
 	EXCEPTIONS = 'Exceptions occured'
 	UNDETECTED = 'Could not detect what to do.\n'
 	MISSING_ENTRIES = 'Missing entries'

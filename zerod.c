@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "3.0.0_20231021";
+const char *VERSION = "3.0.1_20231104";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -490,11 +490,11 @@ int main(int argc, char **argv) {
 		printf("\r... 100%% of%*lld bytes                       \n\n", 20, target.Size);
 		printf("Verifying took %f second(s) / %ld clock units\n\n",
 			(float)duration/CLOCKS_PER_SEC, duration);
+		if ( target.BadBlockCnt > 0 ) warning_bad_blocks(&target);
 	}
 	if ( target.BadBlockCnt > 0 ) {
-		warning_bad_blocks(&target);
 		close_target(&target);
-		printf("All done\n");
+		printf("All done but not every block/page is clean!\n");
 		exit(1);
 	} else {
 		printf("Sample:\n");	// Read sample block(s) to show result
