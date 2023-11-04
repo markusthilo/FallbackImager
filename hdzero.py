@@ -3,7 +3,7 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-01'
+__version__ = '0.2.2_2023-11-04'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -166,11 +166,12 @@ class HdZero(WinUtils):
 		if self.echo == print:
 			echo = lambda msg: print(f'\r{msg}', end='')
 		else:
-			echo = lambda msg: self.echo(msg, overwrite=True)
+			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		error = False
 		for target in self.targets:
 			self.echo()
-			cmd = f'{zerod_str} {target}{opt_str}'
+			target_str = str(target).rstrip('\\')
+			cmd = f'{zerod_str} {target_str}{opt_str}'
 			proc = self.cmd_launch(cmd)
 			for line in proc.stdout:
 				msg = line.strip()
@@ -260,6 +261,8 @@ class HdZeroCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.targets = args.targets
+		if len(self.targets) == 1 and self.targets[0].startswith('\\.PHYSICALDRIVE'):
+			self.targets = [f'\\\\.\\{self.targets[0][2:]}']
 		self.ff = args.ff
 		self.blocksize = args.blocksize
 		self.create = args.create
@@ -287,6 +290,7 @@ class HdZeroCli(ArgumentParser):
 			every = self.every,
 			mbr = self.mbr,
 			name = self.name,
+			outdir = self.outdir,
 			verify = self.verify,
 			extra = self.extra,
 			zerod = self.zerod,
@@ -322,7 +326,6 @@ class HdZeroGui(WinUtils):
 			command=self._select_target, columnspan=8)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.LOGGING)
-		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME, columnspan=8)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=8)
 		GridSeparator(root, frame)
@@ -437,22 +440,14 @@ class HdZeroGui(WinUtils):
 			self.filenames = None
 			return
 		outdir = self.root.settings.get(self.root.OUTDIR) 
-		filename = self.root.settings.get(self.root.FILENAME)
 		if not outdir:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
 				message = self.root.DEST_DIR_REQUIRED
 			)
 			return
-		if not filename:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_FN_REQUIRED
-			)
-			return
 		cmd = self.root.settings.section.lower()
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
 		zerod_exe = self.root.settings.get(self.root.ZEROD_EXE)
 		if zerod_exe:
 			cmd += f' --zerod "{zerod_exe}"'
@@ -482,7 +477,7 @@ class HdZeroGui(WinUtils):
 			cmd += f' --create {file_system}'
 			volume_name = self.root.settings.get(self.root.VOLUME_NAME)
 			if volume_name:
-				cmd += f' --name {volume_name}'
+				cmd += f' --name "{volume_name}"'
 			drive_letter = self.root.settings.get(self.root.DRIVE_LETTER)
 			if (
 				drive_letter != self.root.NEXT_AVAILABLE

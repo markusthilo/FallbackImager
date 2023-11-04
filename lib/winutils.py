@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from pythoncom import CoInitialize
 from wmi import WMI
 from win32api import GetCurrentProcessId, GetLogicalDriveStrings
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
@@ -17,6 +18,7 @@ class WinUtils:
 
 	def __init__(self, outdir=None):
 		'''Generate Windows tools'''
+		CoInitialize()
 		self.conn = WMI()
 		self.cmd_startupinfo = STARTUPINFO()
 		self.cmd_startupinfo.dwFlags |= STARTF_USESHOWWINDOW

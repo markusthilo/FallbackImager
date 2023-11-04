@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-01'
+__version__ = '0.2.2_2023-11-04'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -95,6 +95,7 @@ class Gui(GuiBase):
 	START_JOBS = 'Start jobs'
 	RUNNING = 'Running...'
 	QUIT = 'Quit'
+	ARE_YOU_SURE = 'Are you sure?'
 	SOURCE = 'Source'
 	ASK_SOURCE = 'Select source'
 	PATH = 'Path'

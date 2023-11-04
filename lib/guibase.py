@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from tkinter import Tk
+from tkinter.messagebox import askyesno
 from .settings import Settings
 from .worker import Worker
 from .guielements import ExpandedNotebook, ExpandedFrame
@@ -25,6 +26,7 @@ class GuiBase(Tk):
 		self.title(title)
 		self.resizable(0, 0)
 		self.iconbitmap(self.icon_path)
+		self.protocol('WM_DELETE_WINDOW', self.quit_app)
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.DESCRIPTION)
 		RightButton(self, frame, self.HELP, self.show_help)	
@@ -113,5 +115,9 @@ class GuiBase(Tk):
 
 	def	quit_app(self):
 		'''Store configuration and quit application'''
-		self.settings.write()
-		self.destroy()
+		if askyesno(
+					title = f'{self.QUIT} {self.app_name}',
+					message = self.ARE_YOU_SURE
+		):
+			self.settings.write()
+			self.destroy()
