@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-20'
+__version__ = '0.2.2_2023-11-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -122,8 +122,8 @@ class SQLite:
 						continue
 					with ExtPath.child(f'{self.filename}_{table}_{column}.txt', parent=self.outdir
 						).open(mode='w', encoding='utf-8') as fh:
-						for row, in reader.fetch_table(table, columns=column):
-							print(row, file=fh)
+						for value in reader.fetch_table(table, column=column):
+							print(value, file=fh)
 					continue
 				columns = tuple(col for col in reader.get_columns(table))
 				types = tuple(reader.get_printable(table, col) for col in columns)

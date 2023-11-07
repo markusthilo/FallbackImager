@@ -11,12 +11,12 @@ class MfdbReader(SQLiteReader):
 		super().__init__(mfdb)
 		self.paths = {source_id: source_path
 			for source_id, source_path in self.fetch_table('source_path',
-				fields = ('source_id', 'source_path')
+				columns = ('source_id', 'source_path')
 			)
 		}
 		self.types = {source_id: source_type
 			for source_id, source_type in self.fetch_table('source',
-				fields = ('source_id', 'source_type')
+				columns = ('source_id', 'source_type')
 			)
 		}
 		self.partitions = {source_id: self.paths[source_id]
@@ -28,7 +28,7 @@ class MfdbReader(SQLiteReader):
 			if source_type == 'File'
 		}
 		self.hits = {source_id: self.paths[source_id]
-			for source_id in self.fetch_table('hit_location', fields = 'source_id')
+			for source_id in self.fetch_table('hit_location', column='source_id')
 		}
 
 	def get_files_of_partition(self, partition):

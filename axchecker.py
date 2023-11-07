@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-29'
+__version__ = '0.2.2_2023-11-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -157,9 +157,24 @@ class AxChecker:
 				).open(mode='w', encoding='utf-8') as fh:
 				if not self.nohead:
 					print(tsv.head, file=fh)
+				
+				### DEBUG ####
+				#print('DEBUG')
+				#print(self.mfdb.files[0])
+				#print('===')
+				##############
+				
 				for full_path, line in tsv.read_lines():
 					path = ExtPath.normalize(full_path)
 					if not path in files_short_paths:
+					
+						### DEBUG ###
+						#print(full_path)
+						#print('---')
+						#print(path)
+						#exit()
+						#############
+					
 						print(line, file=fh)
 						missing_cnt += 1
 				if tsv.errors:

@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.2_2023-11-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -278,13 +278,13 @@ class DismImagerGui:
 		compression = self.root.settings.get(self.root.COMPRESSION)
 		image = self.root.settings.get(self.root.VERIFY_FILE)
 		cmd = self.root.settings.section.lower()
-		if not image:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.IMAGE_REQUIRED
-			)
-			return
 		if to_do == self.root.VERIFY_FILE:
+			if not image:
+				showerror(
+					title = self.root.MISSING_ENTRIES,
+					message = self.root.IMAGE_REQUIRED
+				)
+				return
 			cmd += f' --verify --{self.root.PATH.lower()} {image}'
 			if not filename:
 				filename = Path(image).stem

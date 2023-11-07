@@ -100,24 +100,26 @@ class SQLiteReader:
 		for table in self.get_tables():
 			yield table, self.get_columns(table)
 
-	def fetch_table(self, table, columns=None, where=None):
+	def fetch_table(self, table, column=None, columns=None, where=None):
 		'''Fetch one table row by row'''
+		if column and columns:
+			raise ValueError('Argument "column=" or "columns=" is possible, not both')
 		cmd = 'SELECT '
-		if columns:
-			if isinstance(columns, str):
-				columns = (columns,)
-			cmd += ', '.join(f'"{field}"' for field in columns)
+		if column:
+			cmd += f'"{column}"'
+		elif columns:
+			cmd += ', '.join(f'"{column}"' for column in columns)
 		else:
 			cmd += '*'
 		cmd += f' FROM "{table}"'
 		if where:
-			if isinstance(where, str):
-				cmd += f' WHERE {where}'
-			else:
-				cmd += f' WHERE "{where[0]}"='
-				cmd += f'"{where[1]}"'
-		for row in self.cursor.execute(cmd):
-			yield row
+			cmd += f' WHERE {where}'
+		if column:
+			for row in self.cursor.execute(cmd):
+				yield row[0]
+		else:
+			for row in self.cursor.execute(cmd):
+				yield row
 
 	def close(self):
 		'Close SQLite database'

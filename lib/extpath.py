@@ -46,10 +46,12 @@ class ExtPath:
 	@staticmethod
 	def normalize(path):
 		'''Normalize path for better comparison'''
-		path = path.replace(b'\x00\x00\x00\x00'.decode(), '.')
-		path = ExtPath.decode(path).strip('\\/\t\n')
+		#path = ExtPath.decode(path)
+		path = path.rstrip('\\/\t\n')
+		path = path.lstrip('\t\n')
 		path = path.replace('\n', ' ').replace('\t', ' ').replace('/', ':').replace('\r', '')
 		path = path.replace(b'\xe2\x86\xb2'.decode(), '')
+		path = path.replace(b'\x00\x00\x00\x00'.decode(), '.')
 		return path
 
 	@staticmethod
