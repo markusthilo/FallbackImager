@@ -3,7 +3,7 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-04'
+__version__ = '0.2.2_2023-11-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -183,6 +183,8 @@ class HdZero(WinUtils):
 				self.log.warning(stderr)
 				error = True
 		if self.create and not error:
+			if not self.driveletter:
+				self.driveletter = self.get_free_letters()[0]
 			letter = self.create_partition(self.targets[0],
 				label = self.name,
 				letter = self.driveletter,
@@ -347,7 +349,7 @@ class HdZeroGui(WinUtils):
 			([root.DO_NOT_CREATE] + list(self.FS)), default=self.DEF_FS, column=6)
 		root.row -= 1
 		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
-			([root.NEXT_AVAILABLE] + list(self.hdzero.get_free_letters())),
+			([root.NEXT_AVAILABLE] + self.hdzero.get_free_letters()),
 			default=root.NEXT_AVAILABLE, column=8)
 		root.row += 1
 		Checker(root, frame, root.USE_FF, root.USE_FF, column=2)

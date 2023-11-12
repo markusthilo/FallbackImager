@@ -39,18 +39,17 @@ class WinUtils:
 			startupinfo = self.cmd_startupinfo
 		)
 
-	def drive_letter_is_free(self, letter):
-		'''Check if drive letter is free for new assignment'''
-		try:
-			return not Path(str(letter).rstrip(':\\')).exists()
-		except OSError:
-			return True
+	def get_used_letters(self):
+		'''Get drive letters that are already in use as set'''
+		return {drive.rstrip(':\\') for drive in GetLogicalDriveStrings().split('\0') if drive}
 
 	def get_free_letters(self):
 		'''Get free drive letters'''
-		for letter in 'DEFGHIJKLMNOPQRSTUVWXYZ':
-			if self.drive_letter_is_free(letter):
-				yield(letter)
+		return sorted(set('DEFGHIJKLMNOPQRSTUVWXYZ') - self.get_used_letters())
+
+	def drive_letter_is_free(self, letter):
+		'''Check if drive letter is free for new assignment'''
+		return not letter in self.get_used_letters()
 
 	def is_physical_drive(self, path):
 		'''Return True if physical drive'''

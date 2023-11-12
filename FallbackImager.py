@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-04'
+__version__ = '0.2.2_2023-11-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -39,7 +39,7 @@ if __os_name__ == 'nt':
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli,
-			HdZeroGui: HdZeroCli	### under construction ###
+			HdZeroGui: HdZeroCli
 		}
 	else:
 		__modules__ = {
