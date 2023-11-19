@@ -13,19 +13,16 @@ class FsReader:
 
 	def get_posix(self):
 		'''Get file structure recursivly'''
-		self.posix_paths = list()
 		self.file_cnt = 0
 		self.dir_cnt = 0
 		self.else_cnt = 0
 		for path, posix, tp in ExtPath.walk_posix(self.root_path):
 			if tp == 'file':
-				self.posix_paths.append(posix)
 				self.file_cnt += 1
+				yield posix
 			elif tp == 'dir':
-				self.posix_paths.append(posix)
 				self.dir_cnt += 1
+				yield posix
 			else:
-				self.posix_paths.append('$'+posix)
 				self.else_cnt += 1
-		self.posix_paths.sort()
-		return self.posix_paths
+				yield f'${posix}'

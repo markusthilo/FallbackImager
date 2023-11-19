@@ -3,7 +3,7 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.2_2023-11-19'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -29,28 +29,18 @@ class IsoReader(PyCdlib):
 	'''Use PyCdlib to get UDF from ISO'''
 
 	def __init__(self, path):
-		'''Open ISO image'''
+		'''Get UDF fyle system structure, files and dirs'''
 		self.path = path
 		super().__init__()
-		try:
-			self.open(self.path)
-		except:
-			raise RuntimeError(f'PyCdlib is unable to open {self.path}')
-
-	def get_udf(self):
-		'''Get UDF fyle system structure, files and dirs'''
-		self.udf_paths = list()
-		self.udf_dirs_cnt = 0
-		self.udf_files_cnt = 0
+		self.open(self.path)
+		self.files_posix = set()
+		self.dirs_posix = set()
 		for root, dirs, files in self.walk(udf_path='/'):
 			for name in dirs:
-				self.udf_paths.append('/'+f'{root}/{name}'.strip('/')+'/')
-				self.udf_dirs_cnt += 1
+				self.dirs_posix.add('/'+f'{root}/{name}'.strip('/')+'/')
 			for name in files:
-				self.udf_paths.append('/'+f'{root}/{name}'.strip('/'))
-				self.udf_files_cnt += 1
-		self.udf_paths.sort()
-		return self.udf_paths
+				self.files_posix.add('/'+f'{root}/{name}'.strip('/'))
+		self.close()
 
 class CompareIsoFs:
 	'''Compare image to source'''
@@ -106,34 +96,29 @@ class IsoVerify:
 
 	def posix_verify(self):
 		'''Verify by Posix paths'''
-		self.echo('Starting verification')
-		diff = CompareIsoFs(self.root_path, self.image_path, drop=self.drop, echo=self.echo)
-		with ExtPath.child(f'{self.filename}_source.txt', parent=self.outdir).open('w') as fh:
-			fh.write('\n'.join(diff.source_posix))
-		with ExtPath.child(f'{self.filename}_image.txt', parent=self.outdir).open('w') as fh:
-			fh.write('\n'.join(diff.image_posix))
-		if self.drop != GrepLists.false:
-			with ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir).open('w') as fh:
-				fh.write('\n'.join(diff.dropped_posix))
-		with ExtPath.child(f'{self.filename}_missing.txt', parent=self.outdir).open('w') as fh:
-			fh.write('\n'.join(diff.missing_posix))
-		msg = f'Verification:\nSource {self.root_path.name}:'
-		msg += f' {diff.source.file_cnt+diff.source.dir_cnt+diff.source.else_cnt}'
-		msg += f' / {diff.source.file_cnt} / {diff.source.dir_cnt} / {diff.source.else_cnt}'
-		msg += ' (all/files/dirs/other)\n'
-		msg += f'Image {self.image_path.name}:'
-		msg += f' {diff.image.udf_files_cnt+diff.image.udf_dirs_cnt} /'
-		msg += f' {diff.image.udf_files_cnt} / {diff.image.udf_dirs_cnt} (all/files/dirs)\n'
-		msg += f'\nImage hashes\n{FileHashes(self.image_path)}\n\n'
-		if len(diff.dropped_posix) > 0:
-			msg += f'{len(diff.dropped_posix)} UDF entries'
-			msg += ' were ignored in verification (blacklist/whitelist)\n\n'
-		if len(diff.missing_posix) == 0:
-			msg += f'No missing files or directories in UDF structure of {self.image_path.name}'
-			self.log.info(msg, echo=True)
+		self.log.info(f'Reading UDF file system from {self.image_path}', echo=True)
+		iso = IsoReader(self.image_path)
+		with ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir).open('w') as fh:
+			fh.write('\n'.join(sorted(list(iso.dirs_posix|iso.files_posix))))
+		self.log.info(
+			f'ISO/UDF contains {len(iso.dirs_posix)} directories and {len(iso.files_posix)} files', echo=True)
+		self.log.info(f'Getting structure of {self.root_path.name}', echo=True)
+		source = FsReader(self.root_path)
+		if self.drop == GrepLists.false:
+			delta_posix = set(source.get_posix())
 		else:
-			msg += f'Check {self.filename}_missing.txt if relevant content is missing!'
-			self.log.warning(msg)
+			delta_posix = {posix for posix in source.get_posix() if not self.drop(posix)}
+		delta_posix -= iso.dirs_posix
+		delta_posix -= iso.files_posix
+		msg = f'Source {self.root_path.name}:'
+		msg += f' {source.file_cnt+source.dir_cnt+source.else_cnt}'
+		msg += f' / {source.file_cnt} / {source.dir_cnt} / {source.else_cnt}'
+		msg += ' (all/files/dirs/other)'
+		self.log.info(msg, echo=True)
+		if delta_posix:
+			with ExtPath.child(f'{self.filename}_missing.txt', parent=self.outdir).open('w') as fh:
+				fh.write('\n'.join(sorted(list(delta_posix))))
+			self.log.warning(f'{len(delta_posix)} paths are missing in ISO')
 
 class IsoVerifyCli(ArgumentParser):
 	'''CLI for IsoVerify'''
@@ -141,22 +126,22 @@ class IsoVerifyCli(ArgumentParser):
 	def __init__(self,description=__description__, **kwargs):
 		'''Define CLI using argparser'''
 		super().__init__(**kwargs)
-		self.add_argument('-b', '--blacklist', type=Path,
+		self.add_argument('-b', '--blacklist', type=ExtPath.path,
 			help='Blacklist (textfile with one regex per line)', metavar='FILE'
 		)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
-			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
-		)
-		self.add_argument('-p', '--imagepath', type=Path,
+		self.add_argument('-i', '--image', type=ExtPath.path,
 			help='Image path', metavar='FILE'
 		)
-		self.add_argument('-w', '--whitelist', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
+			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
+		)
+		self.add_argument('-w', '--whitelist', type=ExtPath.path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
 		)
-		self.add_argument('root', nargs=1, type=Path,
+		self.add_argument('root', nargs=1, type=ExtPath.path,
 			help='Source root', metavar='DIRECTORY'
 		)
 
@@ -167,16 +152,12 @@ class IsoVerifyCli(ArgumentParser):
 		self.blacklist = args.blacklist
 		self.filename = args.filename
 		self.outdir = args.outdir
-		self.imagepath = args.imagepath
+		self.imagepath = args.image
 		self.whitelist = args.whitelist
 
 	def run(self, echo=print):
 		'''Run the verification'''
-		drop = GrepLists(
-			blacklist = self.blacklist,
-			whitelist = self.whitelist, 
-			echo = echo
-		).get_method()
+		drop = GrepLists(blacklist=self.blacklist, whitelist=self.whitelist).get_method()
 		image = IsoVerify(self.root,
 			imagepath = self.imagepath,
 			filename = self.filename,

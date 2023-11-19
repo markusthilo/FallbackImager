@@ -10,6 +10,14 @@ class ExtPath:
 	'''Add some methods to pathlib´s Path Class'''
 
 	@staticmethod
+	def path(arg):
+		'''Generate Path object'''
+		if isinstance(arg, str):
+			return Path(arg.strip('"'))
+		else:
+			return Path(arg)
+
+	@staticmethod
 	def child(name, parent=None):
 		'''Generate full path'''
 		if not name and not parent:
@@ -46,7 +54,6 @@ class ExtPath:
 	@staticmethod
 	def normalize(path):
 		'''Normalize path for better comparison'''
-		#path = ExtPath.decode(path)
 		path = path.rstrip('\\/\t\n')
 		path = path.lstrip('\t\n')
 		path = path.replace('\n', ' ').replace('\t', ' ').replace('/', ':').replace('\r', '')
