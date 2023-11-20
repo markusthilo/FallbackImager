@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-07'
+__version__ = '0.2.2_2023-11-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -166,10 +166,10 @@ class DismImagerCli(ArgumentParser):
 		self.add_argument('-n', '--name', type=str,
 			help='Intern name of the image in the WMI file', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('-p', '--imagepath', type=Path,
+		self.add_argument('-p', '--imagepath', type=ExtPath.path,
 			help='Image path', metavar='FILE'
 		)
 		self.add_argument('-v', '--verify', default=False, action='store_true',
@@ -178,7 +178,7 @@ class DismImagerCli(ArgumentParser):
 		self.add_argument('-x', '--exe', default=False, action='store_true',
 			help='Copy WimMount.exe to destination directory'
 		)
-		self.add_argument('root', nargs=1, type=Path,
+		self.add_argument('root', nargs=1, type=ExtPath.path,
 			help='Source', metavar='DIRECTORY'
 		)
 

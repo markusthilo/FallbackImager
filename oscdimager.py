@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.1_2023-09-29'
+__version__ = '0.2.2_2023-11-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -117,13 +117,13 @@ class OscdimgCli(ArgumentParser):
 		self.add_argument('-n', '--name', type=str,
 			help='Label of the ISO', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('-x', '--exe', type=Path,
+		self.add_argument('-x', '--exe', type=ExtPath.path,
 			help='Path to oscdimg.exe (use if not found automatically)', metavar='FILE'
 		)
-		self.add_argument('root', nargs=1, type=Path,
+		self.add_argument('root', nargs=1, type=ExtPath.path,
 			help='Source', metavar='DIRECTORY'
 		)
 

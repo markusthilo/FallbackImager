@@ -1,6 +1,6 @@
 # FallbackImager
 
-This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories. Multiple jobs can be generated an will be executed sequentially.
+This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
 
 In this testing state only Windows (10/11) is supported.
 
@@ -9,7 +9,7 @@ This is work in progress.
 ## Installation
 
 ### Out of the box
-The easiest way is to download the latest release und unpack the Zip anywhere. To use the compiled executables no Python or othere dependencies are needed.
+The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed.
 
 ### Python
 To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pycdlib*, *pyinstaller*, *pywin32* and *WMI*. You might want to use
@@ -41,36 +41,38 @@ $ python FallbackImager
 or launch the executable (*FallbackImager.exe*).
 
 ### Tabs
-Evere module is represented by a tab in the upper part of the window.
+Each module is represented by a tab in the upper part of the window.
 
 Most modules have a button and field "Source" to select the source for the operation (e.g. directory or logical drive). Fields can be edited directly. In most cases the buttons let you choose a folder or file.
 
-The modules hneed a "Destination" (or "Logging") to be set. "Filename" sets the name base part for generated files. The related button gives a default proposal in most modules (sometimes dependent on the source).
+The modules need a "Destination" (or "Logging") to be set. "Filename" sets the name base part for generated files. The related button gives a default proposal in most modules (sometimes dependent on the source).
 
 ### Add job
 
-When the usage of a module is defined in the tab above, a command can be added to the task list ("Jobs"). It is possible to edit the command directly ot to write one completly from scratch. A command has to end with a semicolon. The last entry can be removed withe button "Remove last" on the right.
+When the usage of a module is defined in the tab above, a command can be added to the task list ("Jobs"). It is possible to edit the command directly or to write one completely from scratch. A command has to end with a semicolon. The last entry can be removed withe button "Remove last" on the right.
 
 ### Start jobs
 
-The execution job after job ist startet with the button "Start jobs" on the left obove the info field. The jobs will show infos and progress.
+The execution job after job is started with the button "Start jobs" on the left above the info field. The jobs will show infos and progress.
 
-## Modules:
+## Modules
 
 ### MkIsoImager
 This tool generates an ISO file (UDF file system) using *mkisofs.exe*. It will log files that cannot be handled properly. The location of the executable can be set in "Configuration".
 
 ### OscdImager
-The modul uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system).
+The module uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system).
 
 ### IsoVerify
-Verifying/comparing ISO to a logical file structure (using PyCdlib)
+This module is used by ISO generating modules to compare the UDF structure to the source file structure. Therefor it uses the *pycdlib* library. It can also be used to compare an existing image to a local file structure.
+
+It is possible to skip paths using a whitelist or a blacklist. The patterns have to be given as regular expressions (Python/*re* syntax), one per line in a text file. Paths are handles in the POSIX format (no Windowish backslashes). When a local path matches to one line in the whitelist, the verification of this path is skipped. When a blicklist is given, the comparison is skipped if there is no match in the list of regular expressions. You can only use whitelist or blacklist at a time.
 
 ### DismImager
-Imaging a logical file structure as WIM (Admin privileges required, uses dism.exe, Win only)
+This module is only availible with Admin privileges.  It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing. When "Copy WimMount.exe to destination directory" a little GUI to mount and dismount is copied from *bin* to the destination. *WimMount.exe* needs to be run as admin.
 
 ### ZipImager
-Imaging a logical file structure as ZIP file
+Using the Python library *zipfile* this module generates an ZIP archive from a source file structure.
 
 ### Sqlite
 Work with Sqlite/SQL.

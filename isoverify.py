@@ -3,7 +3,7 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-19'
+__version__ = '0.2.2_2023-11-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -43,7 +43,7 @@ class IsoReader(PyCdlib):
 		self.close()
 
 class CompareIsoFs:
-	'''Compare image to source'''
+	'''Compare ISO/UDF to file structure'''
 
 	def __init__(self, root, image, drop=GrepLists.false, echo=print):
 		'''Compare image to source file structure by Posix paths'''
@@ -157,13 +157,15 @@ class IsoVerifyCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the verification'''
+		if self.blacklist and self.whitelist:
+			raise ValueError('Unable to wirk with blacklist and whitelist at the same time')
 		drop = GrepLists(blacklist=self.blacklist, whitelist=self.whitelist).get_method()
 		image = IsoVerify(self.root,
 			imagepath = self.imagepath,
 			filename = self.filename,
 			outdir = self.outdir,
 			drop = drop,
-			echo = echo,
+			echo = echo
 		)
 		image.posix_verify()
 		image.log.close()
@@ -191,8 +193,8 @@ class IsoVerifyGui:
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.SKIP_PATH_CHECK)
 		StringRadiobuttons(root, frame, root.REGEXFILTER,
-			(f'{None}', root.BLACKLIST, root.WHITELIST), f'{None}')
-		GridLabel(root, frame, root.CHECK_ALL_PATHS)
+			(root.NO_FILTER, root.BLACKLIST, root.WHITELIST), root.NO_FILTER)
+		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=2)
 		FileSelector(root, frame,
 			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST, command=self._select_blacklist)
 		FileSelector(root, frame,

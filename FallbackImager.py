@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-19'
+__version__ = '0.2.2_2023-11-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -68,7 +68,7 @@ else:
 	__app_name__ = __file__.stem
 	__parent_path__ = __file__.parent
 __icon_path__ = __parent_path__/'appicon.ico'
-__settings_path__ = __parent_path__/f'{__app_name__.lower()}.json'
+__settings_path__ = __parent_path__/'settings.json'
 ###############
 
 class Gui(GuiBase):
@@ -123,6 +123,7 @@ class Gui(GuiBase):
 	VERIFY_FILE = 'Verify'
 	SELECT_VERIFY_FILE = 'Select image file to verify'
 	FILEFILTER = 'Filter by file list'
+	NO_FILTER = 'No filter'
 	NO_FILEFILTER = 'Do not filter by TSV/file list'
 	SKIP_PATH_CHECK = 'Skip check of paths by blacklist or whitelist'
 	REGEXFILTER = 'RegEx filter'
