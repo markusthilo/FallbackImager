@@ -56,7 +56,7 @@ class MfdbReader(SQLiteReader):
 				return self.paths[self.partition_ids[partition-1]]
 			except IndexError:
 				return None
-			return partition
+		return partition
 
 	def grep_partition(self, partition_name):
 		'''Get files ("File" & "Image") for given partition'''

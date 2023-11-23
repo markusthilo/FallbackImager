@@ -3,12 +3,14 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Compare ISO image (UDF) to file structure
+This module is used by ISO generating modules to compare the UDF structure to the source file structure. Therefor it uses the pycdlib library. It can also be used to compare an existing image to a local file structure.
+
+It is possible to skip paths using a whitelist or a blacklist. The patterns have to be given as regular expressions (Python/re syntax), one per line in a text file. Paths are handles in the POSIX format (no Windowish backslashes). When a local path matches to one line in the whitelist, the verification of this path is skipped. When a blicklist is given, the comparison is skipped if there is no match in the list of regular expressions. You can only use whitelist or blacklist at a time.
 '''
 
 from pathlib import Path

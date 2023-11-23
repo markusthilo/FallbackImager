@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "3.0.1_20231104";
+const char *VERSION = "3.0.1_20231123";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -50,10 +50,11 @@ void print_help() {
 	printf("zerod.exe \\\\.\\PHYSICALDRIVE1\n\n");
 	printf("Disclaimer:\n");
 	printf("The author is not responsible for any loss of data.\n");
-	printf("Obviously, the tool is dangerous as its purpose is to erase data.\n\n");
+	printf("Obviously, the tool is dangerous as it is designed to erase data.\n\n");
 	printf("Author: Markus Thilo\n");
 	printf("License: GPL-3\n");
-	printf("See: https://github.com/markusthilo/HDZero\n\n");
+	printf("This CLI tool is part of the FallbackImager project:\n");
+	printf("https://github.com/markusthilo/FallbackImager\n\n");
 }
 
 /* Parameters to the target (file or device) */

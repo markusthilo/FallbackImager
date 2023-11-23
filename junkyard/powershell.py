@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-05-11'
+__version__ = '0.0.1_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
-__status__ = 'Release'
+__status__ = 'Testing'
 __description__ = 'Interface for PowerShell commands'
 
 from subprocess import Popen, PIPE

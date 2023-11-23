@@ -3,12 +3,14 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Imager and toolset as a fallback when the usual tools let you down
+This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
+
+In this testing state only Windows (10/11) is supported. It is work in progress.
 '''
 
 from pathlib import Path
@@ -87,6 +89,7 @@ class Gui(GuiBase):
 	VOLUME_NAME_WIDTH = 24
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
+	AVAILABLE_MODULES = 'Available modules:'
 	HELP = 'Help'
 	JOBS = 'Jobs'
 	REMOVE_LAST = 'Remove last'
@@ -200,6 +203,7 @@ class Gui(GuiBase):
 	NEXT_AVAILABLE = 'Next available'
 	REFRESH = 'Refresh'
 	TARGET_REQUIRED = 'Physical drive or file(s) to wipe required'
+	LOGDIR_REQUIRED = 'Target directory for logging required'
 	DRIVE_LETTER_IN_USE = 'Drive letter is in use'
 	USE_IT_ANYWAY = 'Use it anyway?'
 	DATABASE = 'Database'

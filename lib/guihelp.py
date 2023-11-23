@@ -17,10 +17,15 @@ class Help(Thread):
 		window = Tk()
 		window.title(self.root.HELP)
 		window.iconbitmap(self.root.icon_path)
-		text = ScrolledText(window, width=self.root.ENTRY_WIDTH, height=4*self.root.INFO_HEIGHT)
+		text = ScrolledText(window,
+			width = self.root.ENTRY_WIDTH,
+			height = 4*self.root.INFO_HEIGHT,
+			wrap = 'word'
+		)
 		text.pack(fill='both', expand=True)
 		text.bind('<Key>', lambda dummy: 'break')
 		text.insert('end', f'{self.root.app_name} v{self.root.version}\n\n')
+		text.insert('end', f'{self.root.DESCRIPTION}\n\n\n')
 		for ImagerGui in self.root.IMAGERS:
 			text.insert('end', f'{ImagerGui.CMD}:\n{ImagerGui.DESCRIPTION}\n\n')
 		text.configure(state='disabled')

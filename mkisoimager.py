@@ -3,12 +3,12 @@
 
 __app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Create ISO image from a file structure using mkisofs
+This tool generates an ISO file (UDF file system) using mkisofs.exe. It will log files that cannot be handled properly.
 '''
 
 from os import name as __os_name__

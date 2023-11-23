@@ -1,4 +1,4 @@
 pycdlib==1.14.0
-pyinstaller==5.10.1
+pyinstaller==6.2.0
 pywin32==306
 WMI==1.5.1

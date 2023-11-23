@@ -3,12 +3,12 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Create ISO image from a file structure using MS OSCDIMG
+The module uses oscdimg.exe (from the Windows ADK Package) to generate an ISO file (UDF file system).
 '''
 
 from pathlib import Path

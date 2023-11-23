@@ -28,7 +28,7 @@ class GuiBase(Tk):
 		self.iconbitmap(self.icon_path)
 		self.protocol('WM_DELETE_WINDOW', self.quit_app)
 		frame = ExpandedFrame(self, self)
-		LeftLabel(self, frame, self.DESCRIPTION)
+		LeftLabel(self, frame, self.AVAILABLE_MODULES)
 		RightButton(self, frame, self.HELP, self.show_help)	
 		self.notebook = ExpandedNotebook(self)
 		self.imagers = [ImagerGui(self) for ImagerGui in self.IMAGERS]

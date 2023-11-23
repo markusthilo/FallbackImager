@@ -3,11 +3,13 @@
 
 __app_name__ = 'WmiMount'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-10-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'Mount WMI Images'
+__description__ = '''
+Mount WMI Images, GUI to use with DismImager
+'''
 
 from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path

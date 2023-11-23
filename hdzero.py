@@ -3,14 +3,18 @@
 
 __app_name__ = 'HdZero'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-12'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Wipe disk but not touching empty blocks/pages or overwrite all. The tool is also
-capable of overwriting files but slack and files system artefacts will remain.
-It is designed to securely wipe HDDs/SSDs and generate a log file.
+This is a wipe tool designed for SSDs and HDDs. There is also the possibility to overwrite files but without erasing file system metadata.
+
+By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with ones.
+
+Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file (hdzero_log_head.txt by default).
+
+Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
 '''
 
 from sys import executable as __executable__
@@ -182,18 +186,21 @@ class HdZero(WinUtils):
 			if stderr := proc.stderr.read():
 				self.log.warning(stderr)
 				error = True
-		if self.create and not error:
-			if not self.driveletter:
-				self.driveletter = self.get_free_letters()[0]
-			letter = self.create_partition(self.targets[0],
-				label = self.name,
-				letter = self.driveletter,
-				mbr = self.mbr,
-				fs = self.create
-			)
-		else:
-			letter = None
+		if not self.create:
+			self.log.close()
+			return
+		if error:
 			self.log.warning(f'Could not create {self.create} file system')
+			self.log.close()
+			return
+		if not self.driveletter:
+			self.driveletter = self.get_free_letters()[0]
+		letter = self.create_partition(self.targets[0],
+			label = self.name,
+			letter = self.driveletter,
+			mbr = self.mbr,
+			fs = self.create
+		)
 		self.log.close()
 		if letter:
 			log_path = Path(f'{letter}:\\hdzero-log.txt')
@@ -326,6 +333,7 @@ class HdZeroGui(WinUtils):
 		GridLabel(root, frame, root.WIPE)
 		StringSelector(root, frame, root.TARGET, root.TARGET,
 			command=self._select_target, columnspan=8)
+		root.settings.raw(root.TARGET).set('')
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.LOGGING)
 		DirSelector(root, frame, root.OUTDIR,
@@ -445,7 +453,7 @@ class HdZeroGui(WinUtils):
 		if not outdir:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_DIR_REQUIRED
+				message = self.root.LOGDIR_REQUIRED
 			)
 			return
 		cmd = self.root.settings.section.lower()

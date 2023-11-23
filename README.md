@@ -1,10 +1,7 @@
 # FallbackImager
-
 This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
 
-In this testing state only Windows (10/11) is supported.
-
-This is work in progress.
+In this testing state only Windows (10/11) is supported. It is work in progress.
 
 ## Installation
 
@@ -69,27 +66,35 @@ This module is used by ISO generating modules to compare the UDF structure to th
 It is possible to skip paths using a whitelist or a blacklist. The patterns have to be given as regular expressions (Python/*re* syntax), one per line in a text file. Paths are handles in the POSIX format (no Windowish backslashes). When a local path matches to one line in the whitelist, the verification of this path is skipped. When a blicklist is given, the comparison is skipped if there is no match in the list of regular expressions. You can only use whitelist or blacklist at a time.
 
 ### DismImager
-This module is only availible with Admin privileges.  It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing. When "Copy WimMount.exe to destination directory" a little GUI to mount and dismount is copied from *bin* to the destination. *WimMount.exe* needs to be run as admin.
+This module is only availible with Admin privileges.  It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing. When "Copy WimMount.exe to destination directory" a little GUI to mount and dismount is copied from *bin* to the destination. *WimMount.exe* needs to be run as Admin.
 
 ### ZipImager
-Using the Python library *zipfile* this module generates an ZIP archive from a source file structure.
+Using the Python library *zipfile* this module generates an ZIP archive from a source file structure. By giving a file list (CSV/TSV) it is possible to select what to include. In addition you can use a whitelist (excludes files) or a blacklist (selects files).
 
 ### Sqlite
-Work with Sqlite/SQL.
+The Sqlite module uses the Python library *sqlite3*. It can show the structure of a *.db* file ("Dump schema") or dump the content as CSV/TSV ("Dump content"). In addition SQL code can be executed ("Execute SQL") by the library. An alternative method is implemented ("Alternative") that is designed to generate a *.db* file from a MySQL dump file in case *sqlite3* fails.
 
 ### AxChecker
-Checking and comparing AXIOM case files, e.g. to X-Ways TSV lists
+As Magnet's AXIOM has proven to be unreliable in the past, this module compares the files in an AXIOM *Case.mfdb* to a file list (CSV/TSV e.g. created with X-Ways) or a local file structure. Only one partition of the case file can be compared at a time.
+
+Hits are files, that are represented in the artifacts. Obviously this tool can only support to find missing files. You will (nearly) never have the identical file lists. In detail AxChecker takes the file paths of the AXIOM case and tries to subtract normalized paths from the list or file system.
 
 ### HdZero
-Wipe physical drives (Admin privileges required, Win only)
+This is a wipe tool designed for SSDs and HDDs. There is also the possibility to overwrite files but without erasing file system metadata.
 
-## Additional tool:
+By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with ones ("Use 0xFF to wipe").
 
-### WimMount
+Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file ("Head of log file", *hdzero_log_head.txt* by default).
 
-GUI for Dism to mount and unmount WIM images (Admin privileges required, Win only)
+Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
 
+## Legal Notice
 
-Respect GPL-3.
-Use on your own risk.
-This is not a commercial tool with an army of developers and a department for quality control behind it.
+### License
+Respect GPL-3:
+https://www.gnu.org/licenses/gpl-3.0.en.html
+
+### Disclaimer
+Use the software on your own risk.
+
+This is not a commercial product with an army of developers and a department for quality control behind it.

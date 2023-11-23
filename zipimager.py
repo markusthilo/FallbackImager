@@ -3,12 +3,12 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Generate ZIP file from logical file structure
+Using the Python library zipfile this module generates an ZIP archive from a source file structure. By giving a file list (CSV/TSV) it is possible to select what to include. In addition you can use a whitelist (excludes files) or a blacklist (selects files).
 '''
 
 from pathlib import Path
@@ -125,7 +125,7 @@ class ZipImagerCli(ArgumentParser):
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
 		super().__init__(**kwargs)
-		self.add_argument('-b', '--blacklist', type=Path,
+		self.add_argument('-b', '--blacklist', type=ExtPath.path,
 			help='Blacklist (textfile with one regex per line)', metavar='FILE'
 		)
 		self.add_argument('-c', '--column', type=str,
@@ -137,19 +137,19 @@ class ZipImagerCli(ArgumentParser):
 		self.add_argument('-n', '--nohead', default=False, action='store_true',
 			help='TSV file has no head line with names of columns (e.g. "Full path" etc.)'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('-l', '--filelist', type=Path,
+		self.add_argument('-l', '--filelist', type=ExtPath.path,
 			help='Copy only the files in the list', metavar='FILE'
 		)
 		self.add_argument('-t', '--flat', default=False, action='store_true',
 			help='Generate a flat structure without folders'
 		)
-		self.add_argument('-w', '--whitelist', type=Path,
+		self.add_argument('-w', '--whitelist', type=ExtPath.path,
 			help='Whitelist (if given, blacklist is ignored)', metavar='FILE'
 		)
-		self.add_argument('root', nargs=1, type=Path,
+		self.add_argument('root', nargs=1, type=ExtPath.path,
 			help='Source root', metavar='DIRECTORY'
 		)
 

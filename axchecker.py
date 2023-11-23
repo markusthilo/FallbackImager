@@ -3,20 +3,14 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-12'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Verify AXIOM case files
-Output directory and filename (base for the generetad files, do extension) are required.
--l/--list lists the partitions contained in the AXIOM case file.
-To compare to a file structure, give the partition with -p/--partition,
-e.g. "Test-SD.E01 - Entire Disk (exFAT, 1,86 GB) Test-SD".
-When a text file is given by -d/--diff, the tool handles the content as a file list
-and tries to compare it to the given AXIOM partition from "Case.mfdb".
--c/--column has to point to the paths if the text file is in TSV format,
-e.g. "Full path" for TSV file generated with X-Ways (German: "Vollpfad").
+As Magnet's AXIOM has proven to be unreliable in the past, this module compares the files in an AXIOM Case.mfdb to a file list (CSV/TSV e.g. created with X-Ways) or a local file structure. Only one partition of the case file can be compared at a time.
+
+Hits are files, that are represented in the artifacts. Obviously this tool can only support to find missing files. You will (nearly) never have the identical file lists. In detail AxChecker takes the file paths of the AXIOM case and tries to subtract normalized paths from the list or file system.
 '''
 
 from pathlib import Path
@@ -160,7 +154,7 @@ class AxCheckerCli(ArgumentParser):
 		self.add_argument('-c', '--column', type=str,
 			help='Column with path to compare', metavar='INTEGER|STRING'
 		)
-		self.add_argument('-d', '--diff', type=Path,
+		self.add_argument('-d', '--diff', type=ExtPath.path,
 			help='Path to file or directory to compare with', metavar='FILE|DIRECTORY'
 		)
 		self.add_argument('-f', '--filename', type=str,
@@ -172,13 +166,13 @@ class AxCheckerCli(ArgumentParser):
 		self.add_argument('-n', '--nohead', default=False, action='store_true',
 			help='TSV file has no head line with names of columns (e.g. "Full path" etc.)'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write log and CSV list(s)', metavar='DIRECTORY'
 		)
 		self.add_argument('-p', '--partition', type=str,
 			help='Image and partiton to compare (--diff DIRECTORY)', metavar='STRING'
 		)
-		self.add_argument('mfdb', nargs=1, type=Path,
+		self.add_argument('mfdb', nargs=1, type=ExtPath.path,
 			help='AXIOM Case (.mfdb) / SQLite data base file', metavar='FILE'
 		)
 
@@ -266,18 +260,20 @@ class AxCheckerGui:
 			)
 			return
 		mfdb = MfdbReader(Path(mfdb))
-		if not mfdb.partitions:
+		partition_ids = mfdb.get_partition_ids()
+		if not partition_ids:
 			showerror(
 				title = self.root.CASE_FILE,
 				message = self.root.UNABLE_DETECT_PARTITIONS
 			)
 			return
-		if len(mfdb.partitions) == 1:
-			self.root.settings.raw(self.root.PARTITION).set(list(mfdb.partitions.values())[0])
+		if len(partition_ids) == 1:
+			self.root.settings.raw(self.root.PARTITION).set(mfdb.paths[partition_ids[0]])
 			return
 		self.partition_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
 		self._selected_part = StringVar()
-		for partition in mfdb.partitions.values():
+		for partition_id in partition_ids:
+			partition = mfdb.paths[partition_id]
 			frame = ExpandedFrame(self.root, self.partition_window)
 			Radiobutton(frame, variable=self._selected_part, value=partition).pack(
 				side='left', padx=self.root.PAD)

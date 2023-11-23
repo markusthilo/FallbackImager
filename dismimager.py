@@ -3,12 +3,14 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.2_2023-11-20'
+__version__ = '0.2.3_2023-11-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Create and check WMI Image
+This module is only availible with Admin privileges. It generates an image in the WIM format using DISM/dism.exe. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing.
+
+WimMount.exe is a GUI to mount WMI images (Admin privileges required).
 '''
 
 from win32com.shell.shell import IsUserAnAdmin
