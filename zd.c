@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.0.1_2023-12-04";
+const char *VERSION = "0.0.1_2023-12-05";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -140,7 +140,6 @@ void read_error(target_t *target, const config_t *conf, badblocks_t *badblocks, 
 	for (int pass=0; pass<badblocks->retry; pass++) {	// loop retries
 		set_pointer(target, target->ptr);
 		if ( read(target->file, block, bs) == bs ) {
-			if ( check_bytes(block, conf, bs) == -1 ) check_max_bad_blocks(badblocks);
 			target->ptr += bs;
 			return;
 		}
@@ -195,7 +194,7 @@ void wipe_all(target_t *target, const config_t *conf, badblocks_t *badblocks) {
 	print_progress(target);
 }
 
-/* Convert value of a command line argument to integer > 0, return -1 if NULL */
+/* Convert value of a command line argument to integer >= 0, return -1 if NULL */
 int uint_arg(const char *value, const char arg) {
 	if ( value == NULL ) return -1;
 	int res = atoi(value);
@@ -376,7 +375,7 @@ int main(int argc, char **argv) {
 		start_time = clock();
 	}
 	printf("Verifying\n");	// verification pass
-	if ( target.ptr != 0 ) set_pointer(&target, 0);
+	set_pointer(&target, 0);
 	badblocks.cnt = 0;
 	if ( target.size >= conf.bs ) {
 		uint64_t *block = malloc(conf.bs);
