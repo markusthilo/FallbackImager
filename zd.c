@@ -86,14 +86,13 @@ void help(const int r) {
 }
 
 /* Set file pointer */
-void set_pointer(target_t *target, const off_t ptr) {
+void set_pointer(target_t *target, const off_t offset) {
+	off_t ptr = target->ptr + offset;
 	if ( lseek(target->file, ptr, SEEK_SET) != ptr ) {
-		fprintf(stderr, "Error: could not point to position %ld in %s\n",
-			ptr, target->path);
+		fprintf(stderr, "Error: could not point to position %ld in %s\n", ptr, target->path);
 		close(target->file);
 		exit(1);
 	}
-	target->ptr = ptr;
 }
 
 /* Check if block is wiped */
@@ -109,45 +108,46 @@ int check_bytes(const uint8_t *block, const config_t *conf, const size_t bs){
 }
 
 /* Print bad blocks */
-void print_bad_blocks(badblocks_t *badblocks) {
-		printf(" found %d bad block(s) (offset/[rwu]):\n", badblocks->cnt);
-		for (int i=0; i<badblocks->cnt-1; i++)
-			printf("%lu/%c, ", badblocks->offsets[i], badblocks->errors[i]);
-		printf("%lu/%c\n\n", badblocks->offsets[badblocks->cnt-1], badblocks->errors[badblocks->cnt-1]);
+void print_bad_blocks(const badblocks_t *badblocks) {
+	printf("ound %d bad block(s) (offset/[rwu]):", badblocks->cnt);
+	for (int i=0; i<badblocks->cnt; i++) {
+			if ( i % 4 == 0 ) printf("\n");
+			else printf("  ");
+		printf("%*ld/%c", 20, badblocks->offsets[i], badblocks->errors[i]);
+	}
+	printf("\n");
 }
 
-/* Check for oo many bad blocks */
-void check_max_bad_blocks(badblocks_t *badblocks) {
+/* Check for too many bad blocks */
+void check_max_bad_blocks(const target_t *target, badblocks_t *badblocks) {
 	if ( badblocks->max > badblocks->cnt++ ) return;
-	printf("\nWarning:");
+	close(target->file);
+	printf("\nF");
 	print_bad_blocks(badblocks);
-	fprintf(stderr, "\nError: tolerance exceeded\n");
+	fprintf(stderr, "Error: aborting because of too many bad blocks\n");
 	exit(1);
 }
 
 /* Handle unwiped block */
 void wipe_error(const target_t *target, badblocks_t *badblocks, const size_t bs) {
-	fprintf(stderr, "\nWarning: unwiped block at offset %ld\n", target->ptr);
 	badblocks->offsets[badblocks->cnt] = target->ptr;
 	badblocks->errors[badblocks->cnt] = 'u';
-	check_max_bad_blocks(badblocks);
+	check_max_bad_blocks(target, badblocks);
 }
 
 /* Handle read error */
-void read_error(target_t *target, const config_t *conf, badblocks_t *badblocks, const size_t bs) {
+int read_error(target_t *target, const config_t *conf, badblocks_t *badblocks, const size_t bs) {
 	fprintf(stderr, "\nError: read error at offset %ld\n", target->ptr);
 	uint8_t *block = malloc(bs);
 	for (int pass=0; pass<badblocks->retry; pass++) {	// loop retries
-		set_pointer(target, target->ptr);
-		if ( read(target->file, block, bs) == bs ) {
-			target->ptr += bs;
-			return;
-		}
+		set_pointer(target, 0);
+		if ( read(target->file, block, bs) == bs ) return 0;
 	}
 	badblocks->offsets[badblocks->cnt] = target->ptr;	// add this bad block
 	badblocks->errors[badblocks->cnt] = 'r';	// mark as read error
-	set_pointer(target, target->ptr+bs);	// go to next block
-	check_max_bad_blocks(badblocks);
+	check_max_bad_blocks(target, badblocks);
+	set_pointer(target, bs);	// point to next block
+	return -1;
 }
 
 /* Handle write error */
@@ -155,16 +155,13 @@ void write_error(target_t *target, const config_t *conf, badblocks_t *badblocks,
 	fprintf(stderr, "\nError: write error at offset %ld\n", target->ptr);
 	uint8_t *block = malloc(bs);
 	for (int pass=0; pass<badblocks->retry; pass++) {	// loop retries
-		set_pointer(target, target->ptr);
-		if ( write(target->file, conf->block, bs) == bs ) {
-			target->ptr += bs;
-			return;
-		}
+		set_pointer(target, 0);
+		if ( write(target->file, conf->block, bs) == bs ) return;
 	}
 	badblocks->offsets[badblocks->cnt] = target->ptr;	// add this bad block
 	badblocks->errors[badblocks->cnt] = 'w';	// mark as read error
+	check_max_bad_blocks(target, badblocks);
 	set_pointer(target, target->ptr+bs);	// go to next block
-	check_max_bad_blocks(badblocks);
 }
 
 /* Print progress */
@@ -202,31 +199,6 @@ int uint_arg(const char *value, const char arg) {
 	if ( strcmp(value, "0") == 0 ) return 0;
 	fprintf(stderr, "Error: -%c needs an unsigned integer value\n", arg);
 	exit(1);
-}
-
-/* Print block to stdout */
-void print_block(target_t *target, const off_t ptr) {
-	set_pointer(target, ptr);
-	off_t bs = target->size - target->ptr;
-	if ( bs > 512 ) bs = 512;	// do not show more than 512 bytes
-	uint8_t *block = malloc(bs);
-	if ( read(target->file, block, bs) != bs ) {
-		fprintf(stderr, "\nError: could not read block of %ld bytes at offset %ld\n",
-			bs, target->ptr);
-		close(target->file);
-		exit(1);
-	}
-	printf("Bytes %ld - %ld", target->ptr, target->ptr + bs);
-	target->ptr += bs;
-	int t = 1;
-	for (int i=0; i<bs; i++) {
-		if ( --t == 0 ) {
-			printf("\n");
-			t = 32;
-		}
-		printf("%02X ", block[i]);
-	}
-	printf("\n");
 }
 
 /* Print time delta */
@@ -287,12 +259,12 @@ int main(int argc, char **argv) {
 	conf.value64 = 0;
 	if ( farg != NULL ) {
 		unsigned long int fvalue = strtoul(farg, NULL, 16);
-		if ( fvalue < 1 || fvalue > 0xff ) {	// check for 8 bits
-			fprintf(stderr, "Error: value has to be inbetween 1 and 0xff\n");
+		if ( fvalue < 0 || fvalue > 0xff ) {	// check for 8 bits
+			fprintf(stderr, "Error: value has to be inbetween 0 and 0xff\n");
 			exit(1);
 		}
 		conf.value = (char) fvalue;
-		for (int shift=0; shift<=56; shift+=8) conf.value64 |= (fvalue << shift);	// expand to 64 bits
+		memset(&conf.value64, conf.value, sizeof(conf.value64));
 	}
 	badblocks.max = uint_arg(marg, 'm');
 	if ( badblocks.max == -1 ) badblocks.max = 200;	// default
@@ -313,6 +285,7 @@ int main(int argc, char **argv) {
 	}
 	target.blocks = target.size / conf.bs;	// full blocks
 	target.leftbytes = target.size % conf.bs;
+	target.ptr = 0;
 	set_pointer(&target, 0);
 	badblocks.cnt = 0;
 	badblocks.offsets = malloc(sizeof(off_t) * badblocks.max);
@@ -326,12 +299,8 @@ int main(int argc, char **argv) {
 				uint64_t *block = malloc(conf.bs);
 				clock_t next_second = print_progress(&target);
 				for (size_t bc=0; bc<target.blocks; bc++) {
-					if ( read(target.file, block, conf.bs) != conf.bs ) {
-						read_error(&target, &conf, &badblocks, conf.bs);
-						continue;
-					}
-					if ( check_block(block, &conf) == -1 ) {	// overwrite block/page
-						set_pointer(&target, target.ptr);
+					if ( read(target.file, block, conf.bs) != conf.bs || check_block(block, &conf) == -1 ) {
+						set_pointer(&target, 0);	// overwrite block/page
 						if ( write(target.file, conf.block, conf.bs ) != conf.bs )
 							write_error(&target, &conf, &badblocks, conf.bs);
 					}
@@ -340,17 +309,16 @@ int main(int argc, char **argv) {
 				}
 				if ( target.leftbytes > 0 ) {
 					uint8_t *block = malloc(target.leftbytes);
-					if ( read(target.file, block, target.leftbytes) != target.leftbytes )
-						read_error(&target, &conf, &badblocks, target.leftbytes);
-					else {
-						if ( check_bytes(block, &conf, target.leftbytes) == -1 ) {
-							set_pointer(&target, target.ptr);
+					if ( read(target.file, block, target.leftbytes) != target.leftbytes
+						|| check_bytes(block, &conf, target.leftbytes) == -1 ) {
+							set_pointer(&target, 0);	// overwrite block/page
 							if ( write(target.file, conf.block, target.leftbytes ) != target.leftbytes )
 								write_error(&target, &conf, &badblocks, target.leftbytes);
-						}
 					}
 				}
 			}
+			target.ptr = target.size;
+			print_progress(&target);
 			break;
 		case 1:	// wipe all blocks
 			memset(conf.block, conf.value, conf.bs);
@@ -370,19 +338,20 @@ int main(int argc, char **argv) {
 			wipe_all(&target, &conf, &badblocks);
 	}
 	if ( todo != 3 ) {
-		print_progress(&target);
 		print_time(start_time);
 		start_time = clock();
 	}
 	printf("Verifying\n");	// verification pass
+	target.ptr = 0;
 	set_pointer(&target, 0);
 	badblocks.cnt = 0;
 	if ( target.size >= conf.bs ) {
 		uint64_t *block = malloc(conf.bs);
 		clock_t next_second = print_progress(&target);
 		for (off_t bc=0; bc<target.blocks; bc++) {
-			if ( read(target.file, block, conf.bs) != conf.bs ) {
-				read_error(&target, &conf, &badblocks, conf.bs);
+			if ( read(target.file, block, conf.bs) != conf.bs
+				&& read_error(&target, &conf, &badblocks, conf.bs) == -1 ) {
+				target.ptr += conf.bs;
 				continue;
 			}
 			if ( check_block(block, &conf) == -1 ) wipe_error(&target, &badblocks, conf.bs);
@@ -392,25 +361,21 @@ int main(int argc, char **argv) {
 	}
 	if ( target.leftbytes > 0 ) {
 		uint8_t *block = malloc(target.leftbytes);
-		if ( read(target.file, block, target.leftbytes) != target.leftbytes )
-			read_error(&target, &conf, &badblocks, target.leftbytes);
-		else if ( check_bytes(block, &conf, target.leftbytes) == -1 )
-			wipe_error(&target, &badblocks, target.leftbytes);
+		if ( read(target.file, block, target.leftbytes) != target.leftbytes
+			&& read_error(&target, &conf, &badblocks, target.leftbytes) == 0
+			&& check_bytes(block, &conf, target.leftbytes) == -1
+		) wipe_error(&target, &badblocks, target.leftbytes);
+		target.ptr = target.size;
 	}
-	target.ptr = target.size;
 	print_progress(&target);
 	print_time(start_time);
+	close(target.file);
 	if ( badblocks.cnt > 0 ) {
-		close(target.file);
-		printf("All done but");
+		printf("All done but f");
 		print_bad_blocks(&badblocks);
+		fprintf(stderr, "Error: %d bad blocks in %s\n", badblocks.cnt, target.path);
 		exit(1);
 	}
-	printf("Sample:\n");	// Read sample block(s) to show result
-	print_block(&target, 0);
-	if ( target.size >= 2048) print_block(&target, (target.size>>1)-256);
-	if ( target.size >= 1024 ) print_block(&target, target.size-512);
-	close(target.file);
 	printf("Verification was succesfull, all done\n\n");
 	exit(0);
 }

@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
 						set_pointer(&target, 0);
 						if ( !WriteFile(target.file, conf.block, conf.bs, &ret, NULL) || ret != conf.bs )
 							write_error(&target, &conf, &badblocks, conf.bs);
-						}
+					}
 					if ( clock() >= next_second ) next_second = print_progress(&target);
 					target.ptr += conf.bs;
 				}
