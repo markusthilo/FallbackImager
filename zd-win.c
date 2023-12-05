@@ -381,13 +381,15 @@ int main(int argc, char **argv) {
 					if ( !ReadFile(target.file, block, target.leftbytes, &ret, NULL)
 						|| ret != target.leftbytes
 						|| check_bytes(block, &conf, target.leftbytes) == -1
-					) { // overwrite block/page
+					) {	// overwrite block/page
 						set_pointer(&target, 0);
 						if ( !WriteFile(target.file, conf.block, target.leftbytes, &ret, NULL)
 							|| ret != target.leftbytes ) write_error(&target, &conf, &badblocks, target.leftbytes);
 					}
 				}
 			}
+			target.ptr = target.size;
+			print_progress(&target);
 			break;
 		case 1:	// wipe all blocks
 			memset(conf.block, conf.value, conf.bs);
@@ -408,8 +410,6 @@ int main(int argc, char **argv) {
 			wipe_all(&target, &conf, &badblocks);
 	}
 	if ( todo != 3 ) {
-		target.ptr = target.size;
-		print_progress(&target);
 		print_time(start_time);
 		start_time = clock();
 	}
@@ -417,16 +417,13 @@ int main(int argc, char **argv) {
 	target.ptr = 0;
 	set_pointer(&target, 0);
 	badblocks.cnt = 0;
-	
-	
-	
 	if ( target.size >= conf.bs ) {
 		DWORD ret;	// to check the returned number of bytes
 		ULONGLONG *block = malloc(conf.bs);
 		clock_t next_second = print_progress(&target);
 		for (LONGLONG bc=0; bc<target.blocks; bc++) {
 			if ( ( !ReadFile(target.file, block, conf.bs, &ret, NULL) || ret != conf.bs )
-				&& ( read_error(&target, &conf, &badblocks, conf.bs) == -1 ) ) {
+				&& read_error(&target, &conf, &badblocks, conf.bs) == -1 ) {
 					target.ptr += conf.bs;
 					continue;
 				}
@@ -439,8 +436,8 @@ int main(int argc, char **argv) {
 		DWORD ret;	// to check the returned number of bytes
 		BYTE *block = malloc(target.leftbytes);
 		if ( ( !ReadFile(target.file, block, target.leftbytes, &ret, NULL) || ret != target.leftbytes )
-			&& ( read_error(&target, &conf, &badblocks, target.leftbytes) == 0 )
-			&& ( check_bytes(block, &conf, target.leftbytes) == -1 )
+			&& read_error(&target, &conf, &badblocks, target.leftbytes) == 0
+			&& check_bytes(block, &conf, target.leftbytes) == -1
 		) wipe_error(&target, &badblocks, target.leftbytes);
 		target.ptr = target.size;
 	}
