@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.0.1_2023-12-05";
+const char *VERSION = "0.0.1_2023-12-06";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -57,10 +57,10 @@ void help(const int r) {
 	printf("v%s\n\n", VERSION);
 	printf("Wipe drive or file\n\n");
 	printf("Usage:\n");
-	printf("zd [OPTIONS] TARGET \n");
-	printf("(or zd -h for this help)\n\n");
+	printf("zd-win.exe [OPTIONS] TARGET \n");
+	printf("(or zd-win.exe -h for this help)\n\n");
 	printf("TARGET:\n");
-	printf("    File or physical drive\n\n");
+	printf("    Physical drive/file\n\n");
 	printf("OPTIONS (optional):\n");
 	printf("    -a : overwrite all bytes, do not check if already wiped\n");
 	printf("    -b BLOCK_SIZE : block size for read and write (default is 4096)\n");
@@ -74,10 +74,10 @@ void help(const int r) {
 	printf("    w: error occured while writing\n");
 	printf("    u: block is not wiped (unwiped)\n\n");
 	printf("Example:\n");
-	printf("zd /dev/sdc\n\n");
+	printf("zd-win.exe \\\\.\\PHYSICALDRIVE2\n\n");
 	printf("Disclaimer:\n");
 	printf("The author is not responsible for any loss of data.\n");
-	printf("Obviously, the tool is dangerous as it is designed to erase data.\n\n");
+	printf("Obviously, this tool is dangerous as it is designed to erase data.\n\n");
 	printf("Author: Markus Thilo\n");
 	printf("License: GPL-3\n");
 	printf("This CLI tool is part of the FallbackImager project:\n");
