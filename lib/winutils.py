@@ -12,8 +12,8 @@ from lib.extpath import ExtPath, FilesPercent
 class WinUtils:
 	'Needed Windows functions'
 
-	WINCMD_TIMEOUT = 60
-	WINCMD_RETRIES = 20
+	WINCMD_TIMEOUT = 120
+	WINCMD_RETRIES = 120
 	WINCMD_DELAY = 1
 
 	def __init__(self, outdir=None):

@@ -96,12 +96,13 @@ class WipeW(WinUtils):
 				blocksize % self.MIN_BLOCKSIZE != 0 or blocksize < MIN_BLOCKSIZE or blocksize > MAX_BLOCKSIZE
 			):
 				raise ValueError(f'Block size has to be n * {MIN_BLOCKSIZE}, >={MIN_BLOCKSIZE} and <={MAX_BLOCKSIZE}')
-		try:
-			int(value, 16)
-		except ValueError:
-			raise ValueError('Byte to overwrite with (-f/--value) has to be a hex value')
-		if int(value, 16) < 0 or int(value, 16) > 0xff:
-			raise ValueError('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
+		if value:
+			try:
+				int(value, 16)
+			except ValueError:
+				raise ValueError('Byte to overwrite with (-f/--value) has to be a hex value')
+			if int(value, 16) < 0 or int(value, 16) > 0xff:
+				raise ValueError('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
 		self.outdir = ExtPath.mkdir(outdir)
 		if zd:
 			self.zd_path = Path(zd)
