@@ -3,14 +3,14 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-12-06'
+__version__ = '0.0.1_2023-12-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-This is a wipe tool designed for SSDs and HDDs. There is also the possibility to overwrite files but without erasing file system metadata.
+This is a wipe tool designed for SSDs and HDDs. There is also the possibility to overwrite files but without erasing file system metadata. It runs on Windows.
 
-By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with ones.
+By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with a given byte value.
 
 Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file (hdzero_log_head.txt by default).
 
@@ -59,8 +59,7 @@ class WipeW(WinUtils):
 	STD_BLOCKSIZE = 4096
 	MAX_BLOCKSIZE = 32768
 
-	def __init__(self,
-			targets = None,
+	def __init__(self, targets,
 			verify = False,
 			allbytes = False,
 			extra = False,
@@ -70,7 +69,6 @@ class WipeW(WinUtils):
 			maxretries = None,
 			create = None,
 			driveletter = None,
-			listdrives = False,
 			log = None,
 			loghead = None,
 			mbr = False,
@@ -80,12 +78,6 @@ class WipeW(WinUtils):
 			echo = print
 		):
 		self.echo = echo
-		if listdrives:
-			if len(targets) > 0:
-				raise RuntimeError('Giving targets makes no sense with --listdrives')
-			super().__init__()
-			self.echo_drives()
-			return
 		if len(targets) == 0:
 			raise FileNotFoundError('Missing drive or file(s) to wipe')
 		if verify and allbytes and extra:
@@ -93,7 +85,7 @@ class WipeW(WinUtils):
 		if verify and (create or extra or mbr or driveletter or name):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
 		if blocksize and (
-				blocksize % self.MIN_BLOCKSIZE != 0 or blocksize < MIN_BLOCKSIZE or blocksize > MAX_BLOCKSIZE
+				blocksize % self.MIN_BLOCKSIZE != 0 or blocksize < self.MIN_BLOCKSIZE or blocksize > self.MAX_BLOCKSIZE
 			):
 				raise ValueError(f'Block size has to be n * {MIN_BLOCKSIZE}, >={MIN_BLOCKSIZE} and <={MAX_BLOCKSIZE}')
 		if value:
@@ -151,12 +143,6 @@ class WipeW(WinUtils):
 			if driveletter or name or mbr:
 				raise RuntimeError(f'Not going to create a partition - too many arguments')
 		self.log = log
-
-	def echo_drives(self):
-		'''List drives and show infos'''
-		for drive_id, drive_info in self.list_drives():
-			self.echo(f'\n{drive_id} - {drive_info}')
-		self.echo()
 
 	def zd(self):
 		'''Run zd-win.exe + write log to file'''
@@ -315,13 +301,16 @@ class WipeWCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run HdZero'''
-		wiper = WipeW(
-			targets = self.targets,
+		if self.listdrives:
+			if len(self.targets) > 0:
+				raise RuntimeError('Giving targets makes no sense with --listdrives')
+			WinUtils().echo_drives()
+			return
+		WipeW(self.targets,
 			allbytes = self.allbytes,
 			blocksize = self.blocksize,
 			create = self.create,
 			driveletter = self.driveletter,
-			listdrives = self.listdrives,
 			loghead = self.loghead,
 			maxbadblocks = self.maxbadblocks,
 			maxretries = self.maxretries,
@@ -333,18 +322,18 @@ class WipeWCli(ArgumentParser):
 			extra = self.extra,
 			zd = self.zd,
 			echo = echo
-		)
-		if not self.listdrives:
-			wiper.zd()
+		).zd()
 
-class HdZeroGui(WinUtils):
+class WipeWGui(WinUtils):
 	'''Notebook page'''
 
 	CMD = __app_name__
 	DESCRIPTION = __description__
 	DEF_BLOCKSIZE = 4096
-	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768,
-		65536, 131072, 262144, 524288, 1048576)
+	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768)
+	DEF_VALUE = '0x00'
+	DEF_MAXBADBLOCKS = '200'
+	DEF_MAXRETRIES = '200'
 	TABLES = ('GPT', 'MBR')
 	DEF_TABLE = 'GPT'
 	FS = ('NTFS', 'exFAT', 'FAT32')
@@ -353,7 +342,6 @@ class HdZeroGui(WinUtils):
 	def __init__(self, root):
 		'''Notebook page'''
 		super().__init__(__parent_path__)
-		self.hdzero = HdZero()
 		root.settings.init_section(self.CMD)
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
@@ -370,14 +358,14 @@ class HdZeroGui(WinUtils):
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.TO_DO)
 		StringRadiobuttons(root, frame, root.TO_DO,
-			(root.NORMAL_WIPE, root.EVERY_BLOCK, root.EXTRA_PASS, root.VERIFY), root.NORMAL_WIPE)
+			(root.NORMAL_WIPE, root.ALL_BYTES, root.EXTRA_PASS, root.VERIFY), root.NORMAL_WIPE)
 		GridLabel(root, frame, root.NORMAL_WIPE, column=1)
-		GridLabel(root, frame, root.EVERY_BLOCK, column=1)
+		GridLabel(root, frame, root.ALL_BYTES, column=1)
 		GridLabel(root, frame, root.EXTRA_PASS, column=1)
 		GridLabel(root, frame, root.VERIFY, column=1)
 		root.row -= 4
 		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
-			default=self.DEF_BLOCKSIZE, column=2)
+			default=self.DEF_BLOCKSIZE, column=3)
 		root.row -= 1
 		GridStringMenu(root, frame, root.PARTITION_TABLE, root.PARTITION_TABLE,
 			([root.DO_NOT_CREATE] + list(self.TABLES)), default=self.DEF_TABLE, column=4)
@@ -386,20 +374,26 @@ class HdZeroGui(WinUtils):
 			([root.DO_NOT_CREATE] + list(self.FS)), default=self.DEF_FS, column=6)
 		root.row -= 1
 		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
-			([root.NEXT_AVAILABLE] + self.hdzero.get_free_letters()),
+			([root.NEXT_AVAILABLE] + self.get_free_letters()),
 			default=root.NEXT_AVAILABLE, column=8)
 		root.row += 1
-		Checker(root, frame, root.USE_FF, root.USE_FF, column=2)
+		StringSelector(root, frame, root.VALUE, root.VALUE, default=self.DEF_VALUE,
+			width=root.SMALL_FIELD_WIDTH, column=3)
 		root.row -= 1
 		StringSelector(root, frame, root.VOLUME_NAME, root.VOLUME_NAME,
-			default=root.DEFAULT_VOLUME_NAME, width=root.VOLUME_NAME_WIDTH, column=6, columnspan=2)
+			default=root.DEFAULT_VOLUME_NAME, width=root.SMALL_FIELD_WIDTH, column=6, columnspan=2)
+		StringSelector(root, frame, root.MAXBADBLOCKS, root.MAXBADBLOCKS, default=self.DEF_MAXBADBLOCKS,
+			width=root.SMALL_FIELD_WIDTH, column=3)
+		root.row -= 1
+		StringSelector(root, frame, root.MAXRETRIES, root.MAXRETRIES, default=self.DEF_MAXRETRIES,
+			width=root.SMALL_FIELD_WIDTH, column=6, columnspan=2)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
 			default=__parent_path__/'hdzero_log_head.txt',
 			command=self._notepad_log_head, columnspan=8)
-		FileSelector(root, frame, root.ZEROD_EXE, root.ZEROD_EXE, root.SELECT_ZEROD_EXE,
-			filetype=(root.ZEROD_EXE, 'zerod.exe'), default=__zerod_exe_path__, columnspan=8)
+		FileSelector(root, frame, root.EXE, root.EXE, root.SELECT_EXE,
+			filetype=(root.EXE, '*.exe'), default=__zd_exe_path__, columnspan=8)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
@@ -422,7 +416,7 @@ class HdZeroGui(WinUtils):
 		frame = ExpandedFrame(self.root, self.target_window)
 		self.root.row = 0
 		GridLabel(self.root, frame, self.root.SELECT_DRIVE)
-		for drive_id, drive_info in self.hdzero.list_drives():
+		for drive_id, drive_info in WinUtils().list_drives():
 			Button(frame, text=drive_id, command=partial(self._put_drive, drive_id)).grid(
 				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
 			text = ScrolledText(frame, width=self.root.ENTRY_WIDTH,
@@ -487,23 +481,60 @@ class HdZeroGui(WinUtils):
 			return
 		cmd = self.root.settings.section.lower()
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		zerod_exe = self.root.settings.get(self.root.ZEROD_EXE)
-		if zerod_exe:
-			cmd += f' --zerod "{zerod_exe}"'
+		zd_exe = self.root.settings.get(self.root.EXE)
+		if zd_exe:
+			cmd += f' --zd "{zd_exe}"'
 		log_head = self.root.settings.get(self.root.LOG_HEAD)
 		if log_head:
 			cmd += f' --loghead "{log_head}"'
 		to_do = self.root.settings.get(self.root.TO_DO)
-		if to_do == self.root.EVERY_BLOCK:
-			cmd += f' --every'
+		if to_do == self.root.ALL_BYTES:
+			cmd += f' --allbytes'
 		elif to_do == self.root.EXTRA_PASS:
 			cmd += f' --extra'
 		elif to_do == self.root.VERIFY:
 			cmd += f' --verify'
 		blocksize = self.root.settings.get(self.root.BLOCKSIZE)
 		cmd += f' --blocksize {blocksize}'
-		if self.root.settings.get(self.root.USE_FF):
-			cmd += f' --ff'
+		value = self.root.settings.get(self.root.VALUE)
+		if value:
+			try:
+				int(value, 16)
+			except ValueError:
+				showerror(
+					title = self.root.WRONG_ENTRY,
+					message = self.root.NEED_HEX
+				)
+				return
+			if int(value, 16) < 0 or int(value, 16) > 0xff:
+				showerror(
+					title = self.root.WRONG_ENTRY,
+					message = self.root.BYTE_RANGE
+				)
+				return
+			cmd += f' --value {value}'
+		maxbadblocks = self.root.settings.get(self.root.MAXBADBLOCKS)
+		if maxbadblocks:
+			try:
+				int(maxbadblocks)
+			except ValueError:
+				showerror(
+					title = self.root.WRONG_ENTRY,
+					message = f'{self.root.NEED_INT} "{self.root.MAXBADBLOCKS}"'
+				)
+				return
+			cmd += f' --maxbadblocks {maxbadblocks}'
+		maxretries = self.root.settings.get(self.root.MAXRETRIES)
+		if maxretries:
+			try:
+				int(maxretries)
+			except ValueError:
+				showerror(
+					title = self.root.WRONG_ENTRY,
+					message = f'{self.root.NEED_INT} "{self.root.MAXRETRIES}"'
+				)
+				return
+			cmd += f' --maxretries {maxretries}'
 		partition_table = self.root.settings.get(self.root.PARTITION_TABLE)
 		file_system = self.root.settings.get(self.root.FILE_SYSTEM)
 		if (

@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.3_2023-11-23'
+__version__ = '0.3.0_2023-12-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -25,7 +25,7 @@ from isoverify import IsoVerifyGui, IsoVerifyCli
 from dismimager import DismImagerGui, DismImagerCli
 from zipimager import ZipImagerGui, ZipImagerCli
 from axchecker import AxCheckerGui, AxCheckerCli
-from hdzero import HdZeroGui, HdZeroCli
+from wipew import WipeWGui, WipeWCli
 from sqlite import SQLiteGui, SQLiteCli
 
 ### MODULES, SYSTEM AND SYSTEM REALTED SETTINGS ###
@@ -41,7 +41,7 @@ if __os_name__ == 'nt':
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli,
-			HdZeroGui: HdZeroCli
+			WipeWGui: WipeWCli
 		}
 	else:
 		__modules__ = {
@@ -86,7 +86,8 @@ class Gui(GuiBase):
 	MAX_ROW_QUANT = 5
 	MAX_COLUMN_QUANT = 10
 	FILES_FIELD_WIDTH = 94
-	VOLUME_NAME_WIDTH = 24
+	SMALL_FIELD_WIDTH = 24
+	BUTTON_WIDTH = 16
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
 	AVAILABLE_MODULES = 'Available modules:'
@@ -145,6 +146,7 @@ class Gui(GuiBase):
 	EXCEPTIONS = 'Exceptions occured'
 	UNDETECTED = 'Could not detect what to do.\n'
 	MISSING_ENTRIES = 'Missing entries'
+	WRONG_ENTRY = 'Wrong entry'
 	SOURCE_REQUIRED = 'Source is required'
 	DEST_DIR_REQUIRED = 'Destination directory is required'
 	DEST_FN_REQUIRED = 'Destination filename is required'
@@ -183,15 +185,17 @@ class Gui(GuiBase):
 	SELECT_FILES = 'Select file(s) to wipe'
 	LOGGING = 'Logging'
 	NORMAL_WIPE = 'Normal wipe'
-	EVERY_BLOCK = 'Wipe every block'
+	ALL_BYTES = 'Wipe all bytes/blocks'
 	EXTRA_PASS = 'Extra/2 pass wipe'
 	VERIFY = 'Verify'
 	BLOCKSIZE = 'Block size'
-	USE_FF = 'Use 0xFF to wipe'
+	VALUE = 'Byte to overwrite'
+	MAXBADBLOCKS = 'Max. bad blocks'
+	MAXRETRIES = 'Max. retries'
 	LOG_HEAD = 'Head of log file'
 	SELECT_TEXT_FILE = 'Select text file'
-	ZEROD_EXE = 'zerod'
-	SELECT_ZEROD_EXE = 'Select ZEROD executable'
+	EXE = 'Executable'
+	SELECT_EXE = 'Select executable'
 	FILE_SYSTEM = 'File system'
 	DO_NOT_CREATE = 'Do not create'
 	PARTITION_TABLE = 'Partition table'
@@ -201,6 +205,9 @@ class Gui(GuiBase):
 	FILE = 'file'
 	FILES = 'files'
 	NEXT_AVAILABLE = 'Next available'
+	NEED_HEX = 'Byte to overwrite with has to be a hex value'
+	BYTE_RANGE = 'Byte to overwrite has to be inbetween 00 and ff'
+	NEED_INT = 'An integer value is needed for '
 	REFRESH = 'Refresh'
 	TARGET_REQUIRED = 'Physical drive or file(s) to wipe required'
 	LOGDIR_REQUIRED = 'Target directory for logging required'

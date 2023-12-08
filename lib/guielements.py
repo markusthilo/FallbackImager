@@ -60,19 +60,19 @@ class ExpandedScrolledText(ScrolledText):
 class LeftButton(Button):
 	'''| Button ---|'''
 	def __init__(self, root, parent, text, command):
-		super().__init__(parent, text=text, command=command)
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.pack(padx=root.PAD, side='left')
 
 class RightButton(Button):
 	'''|--- Button |'''
 	def __init__(self, root, parent, text, command):
-		super().__init__(parent, text=text, command=command)
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.pack(padx=root.PAD, side='right')
 
 class GridButton(Button):
 	'''| | Button | | |'''
 	def __init__(self, root, parent, text, command, column=1, columnspan=1):
-		super().__init__(parent, text=text, command=command)
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 
@@ -122,7 +122,7 @@ class StringField(Button):
 	'''Button + Entry to enter string'''
 	def __init__(self, root, parent, key, text, command, column=1):
 		self.string = root.settings.init_stringvar(key)
-		super().__init__(parent, text=text, command=command)
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='e', padx=root.PAD)
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, sticky='w', padx=root.PAD)
@@ -166,7 +166,7 @@ class SourceDirSelector(Button):
 		self.source_str = root.settings.init_stringvar(root.SOURCE)
 		GridSeparator(root, parent)
 		GridLabel(root, parent, root.SOURCE, columnspan=columnspan+2)
-		super().__init__(parent, text=root.DIRECTORY, command=self._select)
+		super().__init__(parent, text=root.DIRECTORY, command=self._select, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column+1, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.source_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+2, columnspan=columnspan, sticky='w', padx=root.PAD)
@@ -185,7 +185,7 @@ class StringSelector(Button):
 		self.string = root.settings.init_stringvar(key, default=default)
 		if not command:
 			command = self._command
-		super().__init__(parent, text=text, command=command)
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		if not width:
 			width = root.ENTRY_WIDTH
@@ -215,7 +215,7 @@ class FileSelector(Button):
 		self.file_str = root.settings.init_stringvar(key)
 		if default:
 			self.file_str.set(default)
-		super().__init__(parent, text=text, command=self._select)
+		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
 		Entry(parent, textvariable=self.file_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
@@ -274,7 +274,7 @@ class FilenameSelector(Button):
 		self.default = default
 		if not command:
 			command = self._command
-		super().__init__(parent, text=text, command=command) 
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH) 
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
@@ -294,7 +294,7 @@ class DirSelector(Button):
 	'''Button + Entry to select directory'''
 	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=1):
 		self.dir_str = root.settings.init_stringvar(key)
-		super().__init__(parent, text=text, command=self._select)
+		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)

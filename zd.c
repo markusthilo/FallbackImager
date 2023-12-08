@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.0.1_2023-12-06";
+const char *VERSION = "0.0.1_2023-12-08";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -223,7 +223,7 @@ int main(int argc, char **argv) {
 	int todo = 0;	// 0 = selective wipe, 1 = all blocks, 2 = 2pass, 3 = verify
 	time_t start_time;	// to measure
 	char *barg = NULL, *farg = NULL, *marg = NULL, *rarg = NULL;	// pointer to command line args
-	while ((opt = getopt(argc, argv, "avxb:f:m:")) != -1)	// command line arguments
+	while ((opt = getopt(argc, argv, "avxb:f:m:r:")) != -1)	// command line arguments
 		switch (opt) {
 			case 'a': if ( todo == 0 ) { todo = 1; break; }
 			case 'x': if ( todo == 0 ) { todo = 2; break; }

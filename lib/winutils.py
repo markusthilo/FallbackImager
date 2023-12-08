@@ -91,6 +91,12 @@ class WinUtils:
 						continue
 			yield drive_id, drive_info
 
+	def echo_drives(self, echo=print):
+		'''List drives and show infos'''
+		for drive_id, drive_info in self.list_drives():
+			echo(f'\n{drive_id} - {drive_info}')
+		echo()
+
 	def run_diskpart(self, script):
 		'Run diskpart script'
 		self.tmpscriptpath.write_text(script)
