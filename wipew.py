@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-12-08'
+__version__ = '0.0.1_2023-12-11'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,7 +12,7 @@ This is a wipe tool designed for SSDs and HDDs. There is also the possibility to
 
 By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with a given byte value.
 
-Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file (hdzero_log_head.txt by default).
+Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file (wipe-head.txt by default).
 
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
 '''
@@ -67,12 +67,7 @@ class WipeW(WinUtils):
 			blocksize = None,
 			maxbadblocks = None,
 			maxretries = None,
-			create = None,
-			driveletter = None,
 			log = None,
-			loghead = None,
-			mbr = False,
-			name = None,
 			outdir = None,
 			zd = None,
 			echo = print
@@ -82,8 +77,6 @@ class WipeW(WinUtils):
 			raise FileNotFoundError('Missing drive or file(s) to wipe')
 		if verify and allbytes and extra:
 			raise RuntimeError(f'Too many arguments - you can perform normal wipe, all bytes, extra/2-pass or just verify')
-		if verify and (create or extra or mbr or driveletter or name):
-			raise RuntimeError(f'Arguments incompatible with --verify/-v')
 		if blocksize and (
 				blocksize % self.MIN_BLOCKSIZE != 0 or blocksize < self.MIN_BLOCKSIZE or blocksize > self.MAX_BLOCKSIZE
 			):
@@ -96,84 +89,52 @@ class WipeW(WinUtils):
 			if int(value, 16) < 0 or int(value, 16) > 0xff:
 				raise ValueError('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
 		self.outdir = ExtPath.mkdir(outdir)
-		if zd:
-			self.zd_path = Path(zd)
-		elif __zd_exe_path__:
-			self.zd_path = __zd_exe_path__
+		if log:
+			self.log = log
 		else:
-			raise FileNotFoundError('Unable to locate zd-win.exe')
-		super().__init__(self.outdir)
-		not_admin = not IsUserAnAdmin()
-		self.allbytes = allbytes
-		self.blocksize = blocksize
-		self.extra = extra
-		self.verify = verify
-		self.maxbadblocks = maxbadblocks
-		self.maxretries = maxretries
-		self.value = value
-		if len(targets) == 1 and self.is_physical_drive(targets[0]):
-			if not_admin:
-				raise RuntimeError('Admin rights are required to access block devices')
-			self.physicaldrive = True
-			self.targets = targets
-		else:
-			if create or mbr or driveletter or name:
-				raise RuntimeError(f'Arguments only for physical drives')
-			self.targets = list()
-			for target in targets:
-				target_path = Path(target)
-				if not target_path.is_file():
-					raise FileNotFoundError(f'Cannot find file {target_path} to wipe')
-				self.targets.append(target_path)
-			self.physicaldrive = False
-		if create:
-			if not self.physicaldrive:
-				raise RuntimeError(f'{target} is not a block device')
-			if name:
-				self.name = name
-			else:
-				self.name = 'Volume'
-			self.create = create.lower()
-			if loghead:
-				self.loghead = Path(loghead)
-			self.driveletter = driveletter
-			self.mbr = mbr
-		else:
-			self.create = None
-			if driveletter or name or mbr:
-				raise RuntimeError(f'Not going to create a partition - too many arguments')
-		self.log = log
-
-	def zd(self):
-		'''Run zd-win.exe + write log to file'''
-		if not self.log:
 			self.log = Logger(
 				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe-log.txt',
 				outdir = self.outdir, 
 				head = 'wipew.WipeW',
 				echo = self.echo
 			)
+		super().__init__(self.outdir)
+		self.not_admin = not IsUserAnAdmin()
+		if self.is_physical_drive(targets[0]):
+			if len(targets) != 1:
+				raise RuntimeError('Only one physical drive at a time')
+			if self.not_admin:
+				raise RuntimeError('Admin rights are required to access block devices')
+			self.physicaldrive = True
+		else:
+			self.physicaldrive = False
+		if zd:
+			self.zd_path = Path(zd)
+		elif __zd_exe_path__:
+			self.zd_path = __zd_exe_path__
+		else:
+			raise FileNotFoundError('Unable to locate zd-win.exe')
 		cmd = f'{self.zd_path}'
-		if self.blocksize:
+		if blocksize:
 			cmd += f' -b {self.blocksize}'
-		if self.value:
+		if value:
 			cmd += f' -f {self.value}'
-		if self.maxbadblocks:
+		if maxbadblocks:
 			cmd += f' -m {self.maxbadblocks}'
-		if self.maxretries:
+		if maxretries:
 			cmd += f' -r {self.maxretries}'
-		if self.verify:
+		if verify:
 			cmd += ' -v'
-		elif self.allbytes:
+		elif allbytes:
 			cmd += ' -a'
-		elif self.extra:
+		elif extra:
 			cmd += ' -x'
 		if self.echo == print:
 			echo = lambda msg: print(f'\r{msg}', end='')
 		else:
 			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
-		error = False
-		for target in self.targets:
+		self.zd_error = False
+		for target in targets:
 			self.echo()
 			proc = self.cmd_launch(f'{cmd} ' + str(target).rstrip('\\'))
 			for line in proc.stdout:
@@ -181,40 +142,42 @@ class WipeW(WinUtils):
 				if msg:
 					if msg.startswith('...'):
 						echo(msg)
-					elif msg.startswith('Process took'):
-						self.echo(f'\n{msg}')
-						self.log.info(msg)
 					else:
 						self.log.info(msg, echo=True)
 			if stderr := proc.stderr.read():
 				self.log.warning(stderr)
-				error = True
-		if not self.create:
-			self.log.close()
-			return
-		if error:
-			self.log.warning(f'Could not create {self.create} file system')
-			self.log.close()
-			return
-		if not self.driveletter:
-			self.driveletter = self.get_free_letters()[0]
-		letter = self.create_partition(self.targets[0],
-			label = self.name,
-			letter = self.driveletter,
-			mbr = self.mbr,
-			fs = self.create
+				self.zd_error = True
+
+	def mkfs(self, target,
+			fs = 'ntfs',
+			driveletter = None,
+			loghead = None,
+			mbr = False,
+			name = None
+		):
+		'''Generate partition and file system'''
+		if loghead:
+			loghead = Path(loghead)
+		else:
+			loghead = __parent_path__/'wipe-head.txt'
+		if not name:
+			name = 'Volume'
+		driveletter = self.create_partition(target,
+			label = name,
+			driveletter = driveletter,
+			mbr = mbr,
+			fs = fs
 		)
+		if not driveletter:
+			self.log.error('Could not assign a letter to the wiped drive')
 		self.log.close()
-		if letter:
-			log_path = Path(f'{letter}:\\wipe-log.txt')
+		log_path = Path(f'{driveletter}:\\wipe-log.txt')
+		try:
+			head = loghead.read_text()
+		except FileNotFoundError:
 			head = ''
-			if self.loghead:
-				try:
-					head = self.loghead.read_text()
-				except FileNotFoundError:
-					pass
-			with log_path.open('w') as fh:
-				fh.write(head + self.log.path.read_text())
+		with log_path.open('w') as fh:
+			fh.write(head + self.log.path.read_text())
 
 class WipeWCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -230,7 +193,7 @@ class WipeWCli(ArgumentParser):
 		)
 		self.add_argument('-c', '--create', type=str,
 			choices=['ntfs', 'fat32', 'exfat', 'NTFS', 'FAT32', 'EXFAT', 'ExFAT', 'exFAT'],
-			help='Create partition (when target is a physical drive)',
+			help='Create partition [fat32/exfat/ntfs] after wiping a physical drive',
 			metavar='STRING'
 		)
 		self.add_argument('-d', '--driveletter', type=str,
@@ -241,8 +204,7 @@ class WipeWCli(ArgumentParser):
 			help='Byte to overwrite with as hex (00 - ff)',
 			metavar='HEX_BYTE'
 		)
-		self.add_argument('-g', '--loghead',
-			default=__parent_path__/'hdzero_log_head.txt', type=Path,
+		self.add_argument('-g', '--loghead', type=Path,
 			help='Use the given file as head when writing log to new drive',
 			metavar='FILE'
 		)
@@ -306,23 +268,33 @@ class WipeWCli(ArgumentParser):
 				raise RuntimeError('Giving targets makes no sense with --listdrives')
 			WinUtils().echo_drives()
 			return
-		WipeW(self.targets,
+		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
+			raise RuntimeError(f'Arguments incompatible with --verify/-v')
+		wiper = WipeW(self.targets,
 			allbytes = self.allbytes,
 			blocksize = self.blocksize,
-			create = self.create,
-			driveletter = self.driveletter,
-			loghead = self.loghead,
 			maxbadblocks = self.maxbadblocks,
 			maxretries = self.maxretries,
-			mbr = self.mbr,
-			name = self.name,
 			outdir = self.outdir,
 			value = self.value,
 			verify = self.verify,
 			extra = self.extra,
 			zd = self.zd,
 			echo = echo
-		).zd()
+		)
+		if self.create:
+			if not wiper.physicaldrive:
+				wiper.log.error('Unable to create a oartition after wiping file(s)')
+			if wiper.zd_error:
+				wiper.log.error('Wipe process terminated with errors, no partition will be created')
+			wiper.mkfs(self.targets[0],
+				fs = self.create,
+				driveletter = self.driveletter,
+				loghead = self.loghead,
+				mbr = self.mbr,
+				name = self.name
+			)
+		wiper.log.close()
 
 class WipeWGui(WinUtils):
 	'''Notebook page'''

@@ -118,16 +118,11 @@ class WinUtils:
 		except:
 			return
 
-	def clean_table(self, drive_id):
-		'Clean partition table using diskpart'
-		if drive_no := self.get_drive_no(drive_id):
-			return self.run_diskpart(f'select disk {drive_no}\nclean\n')
-
-	def create_partition(self, drive_id, label='Volume', letter=None, mbr=False, fs='ntfs'):
+	def create_partition(self, drive_id, label='Volume', driveletter=None, mbr=False, fs='ntfs'):
 		'''Create partition using diskpart'''
 		if drive_no := self.get_drive_no(drive_id):
-			if not letter:
-				letter = next(self.get_free_letters())
+			if not driveletter:
+				driveletter = self.get_free_letters()[0]
 			if mbr:
 				table = 'mbr'
 			else:
@@ -137,13 +132,13 @@ clean
 convert {table}
 create partition primary
 format quick fs={fs} label={label}
-assign letter={letter}
+assign letter={driveletter}
 '''
 			)
 			for cnt in range(self.WINCMD_RETRIES):
 				sleep(self.WINCMD_DELAY)
 				try:
-					if Path(f'{letter}:\\').exists():
-						return letter
+					if Path(f'{driveletter}:\\').exists():
+						return driveletter
 				except OSError:
 					pass
