@@ -116,13 +116,13 @@ class WipeW(WinUtils):
 			raise FileNotFoundError('Unable to locate zd-win.exe')
 		cmd = f'{self.zd_path}'
 		if blocksize:
-			cmd += f' -b {self.blocksize}'
+			cmd += f' -b {blocksize}'
 		if value:
-			cmd += f' -f {self.value}'
+			cmd += f' -f {value}'
 		if maxbadblocks:
-			cmd += f' -m {self.maxbadblocks}'
+			cmd += f' -m {maxbadblocks}'
 		if maxretries:
-			cmd += f' -r {self.maxretries}'
+			cmd += f' -r {maxretries}'
 		if verify:
 			cmd += ' -v'
 		elif allbytes:
@@ -143,7 +143,8 @@ class WipeW(WinUtils):
 					if msg.startswith('...'):
 						echo(msg)
 					else:
-						self.log.info(msg, echo=True)
+						self.log.info(msg)
+						self.echo(f'\n{msg}')
 			if stderr := proc.stderr.read():
 				self.log.warning(stderr)
 				self.zd_error = True
@@ -456,9 +457,6 @@ class WipeWGui(WinUtils):
 		zd_exe = self.root.settings.get(self.root.EXE)
 		if zd_exe:
 			cmd += f' --zd "{zd_exe}"'
-		log_head = self.root.settings.get(self.root.LOG_HEAD)
-		if log_head:
-			cmd += f' --loghead "{log_head}"'
 		to_do = self.root.settings.get(self.root.TO_DO)
 		if to_do == self.root.ALL_BYTES:
 			cmd += f' --allbytes'
@@ -511,6 +509,7 @@ class WipeWGui(WinUtils):
 		file_system = self.root.settings.get(self.root.FILE_SYSTEM)
 		if (
 			target_is_pd
+			and to_do != self.root.VERIFY
 			and partition_table != self.root.DO_NOT_CREATE
 			and file_system != self.root.DO_NOT_CREATE
 		):
@@ -523,13 +522,15 @@ class WipeWGui(WinUtils):
 			drive_letter = self.root.settings.get(self.root.DRIVE_LETTER)
 			if (
 				drive_letter != self.root.NEXT_AVAILABLE
-				and not self.hdzero.drive_letter_is_free(drive_letter)
 				and askyesno(
 					title = self.root.DRIVE_LETTER_TAKEN,
 					message = self.root.USE_IT_ANYWAY
 				)
 			):
 				cmd += f' --driveletter {drive_letter}'
+			log_head = self.root.settings.get(self.root.LOG_HEAD)
+			if log_head:
+				cmd += f' --loghead "{log_head}"'
 		if self.is_physical_drive(target):
 			cmd += f' {target}'
 		else:
