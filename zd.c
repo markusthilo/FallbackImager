@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.0.1_2023-12-08";
+const char *VERSION = "0.0.1_2023-12-11";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -95,6 +95,16 @@ void set_pointer(target_t *target, const off_t offset) {
 	}
 }
 
+/* Set file pointer to 0 = beginning*/
+void reset_pointer(target_t *target) {
+	if ( lseek(target->file, 0, SEEK_SET) != 0 ) {
+		fprintf(stderr, "Error: could not point to beginning of %s\n", target->path);
+		close(target->file);
+		exit(1);
+	}
+}
+
+
 /* Check if block is wiped */
 int check_block(const uint64_t *block, const config_t *conf){
 	for (int i=0; i<conf->bs64; i++) if ( block[i] != conf->value64 ) return -1;
@@ -166,21 +176,20 @@ void write_error(target_t *target, const config_t *conf, badblocks_t *badblocks,
 
 /* Print progress */
 clock_t print_progress(const target_t *target) {
-	const clock_t onesec = 1000000 / CLOCKS_PER_SEC;
 	printf("\r...%*d%% / %*ld of%*ld bytes",
 		4, (int)((100*target->ptr)/target->size), 20, target->ptr, 20, target->size);
 	fflush(stdout);
-	return clock() + onesec;
+	return time(NULL);
 }
 
 /* Wipe target, overwrite all */
 void wipe_all(target_t *target, const config_t *conf, badblocks_t *badblocks) {
 	if ( target->size >= conf->bs ) {
-		clock_t next_second = print_progress(target);
+		clock_t now = print_progress(target);
 		for (off_t bc=0; bc<target->blocks; bc++) {
 			if ( write(target->file, conf->block, conf->bs ) != conf->bs )
 				write_error(target, conf, badblocks, conf->bs);
-			if ( clock() >= next_second ) next_second = print_progress(target);
+			if ( time(NULL) > now ) now = print_progress(target);
 			target->ptr += conf->bs;
 		}
 	}
@@ -203,11 +212,17 @@ int uint_arg(const char *value, const char arg) {
 
 /* Print time delta */
 void print_time(const time_t start_time) {
-	int delta = (clock() - start_time) / CLOCKS_PER_SEC;
-	int h = delta/3600;
-	int m = (delta - h*3600)/60;
-	int s = delta - h*3600 - m*60;
-	printf("\nProcess took %d hour(s), %d minute(s) and %d second(s)\n", h, m, s);
+	time_t delta = time(NULL) - start_time;
+	struct tm *delta_tm = localtime(&delta);
+	printf("\nProcess took ");
+	if ( delta_tm->tm_yday == 1 ) printf("1 day, ");
+	else if ( delta_tm->tm_yday > 1 ) printf("%d days, ", delta_tm->tm_yday);
+	if ( delta_tm->tm_hour == 1 ) printf("1 hour, ");
+	else if ( delta_tm->tm_hour > 1 ) printf("%d hours, ", delta_tm->tm_hour);
+	if ( delta_tm->tm_min == 1 ) printf("1 minute, ");
+	else if ( delta_tm->tm_min > 1 ) printf("%d minutes, ", delta_tm->tm_min);
+	if ( delta_tm->tm_sec == 1 ) printf("1 second\n");
+	else printf("%d seconds\n", delta_tm->tm_sec);
 }
 
 /* Main function - program starts here */
@@ -290,21 +305,21 @@ int main(int argc, char **argv) {
 	badblocks.cnt = 0;
 	badblocks.offsets = malloc(sizeof(off_t) * badblocks.max);
 	badblocks.errors = malloc(sizeof(char) * badblocks.max);
-	start_time = clock();
+	time(&start_time);
 	switch (todo) {
 		case 0:	// normal/selective wipe
 			memset(conf.block, conf.value, conf.bs);
 			printf("Wiping\n");
 			if ( target.size >= conf.bs ) {
 				uint64_t *block = malloc(conf.bs);
-				clock_t next_second = print_progress(&target);
+				clock_t now = print_progress(&target);
 				for (size_t bc=0; bc<target.blocks; bc++) {
 					if ( read(target.file, block, conf.bs) != conf.bs || check_block(block, &conf) == -1 ) {
 						set_pointer(&target, 0);	// overwrite block/page
 						if ( write(target.file, conf.block, conf.bs ) != conf.bs )
 							write_error(&target, &conf, &badblocks, conf.bs);
 					}
-					if ( clock() >= next_second ) next_second = print_progress(&target);
+					if ( time(NULL) > now ) now = print_progress(&target);
 					target.ptr += conf.bs;
 				}
 				if ( target.leftbytes > 0 ) {
@@ -330,24 +345,28 @@ int main(int argc, char **argv) {
 			printf("Wiping, pass 1 of 2\n");
 			wipe_all(&target, &conf, &badblocks);
 			print_time(start_time);
-			start_time = clock();
-			set_pointer(&target, 0);
+			time(&start_time);
+			target.ptr = 0;
+			reset_pointer(&target);
 			badblocks.cnt = 0;
 			memset(conf.block, conf.value, conf.bs);
 			printf("Wiping, pass 2 of 2\n");
 			wipe_all(&target, &conf, &badblocks);
+			break;
+		case 3:	// verify
+			memset(conf.block, conf.value, conf.bs);
 	}
 	if ( todo != 3 ) {
 		print_time(start_time);
-		start_time = clock();
+		time(&start_time);
+		target.ptr = 0;
+		reset_pointer(&target);
 	}
 	printf("Verifying\n");	// verification pass
-	target.ptr = 0;
-	set_pointer(&target, 0);
 	badblocks.cnt = 0;
 	if ( target.size >= conf.bs ) {
 		uint64_t *block = malloc(conf.bs);
-		clock_t next_second = print_progress(&target);
+		clock_t now = print_progress(&target);
 		for (off_t bc=0; bc<target.blocks; bc++) {
 			if ( read(target.file, block, conf.bs) != conf.bs
 				&& read_error(&target, &conf, &badblocks, conf.bs) == -1 ) {
@@ -355,7 +374,7 @@ int main(int argc, char **argv) {
 				continue;
 			}
 			if ( check_block(block, &conf) == -1 ) wipe_error(&target, &badblocks, conf.bs);
-			if ( clock() >= next_second ) next_second = print_progress(&target);
+			if ( time(NULL) > now ) now = print_progress(&target);
 			target.ptr += conf.bs;
 		}
 	}
