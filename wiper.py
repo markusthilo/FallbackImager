@@ -18,6 +18,8 @@ Be aware that this module is extremely dangerous as it is designed to erase data
 '''
 
 from sys import executable as __executable__
+from time import sleep
+from subprocess import Popen, PIPE
 from pathlib import Path
 from functools import partial
 from argparse import ArgumentParser
@@ -98,32 +100,35 @@ class WipeR:
 				head = 'wiper.WipeR',
 				echo = self.echo
 			)
-		if targets[0].is_block_device():
+		if Path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
-		cmd = f'{__zd_path__}'
+		cmd = [f'{__zd_path__}']
 		if blocksize:
-			cmd += f' -b {blocksize}'
+			cmd.extend(['-b',  blocksize])
 		if value:
-			cmd += f' -f {value}'
+			cmd.extend(['-f', value])
 		if maxbadblocks:
-			cmd += f' -m {maxbadblocks}'
+			cmd.extend(['-m', maxbadblocks])
 		if maxretries:
-			cmd += f' -r {maxretries}'
+			cmd.extend(['-r', maxretries])
 		if verify:
-			cmd += ' -v'
+			cmd.append('-v')
 		elif allbytes:
-			cmd += ' -a'
+			cmd.append('-a')
 		elif extra:
-			cmd += ' -x'
+			cmd.append('-x')
 		if self.echo == print:
 			echo = lambda msg: print(f'\r{msg}', end='')
 		else:
 			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		self.zd_error = False
+
+		return
+
 		for target in targets:
 			self.echo()
-			proc = self.cmd_launch(f'{cmd} ' + str(target).rstrip('\\'))
+			proc = Popen(cmd + [target], stdout=PIPE, stderr=PIPE, text=True)
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg:
@@ -149,22 +154,38 @@ class WipeR:
 			loghead = __parent_path__/'wipe-head.txt'
 		if not name:
 			name = 'Volume'
-		driveletter = self.create_partition(target,
-			label = name,
-			driveletter = driveletter,
-			mbr = mbr,
-			fs = fs
-		)
-		if not driveletter:
-			self.log.error('Could not assign a letter to the wiped drive')
+		stdout, stderr = LinUtils.init_dev(target, mbr=mbr, fs=fs)
+		if stderr:
+			self.log.warning(stderr, echo=True)
+		for retry in range(10):
+			sleep(1)
+			stdout, stderr = LinUtils.lsblk(target)
+			try:
+				partition = stdout[1]['path']
+				break
+			except IndexError:
+				if retry < 9:
+					continue
+				self.log.error('Could not create new partition')
+		stdout, stderr = LinUtils.mkfs(partition, fs=fs, label=name)
+		if stderr:
+			self.log.warning(stderr, echo=True)
+		mnt = ExtPath.mkdir(self.outdir/'mnt')
+		stdout, stderr = LinUtils.mount(partition, mnt)
+		if stderr:
+			self.log.error(stderr)
 		self.log.close()
-		log_path = Path(f'{driveletter}:\\wipe-log.txt')
+		log_path = mnt/'wipe-log.txt'
 		try:
 			head = loghead.read_text()
 		except FileNotFoundError:
 			head = ''
 		with log_path.open('w') as fh:
 			fh.write(head + self.log.path.read_text())
+		stdout, stderr = LinUtils.umount(mnt)
+		if stderr:
+			raise RuntimeError(stderr)
+		mnt.rmdir()
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -239,7 +260,7 @@ class WipeRCli(ArgumentParser):
 		'''Run zd'''
 		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
-		wiper = WipeW(self.targets,
+		wiper = WipeR(self.targets,
 			allbytes = self.allbytes,
 			blocksize = self.blocksize,
 			maxbadblocks = self.maxbadblocks,
@@ -248,7 +269,6 @@ class WipeRCli(ArgumentParser):
 			value = self.value,
 			verify = self.verify,
 			extra = self.extra,
-			zd = self.zd,
 			echo = echo
 		)
 		if self.create:
@@ -258,7 +278,6 @@ class WipeRCli(ArgumentParser):
 				wiper.log.error('Wipe process terminated with errors, no partition will be created')
 			wiper.mkfs(self.targets[0],
 				fs = self.create,
-				driveletter = self.driveletter,
 				loghead = self.loghead,
 				mbr = self.mbr,
 				name = self.name
