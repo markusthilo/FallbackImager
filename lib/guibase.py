@@ -11,7 +11,7 @@ from .guihelp import Help
 
 class GuiBase(Tk):
 
-	def __init__(self, name, version, icon_path, settings_path, not_admin=None, debug=False):
+	def __init__(self, name, version, icon_path, settings_path, not_admin=None, os_name='nt', debug=False):
 		'''Add stuff to Tk'''
 		self.app_name = name
 		self.version = version
@@ -25,7 +25,8 @@ class GuiBase(Tk):
 			title += f' ({not_admin})'
 		self.title(title)
 		self.resizable(0, 0)
-		self.iconbitmap(self.icon_path)
+		if os_name == 'nt':
+			self.iconbitmap(self.icon_path)
 		self.protocol('WM_DELETE_WINDOW', self.quit_app)
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.AVAILABLE_MODULES)

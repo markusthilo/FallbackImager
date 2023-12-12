@@ -3,14 +3,14 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-11'
+__version__ = '0.3.0_2023-12-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
 This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
 
-In this testing state only Windows (10/11) is supported. It is work in progress.
+This is work in progress.
 '''
 
 from pathlib import Path
@@ -19,19 +19,19 @@ from os import name as __os_name__
 from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
-from mkisoimager import MkIsoImagerGui, MkIsoImagerCli
-from oscdimager import OscdimgGui, OscdimgCli
 from isoverify import IsoVerifyGui, IsoVerifyCli
-from dismimager import DismImagerGui, DismImagerCli
 from zipimager import ZipImagerGui, ZipImagerCli
 from axchecker import AxCheckerGui, AxCheckerCli
-from wipew import WipeWGui, WipeWCli
 from sqlite import SQLiteGui, SQLiteCli
 
 ### MODULES, SYSTEM AND SYSTEM REALTED SETTINGS ###
 __not_admin__ = None
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
+	from mkisoimager import MkIsoImagerGui, MkIsoImagerCli
+	from oscdimager import OscdimgGui, OscdimgCli
+	from dismimager import DismImagerGui, DismImagerCli
+	from wipew import WipeWGui, WipeWCli
 	if IsUserAnAdmin():
 		__modules__ = {
 			MkIsoImagerGui: MkIsoImagerCli,
@@ -54,12 +54,13 @@ if __os_name__ == 'nt':
 		}
 		__not_admin__ = 'No Admin Privileges'
 else:
+		from wiper import WipeRGui, WipeRCli
 		__modules__ = {
-			MkIsoImagerGui: MkIsoImagerCli,
 			IsoVerifyGui: IsoVerifyCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
-			AxCheckerGui: AxCheckerCli
+			AxCheckerGui: AxCheckerCli,
+			WipeRGui: WipeRCli
 		}
 __executable__ = Path(__executable__)
 __file__ = Path(__file__)
@@ -233,6 +234,7 @@ class Gui(GuiBase):
 		'''Build GUI'''
 		super().__init__(__app_name__,__version__, __icon_path__, __settings_path__,
 			not_admin = __not_admin__,
+			os_name = __os_name__,
 			debug = debug
 		)
 
