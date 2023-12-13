@@ -8,13 +8,29 @@ class LinUtils:
 	'Use command line tools'
 
 	@staticmethod
-	def lsblk(dev=None):
-		'''Use lsblk with JSON output'''
-		cmd = ['lsblk', '--json', '-o', 'PATH,LABEL,SIZE,TYPE,FSTYPE,MOUNTPOINTS']
-		if dev:
-			cmd.append(dev)
-		ret = run(cmd, capture_output=True, text=True)
-		return loads(ret.stdout)['blockdevices'], ret.stderr
+	def lsdisk():
+		'''Use lsblk with JSON output to get disks'''
+		return [dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
+			capture_output=True, text=True).stdout)['blockdevices']
+			if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
+		]
+
+	@staticmethod
+	def lspart(dev):
+		'''Use lsblk with JSON output to get partitions'''
+		return [dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE', f'{dev}'],
+			capture_output=True, text=True).stdout)['blockdevices']
+			if dev['type'] == 'part'
+		]
+
+	@staticmethod
+	def diskinfo(dev):
+		'''Use lsblk with JSON output to get infos about a disk'''
+		return [(dev['path'], dev['label'], dev['size'], dev['mountpoints'])
+			for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] == 'part'
+		]
 
 	@staticmethod
 	def init_dev(dev, mbr=False, fs='ntfs'):
@@ -53,15 +69,13 @@ class LinUtils:
 	@staticmethod
 	def mount(dev, target):
 		'''Use mount'''
-		ret = run(['mount', f'{dev}', f'{target}'], capture_output=True, text=True)
-		return ret.stdout, ret.stderr
+		return run(['mount', f'{dev}', f'{target}'], capture_output=True, text=True).stderr
 
 	@staticmethod
 	def umount(target):
 		'''Use umount'''
 		run(['sync'], check=True)
-		ret = run(['umount', f'{target}'], capture_output=True, text=True)
-		return ret.stdout, ret.stderr
+		return run(['umount', f'{target}'], capture_output=True, text=True).stderr
 
 
 

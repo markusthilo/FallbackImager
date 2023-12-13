@@ -317,7 +317,7 @@ class ChildWindow(Toplevel):
 		super().__init__(root)
 		self.title(title)
 		self.resizable(0, 0)
-		self.iconbitmap(root.icon_path)
+		self.iconphoto(True, root.appicon)
 		self.protocol('WM_DELETE_WINDOW', self.destroy)
 		root.child_win_active = True
 		self.root = root

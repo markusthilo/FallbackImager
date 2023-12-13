@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-12'
+__version__ = '0.3.0_2023-12-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -70,7 +70,7 @@ if __executable__.stem.lower() == __file__.stem.lower():
 else:
 	__app_name__ = __file__.stem
 	__parent_path__ = __file__.parent
-__icon_path__ = __parent_path__/'appicon.ico'
+__icon_path__ = __parent_path__/'appicon.png'
 __settings_path__ = __parent_path__/'settings.json'
 ###############
 

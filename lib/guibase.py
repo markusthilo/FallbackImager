@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter import Tk
+from tkinter import Tk, PhotoImage
 from tkinter.messagebox import askyesno
 from .settings import Settings
 from .worker import Worker
@@ -16,7 +16,6 @@ class GuiBase(Tk):
 		self.app_name = name
 		self.version = version
 		self.debug = debug
-		self.icon_path = icon_path
 		self.settings = Settings(settings_path)
 		self.worker = None
 		super().__init__()
@@ -25,8 +24,8 @@ class GuiBase(Tk):
 			title += f' ({not_admin})'
 		self.title(title)
 		self.resizable(0, 0)
-		if os_name == 'nt':
-			self.iconbitmap(self.icon_path)
+		self.appicon = PhotoImage(file=icon_path)
+		self.iconphoto(True, self.appicon)
 		self.protocol('WM_DELETE_WINDOW', self.quit_app)
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.AVAILABLE_MODULES)

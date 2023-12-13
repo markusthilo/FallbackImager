@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-12-11'
+__version__ = '0.0.1_2023-12-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -51,6 +51,7 @@ for __zd_exe_path__ in (
 		break
 else:
 	__zd_exe_path__ = None
+__wipe_log_head__ = __parent_path__/'wipe-log-head.txt'
 
 class WipeW(WinUtils):
 	'''Frontend and Python wrapper for zd-win.exe'''
@@ -160,7 +161,7 @@ class WipeW(WinUtils):
 		if loghead:
 			loghead = Path(loghead)
 		else:
-			loghead = __parent_path__/'wipe-head.txt'
+			loghead = __wipe_log_head__
 		if not name:
 			name = 'Volume'
 		driveletter = self.create_partition(target,
@@ -363,8 +364,7 @@ class WipeWGui(WinUtils):
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
-			default=__parent_path__/'hdzero_log_head.txt',
-			command=self._notepad_log_head, columnspan=8)
+			default=__wipe_log_head__, command=self._notepad_log_head, columnspan=8)
 		FileSelector(root, frame, root.EXE, root.EXE, root.SELECT_EXE,
 			filetype=(root.EXE, '*.exe'), default=__zd_exe_path__, columnspan=8)
 		GridSeparator(root, frame)

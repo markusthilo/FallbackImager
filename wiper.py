@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-12-12'
+__version__ = '0.0.1_2023-12-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -54,6 +54,7 @@ for __zd_path__ in (
 		break
 else:
 	raise FileNotFoundError('Unable to locate zd')
+__wipe_log_head__ = __parent_path__/'wipe-log-head.txt'
 
 class WipeR:
 	'''Frontend and Python wrapper for zd'''
@@ -151,27 +152,24 @@ class WipeR:
 		if loghead:
 			loghead = Path(loghead)
 		else:
-			loghead = __parent_path__/'wipe-head.txt'
+			loghead = __wipe_log_head__
 		if not name:
 			name = 'Volume'
 		stdout, stderr = LinUtils.init_dev(target, mbr=mbr, fs=fs)
 		if stderr:
 			self.log.warning(stderr, echo=True)
 		for retry in range(10):
-			sleep(1)
-			stdout, stderr = LinUtils.lsblk(target)
-			try:
-				partition = stdout[1]['path']
+			partitions = LinUtils.lspart(target)
+			if partitions:
+				partition = partitions[0]
 				break
-			except IndexError:
-				if retry < 9:
-					continue
+			if retry == 9:
 				self.log.error('Could not create new partition')
 		stdout, stderr = LinUtils.mkfs(partition, fs=fs, label=name)
 		if stderr:
 			self.log.warning(stderr, echo=True)
 		mnt = ExtPath.mkdir(self.outdir/'mnt')
-		stdout, stderr = LinUtils.mount(partition, mnt)
+		stderr = LinUtils.mount(partition, mnt)
 		if stderr:
 			self.log.error(stderr)
 		self.log.close()
@@ -182,7 +180,7 @@ class WipeR:
 			head = ''
 		with log_path.open('w') as fh:
 			fh.write(head + self.log.path.read_text())
-		stdout, stderr = LinUtils.umount(mnt)
+		stderr = LinUtils.umount(mnt)
 		if stderr:
 			raise RuntimeError(stderr)
 		mnt.rmdir()
@@ -296,7 +294,7 @@ class WipeRGui:
 	DEF_MAXRETRIES = '200'
 	TABLES = ('GPT', 'MBR')
 	DEF_TABLE = 'GPT'
-	FS = ('NTFS', 'exFAT', 'FAT32')
+	FS = ('NTFS', 'exFAT', 'FAT32', 'Ext4')
 	DEF_FS = 'NTFS'
 
 	def __init__(self, root):
@@ -322,7 +320,6 @@ class WipeRGui:
 		GridLabel(root, frame, root.ALL_BYTES, column=1)
 		GridLabel(root, frame, root.EXTRA_PASS, column=1)
 		GridLabel(root, frame, root.VERIFY, column=1)
-		''''
 		root.row -= 4
 		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
 			default=self.DEF_BLOCKSIZE, column=3)
@@ -332,11 +329,6 @@ class WipeRGui:
 		root.row -= 1
 		GridStringMenu(root, frame, root.FILE_SYSTEM, root.FILE_SYSTEM,
 			([root.DO_NOT_CREATE] + list(self.FS)), default=self.DEF_FS, column=6)
-		root.row -= 1
-		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
-			([root.NEXT_AVAILABLE] + self.get_free_letters()),
-			default=root.NEXT_AVAILABLE, column=8)
-		root.row += 1
 		StringSelector(root, frame, root.VALUE, root.VALUE, default=self.DEF_VALUE,
 			width=root.SMALL_FIELD_WIDTH, column=3)
 		root.row -= 1
@@ -350,11 +342,8 @@ class WipeRGui:
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
-			default=__parent_path__/'hdzero_log_head.txt',
-			command=self._notepad_log_head, columnspan=8)
-		FileSelector(root, frame, root.EXE, root.EXE, root.SELECT_EXE,
-			filetype=(root.EXE, '*.exe'), default=__zd_exe_path__, columnspan=8)
-		'''
+			default=__wipe_log_head__,
+			command=self._default_head, columnspan=8)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
@@ -363,10 +352,10 @@ class WipeRGui:
 		self.root = root
 		self.filenames = None
 
-	def _notepad_log_head(self):
+	def _default_head(self):
 		'''Edit log header file with Notepad'''
-		proc = Popen(['notepad', self.root.settings.get(self.root.LOG_HEAD, section=self.CMD)])
-		proc.wait()
+		self.root.settings.section = self.CMD
+		self.root.settings.raw(self.root.LOG_HEAD).set(__wipe_log_head__)
 
 	def _select_target(self):
 		'''Select drive to wipe'''
@@ -377,14 +366,14 @@ class WipeRGui:
 		frame = ExpandedFrame(self.root, self.target_window)
 		self.root.row = 0
 		GridLabel(self.root, frame, self.root.SELECT_DRIVE)
-		for drive_id, drive_info in WinUtils().list_drives():
-			Button(frame, text=drive_id, command=partial(self._put_drive, drive_id)).grid(
+		for disk in LinUtils.lsdisk():
+			Button(frame, text=disk, command=partial(self._put_drive, disk)).grid(
 				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
 			text = ScrolledText(frame, width=self.root.ENTRY_WIDTH,
-				height=min(len(drive_info.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
+				height=min(len(f'{dev}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
 			text.grid(row=self.root.row, column=1)
 			text.bind('<Key>', lambda dummy: 'break')
-			text.insert('end', f'{drive_id} - {drive_info}')
+			text.insert('end', f'{disk}')
 			text.configure(state='disabled')
 			self.root.row += 1
 		frame = ExpandedFrame(self.root, self.target_window)
