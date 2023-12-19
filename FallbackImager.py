@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-13'
+__version__ = '0.3.0_2023-12-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -19,24 +19,32 @@ from os import name as __os_name__
 from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
-from isoverify import IsoVerifyGui, IsoVerifyCli
-from zipimager import ZipImagerGui, ZipImagerCli
-from axchecker import AxCheckerGui, AxCheckerCli
-from sqlite import SQLiteGui, SQLiteCli
+from isoverify import IsoVerifyCli
+from lib.isoverifygui import IsoVerifyGui
+from zipimager import ZipImagerCli
+from lib.zipimagergui import ZipImagerGui
+from axchecker import AxCheckerCli
+from lib.axcheckergui import AxCheckerGui
+from sqlite import SQLiteCli
+from lib.sqlitegui import SQLiteGui
 
 ### MODULES, SYSTEM AND SYSTEM REALTED SETTINGS ###
 __not_admin__ = None
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
-	from mkisoimager import MkIsoImagerGui, MkIsoImagerCli
-	from oscdimager import OscdimgGui, OscdimgCli
-	from dismimager import DismImagerGui, DismImagerCli
-	from wipew import WipeWGui, WipeWCli
+	from mkisoimager import MkIsoImagerCli
+	from lib.mkisoimagergui import MkIsoImagerGui
+	from oscdimager import OscdImagerCli
+	from lib.oscdimagergui import OscdImagerGui
+	from dismimager import DismImagerCli
+	from lib.dismimagergui import DismImagerGui
+	from wipew import WipeWCli
+	from lib.wipewgui import WipeWGui
 	if IsUserAnAdmin():
 		__modules__ = {
-			MkIsoImagerGui: MkIsoImagerCli,
-			OscdimgGui: OscdimgCli,
-			IsoVerifyGui: IsoVerifyCli,
+		#	MkIsoImagerGui: MkIsoImagerCli,
+		#	OscdImagerGui: OscdImagerCli,
+		#	IsoVerifyGui: IsoVerifyCli,
 			DismImagerGui: DismImagerCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
@@ -45,33 +53,31 @@ if __os_name__ == 'nt':
 		}
 	else:
 		__modules__ = {
-			MkIsoImagerGui: MkIsoImagerCli,
-			OscdimgGui: OscdimgCli,
-			IsoVerifyGui: IsoVerifyCli,
+		#	MkIsoImagerGui: MkIsoImagerCli,
+		#	OscdimgGui: OscdimgCli,
+		#	IsoVerifyGui: IsoVerifyCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli
 		}
 		__not_admin__ = 'No Admin Privileges'
 else:
-		from wiper import WipeRGui, WipeRCli
+		from wiper import WipeRCli
+		from lib.wipergui import WipeRGui
 		__modules__ = {
-			IsoVerifyGui: IsoVerifyCli,
+		#	MkIsoImagerGui: MkIsoImagerCli,
+		#	IsoVerifyGui: IsoVerifyCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli,
-			WipeRGui: WipeRCli
+		#	WipeRGui: WipeRCli
 		}
 __executable__ = Path(__executable__)
 __file__ = Path(__file__)
 if __executable__.stem.lower() == __file__.stem.lower():
-	__app_name__ = __executable__.stem
 	__parent_path__ = __executable__.parent
 else:
-	__app_name__ = __file__.stem
 	__parent_path__ = __file__.parent
-__icon_path__ = __parent_path__/'appicon.png'
-__settings_path__ = __parent_path__/'settings.json'
 ###############
 
 class Gui(GuiBase):
@@ -91,6 +97,10 @@ class Gui(GuiBase):
 	BUTTON_WIDTH = 16
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
+	NOT_ADMIN = 'No Admin Privileges'
+	FATAL_ERROR = 'Fatal error'
+	MODULE_ERROR = 'Unable to load any module'
+	ERROR = 'Error'
 	AVAILABLE_MODULES = 'Available modules:'
 	HELP = 'Help'
 	JOBS = 'Jobs'
@@ -232,9 +242,8 @@ class Gui(GuiBase):
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
-		super().__init__(__app_name__,__version__, __icon_path__, __settings_path__,
+		super().__init__(__app_name__,__version__, __parent_path__,
 			not_admin = __not_admin__,
-			os_name = __os_name__,
 			debug = debug
 		)
 

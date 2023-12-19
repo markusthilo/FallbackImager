@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from tkinter import Tk, PhotoImage
-from tkinter.messagebox import askyesno
+from tkinter.messagebox import askyesno, showerror
 from .settings import Settings
 from .worker import Worker
 from .guielements import ExpandedNotebook, ExpandedFrame
@@ -11,27 +11,39 @@ from .guihelp import Help
 
 class GuiBase(Tk):
 
-	def __init__(self, name, version, icon_path, settings_path, not_admin=None, os_name='nt', debug=False):
+	def __init__(self, name, version, parent_path, not_admin=False, debug=False):
 		'''Add stuff to Tk'''
 		self.app_name = name
 		self.version = version
 		self.debug = debug
-		self.settings = Settings(settings_path)
+		self.settings = Settings(parent_path/'fisettings.json')
 		self.worker = None
+		self.parent_path = parent_path
 		super().__init__()
 		title = f'{self.app_name} v{self.version}'
 		if not_admin:
-			title += f' ({not_admin})'
+			title += f' ({self.NOT_ADMIN})'
 		self.title(title)
 		self.resizable(0, 0)
-		self.appicon = PhotoImage(file=icon_path)
+		self.appicon = PhotoImage(file=parent_path/'appicon.png')
 		self.iconphoto(True, self.appicon)
 		self.protocol('WM_DELETE_WINDOW', self.quit_app)
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.AVAILABLE_MODULES)
 		RightButton(self, frame, self.HELP, self.show_help)	
 		self.notebook = ExpandedNotebook(self)
-		self.imagers = [ImagerGui(self) for ImagerGui in self.IMAGERS]
+		self.imagers = list()
+		for ImagerGui in self.IMAGERS:
+			try:
+				self.imagers.append(ImagerGui(self))
+			except RuntimeError:
+				pass
+		if len(self.imagers) < 1:
+			showerror(
+				title = self.FATAL_ERROR,
+				message = self.MODULE_ERROR
+			)
+			raise ImportError(self.MODULE_ERROR)
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.JOBS)
 		self.rm_last_job_button = RightButton(self,

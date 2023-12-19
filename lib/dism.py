@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from subprocess import Popen, PIPE, STARTUPINFO, STARTF_USESHOWWINDOW
-from .timestamp import TimeStamp
+from pathlib import Path
+from lib.timestamp import TimeStamp
 
 class Dism(Popen):
 	'''Dism via subprocess'''

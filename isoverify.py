@@ -3,7 +3,7 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.3_2023-11-23'
+__version__ = '0.3.0_2023-12-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -23,9 +23,6 @@ from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
 from lib.fsreader import FsReader
-from lib.guielements import ExpandedFrame, SourceDirSelector, GridSeparator, GridLabel
-from lib.guielements import FilenameSelector, DirSelector, FileSelector
-from lib.guielements import StringRadiobuttons, GridButton, GridBlank
 
 class IsoReader(PyCdlib):
 	'''Use PyCdlib to get UDF from ISO'''
@@ -34,6 +31,9 @@ class IsoReader(PyCdlib):
 		'''Get UDF fyle system structure, files and dirs'''
 		self.path = path
 		super().__init__()
+		
+		print('DEBUG', self.path, type(self.path))
+		
 		self.open(self.path)
 		self.files_posix = set()
 		self.dirs_posix = set()
@@ -72,8 +72,12 @@ class CompareIsoFs:
 class IsoVerify:
 	'''Verification'''
  
-	def __init__(self, root,
-		imagepath = None,
+	def __init__(self):
+		'''Generate object'''
+		pass
+
+	def verify(self, root,
+		image = None,
 		drop = GrepLists.false,
 		filename = None,
 		outdir = None,
@@ -85,8 +89,8 @@ class IsoVerify:
 		self.drop = drop
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
-		if imagepath:
-			self.image_path = Path(imagepath)
+		if image:
+			self.image_path = Path(image)
 		else:
 			self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		self.echo = echo
@@ -95,9 +99,6 @@ class IsoVerify:
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head=f'isoverify.IsoVerify', echo=echo)
-
-	def posix_verify(self):
-		'''Verify by Posix paths'''
 		self.log.info(f'Reading UDF file system from {self.image_path}', echo=True)
 		iso = IsoReader(self.image_path)
 		with ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir).open('w') as fh:
@@ -125,9 +126,9 @@ class IsoVerify:
 class IsoVerifyCli(ArgumentParser):
 	'''CLI for IsoVerify'''
 
-	def __init__(self,description=__description__, **kwargs):
+	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
-		super().__init__(**kwargs)
+		super().__init__(description=__description__, prog=__app_name__.lower(), **kwargs)
 		self.add_argument('-b', '--blacklist', type=ExtPath.path,
 			help='Blacklist (textfile with one regex per line)', metavar='FILE'
 		)
@@ -154,7 +155,7 @@ class IsoVerifyCli(ArgumentParser):
 		self.blacklist = args.blacklist
 		self.filename = args.filename
 		self.outdir = args.outdir
-		self.imagepath = args.image
+		self.image = args.image
 		self.whitelist = args.whitelist
 
 	def run(self, echo=print):
@@ -162,109 +163,15 @@ class IsoVerifyCli(ArgumentParser):
 		if self.blacklist and self.whitelist:
 			raise ValueError('Unable to wirk with blacklist and whitelist at the same time')
 		drop = GrepLists(blacklist=self.blacklist, whitelist=self.whitelist).get_method()
-		image = IsoVerify(self.root,
-			imagepath = self.imagepath,
+		ver = IsoVerify()
+		ver.verify(self.root,
+			image = self.image,
 			filename = self.filename,
 			outdir = self.outdir,
 			drop = drop,
 			echo = echo
 		)
-		image.posix_verify()
-		image.log.close()
-
-class IsoVerifyGui:
-	'''Notebook page'''
-	CMD = __app_name__
-	DESCRIPTION = __description__
-
-	def __init__(self, root):
-		'''Notebook page'''
-		root.settings.init_section(self.CMD)
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.ISO_IMAGE)
-		FileSelector(root, frame,
-			root.IMAGE, root.IMAGE, root.SELECT_IMAGE, filetype=('ISO files', '*.iso'))
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION)
-		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.SKIP_PATH_CHECK)
-		StringRadiobuttons(root, frame, root.REGEXFILTER,
-			(root.NO_FILTER, root.BLACKLIST, root.WHITELIST), root.NO_FILTER)
-		GridLabel(root, frame, root.CHECK_ALL_PATHS, column=2)
-		FileSelector(root, frame,
-			root.BLACKLIST, root.BLACKLIST, root.SELECT_BLACKLIST, command=self._select_blacklist)
-		FileSelector(root, frame,
-			root.WHITELIST, root.WHITELIST, root.SELECT_WHITELIST, command=self._select_whitelist)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
-			column=0, columnspan=3)
-		self.root = root
-
-	def _select_blacklist(self):
-		'''Select blacklist'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.REGEXFILTER).set(self.root.BLACKLIST)
-
-	def _select_whitelist(self):
-		'''Select whitelist'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.REGEXFILTER).set(self.root.WHITELIST)
-
-	def _add_job(self):
-		'''Generate command line'''
-		self.root.settings.section = self.CMD
-		source = self.root.settings.get(self.root.SOURCE)
-		image = self.root.settings.get(self.root.IMAGE)
-		outdir = self.root.settings.get(self.root.OUTDIR)
-		filename = self.root.settings.get(self.root.FILENAME)
-		blacklist = self.root.settings.get(self.root.BLACKLIST)
-		whitelist = self.root.settings.get(self.root.WHITELIST)
-		if not source:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCE_REQUIRED
-			)
-			return
-		if not image:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.ISO_REQUIRED
-			)
-			return
-		if not outdir:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_DIR_REQUIRED
-			)
-			return
-		if not filename:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_FN_REQUIRED
-			)
-			return
-		cmd = self.root.settings.section.lower()
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		cmd += f' --imagepath "{image}"'
-		path_filter = self.root.settings.get(self.root.REGEXFILTER)
-		if path_filter == self.root.BLACKLIST:
-			blacklist = self.root.settings.get(self.root.BLACKLIST)
-			if blacklist:
-				cmd += f' --{self.root.BLACKLIST.lower()} "{blacklist}"'
-		elif path_filter == self.root.WHITELIST:
-			whitelist = self.root.settings.get(self.root.WHITELIST)
-			if whitelist:
-				cmd += f' --{self.root.WHITELIST.lower()} "{whitelist}"'
-		cmd += f' "{source}"'
-		self.root.append_job(cmd)
+		ver.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = IsoVerifyCli()

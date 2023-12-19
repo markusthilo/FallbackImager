@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.3_2023-11-23'
+__version__ = '0.3.0_2023-12-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -20,40 +20,13 @@ from lib.tsvreader import TsvReader
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
-from lib.guielements import BasicFilterTab
 
 class ZipImager:
 	'''Imager using ZipFile'''
 
-	def __init__(self, root,
-		flat = False,
-		filelist = None,
-		column = 1,
-		nohead = False,
-		drop = GrepLists.false,
-		filename = None,
-		outdir = None,
-		echo = print,
-		log = None
-	):
-		'''Prepare to create zip file'''
-		self.echo = echo
-		self.root_path = Path(root)
-		self.flat = flat
-		self.filelist = filelist
-		self.column = column
-		self.nohead = nohead
-		self.drop = drop
-		self.filename = TimeStamp.now_or(filename)
-		self.outdir = ExtPath.mkdir(outdir)
-		self.image_path = ExtPath.child(f'{self.filename}.zip', parent=self.outdir)
-		self.files_path = ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir)
-		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(filename=self.filename, outdir=self.outdir,
-				head='zipimager.ZipImager', echo=echo)
+	def __init__(self):
+		'''Create object'''
+		pass
 
 	def _write_flat(self, path, relative, zf, files_fh, dropped_fh, file_cnt, dropped_cnt):
 		'''Write ZIP with flattened structure'''
@@ -76,8 +49,35 @@ class ZipImager:
 			print(f'{relative}\tdropped_by_zip', file=dropped_fh)
 			return file_cnt, dropped_cnt + 1
 
-	def create(self):
+	def create(self, root,
+		flat = False,
+		filelist = None,
+		column = 1,
+		nohead = False,
+		drop = GrepLists.false,
+		filename = None,
+		outdir = None,
+		echo = print,
+		log = None
+	):
 		'''Create zip file'''
+		self.echo = echo
+		self.root_path = Path(root)
+		self.flat = flat
+		self.filelist = filelist
+		self.column = column
+		self.nohead = nohead
+		self.drop = drop
+		self.filename = TimeStamp.now_or(filename)
+		self.outdir = ExtPath.mkdir(outdir)
+		self.image_path = ExtPath.child(f'{self.filename}.zip', parent=self.outdir)
+		self.files_path = ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir)
+		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
+		if log:
+			self.log = log
+		else:
+			self.log = Logger(filename=self.filename, outdir=self.outdir,
+				head='zipimager.ZipImager', echo=echo)
 		self.echo('Creating Zip file')
 		file_cnt = 0
 		dropped_cnt = 0
@@ -122,9 +122,9 @@ class ZipImager:
 class ZipImagerCli(ArgumentParser):
 	'''CLI for the imager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self):
 		'''Define CLI using argparser'''
-		super().__init__(**kwargs)
+		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
 		self.add_argument('-b', '--blacklist', type=ExtPath.path,
 			help='Blacklist (textfile with one regex per line)', metavar='FILE'
 		)
@@ -168,7 +168,8 @@ class ZipImagerCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		image = ZipImager(self.root,
+		imager = ZipImager()
+		imager.create(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
 			filelist = self.filelist,
@@ -178,17 +179,9 @@ class ZipImagerCli(ArgumentParser):
 			drop = GrepLists(blacklist=self.blacklist, whitelist=self.whitelist).get_method(),
 			echo = echo
 		)
-		image.create()
-		image.log.close()
-
-class ZipImagerGui(BasicFilterTab):
-	'''Notebook page'''
-	CMD = __app_name__
-	DESCRIPTION = __description__
-	def __init__(self, root):
-		super().__init__(root)
+		imager.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = ZipImagerCli(description=__description__.strip())
+	app = ZipImagerCli()
 	app.parse()
 	app.run()
