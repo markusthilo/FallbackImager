@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-15'
+__version__ = '0.3.0_2023-12-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -39,17 +39,6 @@ if __executable__.stem.lower() == __file__.stem.lower():
 	__parent_path__ = __executable__.parent
 else:
 	__parent_path__ = __file__.parent
-for __zd_path__ in (
-		__parent_path__/'zd',
-		__parent_path__/'bin'/'zd',
-		Path('/usr/bin/zd'),
-		Path('/usr/local/bin/zd')
-	):
-	if __zd_path__.is_file():
-		break
-else:
-	raise FileNotFoundError('Unable to locate zd')
-__wipe_log_head__ = __parent_path__/'wipe-log-head.txt'
 
 class WipeR:
 	'''Frontend and Python wrapper for zd'''
@@ -58,7 +47,20 @@ class WipeR:
 	STD_BLOCKSIZE = 4096
 	MAX_BLOCKSIZE = 32768
 
-	def __init__(self, targets,
+	def __init__(self):
+		'''Create Object'''
+		for self.zd_path in (
+			__parent_path__/'bin/zd',
+			__parent_path__/'zd',
+			Path('/usr/bin/zd'),
+			Path('/usr/local/bin/zd')
+		):
+			if self.zd_path.is_file():
+				break
+		if not self.zd_path.is_file():
+			raise RuntimeError('Uanbale to locate zd binary')
+
+	def wipe(self, targets,
 			verify = False,
 			allbytes = False,
 			extra = False,
@@ -99,15 +101,15 @@ class WipeR:
 		if Path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
-		cmd = [f'{__zd_path__}']
+		cmd = [f'{self.zd_path}']
 		if blocksize:
-			cmd.extend(['-b',  blocksize])
+			cmd.extend(['-b', f'{blocksize}'])
 		if value:
-			cmd.extend(['-f', value])
+			cmd.extend(['-f', f'{value}'])
 		if maxbadblocks:
-			cmd.extend(['-m', maxbadblocks])
+			cmd.extend(['-m', f'{maxbadblocks}'])
 		if maxretries:
-			cmd.extend(['-r', maxretries])
+			cmd.extend(['-r', f'{maxretries}'])
 		if verify:
 			cmd.append('-v')
 		elif allbytes:
@@ -118,24 +120,19 @@ class WipeR:
 			echo = lambda msg: print(f'\r{msg}', end='')
 		else:
 			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
-		self.zd_error = False
-
-		return
-
 		for target in targets:
 			self.echo()
 			proc = Popen(cmd + [target], stdout=PIPE, stderr=PIPE, text=True)
 			for line in proc.stdout:
 				msg = line.strip()
-				if msg:
-					if msg.startswith('...'):
-						echo(msg)
-					else:
-						self.log.info(msg)
-						self.echo(f'\n{msg}')
+				if msg.startswith('...'):
+					echo(msg)
+				elif msg == '':
+					self.echo('')
+				else:
+					self.log.info(msg, echo=True)
 			if stderr := proc.stderr.read():
-				self.log.warning(stderr)
-				self.zd_error = True
+				self.log.error(f'zd-win.exe terminated with: {stderr}')
 
 	def mkfs(self, target,
 			fs = 'ntfs',
@@ -147,7 +144,7 @@ class WipeR:
 		if loghead:
 			loghead = Path(loghead)
 		else:
-			loghead = __wipe_log_head__
+			loghead = __parent_path__/'wipe-log-head.txt'
 		if not name:
 			name = 'Volume'
 		stdout, stderr = LinUtils.init_dev(target, mbr=mbr, fs=fs)
@@ -253,7 +250,8 @@ class WipeRCli(ArgumentParser):
 		'''Run zd'''
 		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
-		wiper = WipeR(self.targets,
+		wiper = WipeR()
+		wiper.wipe(self.targets,
 			allbytes = self.allbytes,
 			blocksize = self.blocksize,
 			maxbadblocks = self.maxbadblocks,
@@ -265,10 +263,6 @@ class WipeRCli(ArgumentParser):
 			echo = echo
 		)
 		if self.create:
-			#if not wiper.physicaldrive:
-			#	wiper.log.error('Unable to create a oartition after wiping file(s)')
-			if wiper.zd_error:
-				wiper.log.error('Wipe process terminated with errors, no partition will be created')
 			wiper.mkfs(self.targets[0],
 				fs = self.create,
 				loghead = self.loghead,

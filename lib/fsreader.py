@@ -8,21 +8,21 @@ class FsReader:
 	'''Get the mounted/local file system'''
 
 	def __init__(self, root):
-		'''Define root'''
-		self.root_path = Path(root)
-
-	def get_posix(self):
 		'''Get file structure recursivly'''
-		self.file_cnt = 0
-		self.dir_cnt = 0
-		self.else_cnt = 0
+		self.root_path = Path(root)
+		self.files_posix = []
+		self.files_path = []
+		self.dirs_posix = []
+		self.dirs_path = []
+		self.others_posix = []
+		self.others_path = []
 		for path, posix, tp in ExtPath.walk_posix(self.root_path):
 			if tp == 'file':
-				self.file_cnt += 1
-				yield posix
+				self.files_posix.append(posix)
+				self.files_path.append(path)
 			elif tp == 'dir':
-				self.dir_cnt += 1
-				yield posix
+				self.dirs_posix.append(posix)
+				self.dirs_path.append(path)
 			else:
-				self.else_cnt += 1
-				yield f'${posix}'
+				self.others_posix.append(posix)
+				self.others_path.append(path)

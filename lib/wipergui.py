@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from tkinter.messagebox import showerror
+from tkinter.ttk import Button
+from tkinter.scrolledtext import ScrolledText
+from functools import partial
 from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu, GridStringMenu
 from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector, ExpandedLabelFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
+from lib.linutils import LinUtils
 
 class WipeRGui:
 	'''Notebook page for WipeR'''
@@ -24,6 +29,7 @@ class WipeRGui:
 	def __init__(self, root):
 		'''Notebook page'''
 		root.settings.init_section(self.CMD)
+		self.default_wlh_path = root.parent_path/'wipe-log-head.txt'
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
@@ -66,7 +72,7 @@ class WipeRGui:
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
-			default=__wipe_log_head__,
+			default=self.default_wlh_path,
 			command=self._default_head, columnspan=8)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
@@ -79,7 +85,7 @@ class WipeRGui:
 	def _default_head(self):
 		'''Edit log header file with Notepad'''
 		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.LOG_HEAD).set(__wipe_log_head__)
+		self.root.settings.raw(self.root.LOG_HEAD).set(self.default_wlh_path)
 
 	def _select_target(self):
 		'''Select drive to wipe'''
@@ -94,7 +100,7 @@ class WipeRGui:
 			Button(frame, text=disk, command=partial(self._put_drive, disk)).grid(
 				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
 			text = ScrolledText(frame, width=self.root.ENTRY_WIDTH,
-				height=min(len(f'{dev}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
+				height=min(len(f'{disk}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
 			text.grid(row=self.root.row, column=1)
 			text.bind('<Key>', lambda dummy: 'break')
 			text.insert('end', f'{disk}')
@@ -138,8 +144,7 @@ class WipeRGui:
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
 		target = self.root.settings.get(self.root.TARGET)
-		target_is_pd = self.is_physical_drive(target)
-		if not target or ( not target_is_pd and not self.filenames ):
+		if not target and not self.filenames:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
 				message = self.root.TARGET_REQUIRED
@@ -154,10 +159,7 @@ class WipeRGui:
 			)
 			return
 		cmd = self.root.settings.section.lower()
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		zd_exe = self.root.settings.get(self.root.EXE)
-		if zd_exe:
-			cmd += f' --zd "{zd_exe}"'
+		cmd += f' --outdir "{outdir}"'
 		to_do = self.root.settings.get(self.root.TO_DO)
 		if to_do == self.root.ALL_BYTES:
 			cmd += f' --allbytes'
@@ -208,9 +210,7 @@ class WipeRGui:
 			cmd += f' --maxretries {maxretries}'
 		partition_table = self.root.settings.get(self.root.PARTITION_TABLE)
 		file_system = self.root.settings.get(self.root.FILE_SYSTEM)
-		if (
-			target_is_pd
-			and to_do != self.root.VERIFY
+		if ( to_do != self.root.VERIFY
 			and partition_table != self.root.DO_NOT_CREATE
 			and file_system != self.root.DO_NOT_CREATE
 		):
@@ -220,21 +220,12 @@ class WipeRGui:
 			volume_name = self.root.settings.get(self.root.VOLUME_NAME)
 			if volume_name:
 				cmd += f' --name "{volume_name}"'
-			drive_letter = self.root.settings.get(self.root.DRIVE_LETTER)
-			if (
-				drive_letter != self.root.NEXT_AVAILABLE
-				and askyesno(
-					title = self.root.DRIVE_LETTER_TAKEN,
-					message = self.root.USE_IT_ANYWAY
-				)
-			):
-				cmd += f' --driveletter {drive_letter}'
 			log_head = self.root.settings.get(self.root.LOG_HEAD)
 			if log_head:
 				cmd += f' --loghead "{log_head}"'
-		if self.is_physical_drive(target):
+		if target:
 			cmd += f' {target}'
 		else:
-			for target in self.filenames:
-				cmd += f' "{target}"'
+			for filename in self.filenames:
+				cmd += f' "{filename}"'
 		self.root.append_job(cmd)

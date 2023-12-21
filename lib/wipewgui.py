@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter.messagebox import showerror
+from tkinter.messagebox import showerror, askyesno
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
@@ -30,6 +30,7 @@ class WipeWGui(WinUtils):
 		'''Notebook page'''
 		super().__init__(root.parent_path)
 		root.settings.init_section(self.CMD)
+		self.default_wlh_path = root.parent_path/'wipe-log-head.txt'
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
@@ -77,9 +78,7 @@ class WipeWGui(WinUtils):
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
-			default=root.parent_path/'wipe-log-head.txt', command=self._notepad_log_head, columnspan=8)
-		FileSelector(root, frame, root.EXE, root.EXE, root.SELECT_EXE,
-			filetype=(root.EXE, '*.exe'), default=root.parent_path/'bin/zd-win.exe', columnspan=8)
+			default=self.default_wlh_path, command=self._notepad_log_head, columnspan=8)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
@@ -244,6 +243,6 @@ class WipeWGui(WinUtils):
 		if self.is_physical_drive(target):
 			cmd += f' {target}'
 		else:
-			for target in self.filenames:
-				cmd += f' "{target}"'
+			for filename in self.filenames:
+				cmd += f' "{filename}"'
 		self.root.append_job(cmd)

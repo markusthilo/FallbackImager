@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.0.1_2023-12-11";
+const char *VERSION = "0.0.1_2023-12-19";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -104,7 +104,6 @@ void reset_pointer(target_t *target) {
 	}
 }
 
-
 /* Check if block is wiped */
 int check_block(const uint64_t *block, const config_t *conf){
 	for (int i=0; i<conf->bs64; i++) if ( block[i] != conf->value64 ) return -1;
@@ -119,7 +118,7 @@ int check_bytes(const uint8_t *block, const config_t *conf, const size_t bs){
 
 /* Print bad blocks */
 void print_bad_blocks(const badblocks_t *badblocks) {
-	printf("ound %d bad block(s) (offset/[rwu]):", badblocks->cnt);
+	printf("Found %d bad block(s) (offset/[rwu]):", badblocks->cnt);
 	for (int i=0; i<badblocks->cnt; i++) {
 			if ( i % 4 == 0 ) printf("\n");
 			else printf("  ");
@@ -132,7 +131,7 @@ void print_bad_blocks(const badblocks_t *badblocks) {
 void check_max_bad_blocks(const target_t *target, badblocks_t *badblocks) {
 	if ( badblocks->max > badblocks->cnt++ ) return;
 	close(target->file);
-	printf("\nF");
+	printf("\n\n");
 	print_bad_blocks(badblocks);
 	fprintf(stderr, "Error: aborting because of too many bad blocks\n");
 	exit(1);
@@ -214,7 +213,7 @@ int uint_arg(const char *value, const char arg) {
 void print_time(const time_t start_time) {
 	time_t delta = time(NULL) - start_time;
 	struct tm *delta_tm = localtime(&delta);
-	printf("\nProcess took ");
+	printf("\n\nProcess took ");
 	if ( delta_tm->tm_yday == 1 ) printf("1 day, ");
 	else if ( delta_tm->tm_yday > 1 ) printf("%d days, ", delta_tm->tm_yday);
 	if ( delta_tm->tm_hour == 1 ) printf("1 hour, ");
@@ -390,7 +389,7 @@ int main(int argc, char **argv) {
 	print_time(start_time);
 	close(target.file);
 	if ( badblocks.cnt > 0 ) {
-		printf("All done but f");
+		printf("Warning: all done but found bad blocks\n");
 		print_bad_blocks(&badblocks);
 		fprintf(stderr, "Error: %d bad blocks in %s\n", badblocks.cnt, target.path);
 		exit(1);

@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-12-18'
+__version__ = '0.0.1_2023-12-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -49,8 +49,8 @@ class WipeW(WinUtils):
 	def __init__(self):
 		'''Create Object'''
 		for self.zd_path in (
-			__parent_path__/'zd-win.exe',
-			__parent_path__/'bin'/'zd-win.exe',
+			__parent_path__/'bin/zd-win.exe',
+			__parent_path__/'zd-win.exe'
 		):
 			if self.zd_path.is_file():
 				break
@@ -131,6 +131,8 @@ class WipeW(WinUtils):
 				msg = line.strip()
 				if msg.startswith('...'):
 					echo(msg)
+				elif msg == '':
+					self.echo('')
 				else:
 					self.log.info(msg, echo=True)
 			if stderr := proc.stderr.read():

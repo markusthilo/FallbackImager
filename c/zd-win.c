@@ -234,7 +234,7 @@ int uint_arg(const char *value, const char arg) {
 void print_time(const time_t start_time) {
 	time_t delta = time(NULL) - start_time;
 	struct tm *delta_tm = localtime(&delta);
-	printf("\nProcess took ");
+	printf("\n\nProcess took ");
 	if ( delta_tm->tm_yday == 1 ) printf("1 day, ");
 	else if ( delta_tm->tm_yday > 1 ) printf("%d days, ", delta_tm->tm_yday);
 	if ( delta_tm->tm_hour == 1 ) printf("1 hour, ");

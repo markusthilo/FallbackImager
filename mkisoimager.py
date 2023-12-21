@@ -3,7 +3,7 @@
 
 __app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-18'
+__version__ = '0.3.0_2023-12-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,7 +15,7 @@ from sys import executable as __executable__
 from os import name as __os_name__
 from pathlib import Path
 from argparse import ArgumentParser
-from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
+from lib.openproc import OpenProc
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -73,25 +73,17 @@ class MkIsoImager:
 		self.label = ''.join(char for char in self.root_path.stem
 			if char.isalnum() or char in ['_', '-'])[:32]
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
-		self.content_path = ExtPath.child(f'{self.filename}_content.txt', parent=self.outdir)
-		self.dropped_path = ExtPath.child(f'{self.filename}_dropped.txt', parent=self.outdir)
 		if log:
 			self.log = log
 		else:
 			self.log = Logger(self.filename, outdir=self.outdir, head='mkisoimager.MkIsoImager', echo=echo)
-		self.cmd = f'{self.mkisofs_path} -udf -o "{self.image_path}" -V "{self.label}" "{self.root_path}"'
-		self.log.info(f'> {self.cmd}', echo=True)
-		self.startupinfo = STARTUPINFO()
-		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-		proc = Popen(self.cmd,
-			shell = True,
-			stdout = PIPE,
-			stderr = STDOUT,
-			encoding = 'utf-8',
-			errors = 'ignore',
-			universal_newlines = True,
-			startupinfo = self.startupinfo
-		)
+		self.cmd = list(f'{self.mkisofs_path}')
+		self.cmd.append('-udf')
+		self.cmd.extend(['-o', f'"{self.image_path}"'])
+		self.cmd.extend(['-V', f'"{self.label}"'])
+		self.cmd.append(f'"{self.root_path}"')
+		self.log.info(f'> {" ".join(self.cmd)}', echo=True)
+		proc = OpenProc(self.cmd)
 		for line in proc.stdout:
 			if line.strip():
 				echo(line.strip())
@@ -140,13 +132,14 @@ class MkIsoImagerCli(ArgumentParser):
 			name = self.name,
 			echo = echo
 		)
-		IsoVerify(self.root,
-			imagepath = imager.image_path,
+		ver = IsoVerify()
+		ver.read_udf(imager.image_path,
 			filename = self.filename,
 			outdir = self.outdir,
 			echo = echo,
 			log = imager.log
-		).posix_verify()
+		)
+		ver.compare(self.root)
 		image.log.close()
 
 if __name__ == '__main__':	# start here if called as application
