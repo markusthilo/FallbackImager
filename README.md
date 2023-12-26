@@ -1,7 +1,7 @@
 # FallbackImager
 This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
 
-In this testing state only Windows (10/11) is supported. It is work in progress.
+The tool is currently developed for Linux based OS and Windows (>=10). It is work in progress.
 
 ## Installation
 
@@ -9,22 +9,29 @@ In this testing state only Windows (10/11) is supported. It is work in progress.
 The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed.
 
 ### Python
-To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pycdlib*, *pyinstaller*, *pywin32* and *WMI*. You might want to use
+To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pyinstaller*, *pywin32* and *WMI*. You might want to use
 ```
 $ pip install -r requirements.txt
 ```
 to install them. The scripts *make-FallbackImager-exe.py*, *make-WimMount-exe.py* and *make-win-cli-apps-exe.py* uses *PyInstaller* to generate the executables if needed.
 
+As *pycdlib* and *mkisofs.exe* are not properly working, the modules MkIsoImager and IsoVerify were dropped.
+
 ### C
-To compile zerod.c you can use MSYS2, install and run MinGW-w64:
+
+On Linux based OS *gcc* is needed:
+```
+$ gcc -o bin/zd c/zd.c
+```
+To compile zd-win.c on Windows you can use MSYS2 with MinGW-w64:
 ```
 $ pacman -Syu
 $ pacman -S mingw-w64-ucrt-x86_64-gcc
-$ gcc -o bin/zerod.exe zerod.c
+$ gcc -o bin/zd-win.exe c/zd-win.c
 ```
 
 ### 3rd party tools
-You need a (sub-)directory *bin* with *mkisofs.exe* and *oscdimg.exe*. This folder is also the home for *WimMount.exe* and *zerod.exe*.
+The wipe tool zd has to be in a (sub-)folder *bin*. On Windows you need *oscdimg.exe* in *bin*. This folder is also the home for *WimMount.exe* and *zd-win.exe*.
 
 ## Usage of the GUI
 
@@ -35,7 +42,7 @@ Use the Python file with
 ```
 $ python FallbackImager
 ```
-or launch the executable (*FallbackImager.exe*).
+or launch the executable (*FallbackImager.exe*) on Windows.
 
 ### Tabs
 Each module is represented by a tab in the upper part of the window.
@@ -54,19 +61,11 @@ The execution job after job is started with the button "Start jobs" on the left 
 
 ## Modules
 
-### MkIsoImager
-This tool generates an ISO file (UDF file system) using *mkisofs.exe*. It will log files that cannot be handled properly. The location of the executable can be set in "Configuration".
-
 ### OscdImager
-The module uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system).
-
-### IsoVerify
-This module is used by ISO generating modules to compare the UDF structure to the source file structure. Therefor it uses the *pycdlib* library. It can also be used to compare an existing image to a local file structure.
-
-It is possible to skip paths using a whitelist or a blacklist. The patterns have to be given as regular expressions (Python/*re* syntax), one per line in a text file. Paths are handles in the POSIX format (no Windowish backslashes). When a local path matches to one line in the whitelist, the verification of this path is skipped. When a blicklist is given, the comparison is skipped if there is no match in the list of regular expressions. You can only use whitelist or blacklist at a time.
+The module uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system). Obviously this module is only available on Windows.
 
 ### DismImager
-This module is only availible with Admin privileges.  It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing. When "Copy WimMount.exe to destination directory" a little GUI to mount and dismount is copied from *bin* to the destination. *WimMount.exe* needs to be run as Admin.
+This module is only availible on Windows with Admin privileges. It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing. When "Copy WimMount.exe to destination directory" a little GUI to mount and dismount is copied from *bin* to the destination. *WimMount.exe* needs to be run as Admin.
 
 ### ZipImager
 Using the Python library *zipfile* this module generates an ZIP archive from a source file structure. By giving a file list (CSV/TSV) it is possible to select what to include. In addition you can use a whitelist (excludes files) or a blacklist (selects files).
@@ -79,12 +78,12 @@ As Magnet's AXIOM has proven to be unreliable in the past, this module compares 
 
 Hits are files, that are represented in the artifacts. Obviously this tool can only support to find missing files. You will (nearly) never have the identical file lists. In detail AxChecker takes the file paths of the AXIOM case and tries to subtract normalized paths from the list or file system.
 
-### HdZero
+### WipeR/WipeW
 This is a wipe tool designed for SSDs and HDDs. There is also the possibility to overwrite files but without erasing file system metadata.
 
-By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with ones ("Use 0xFF to wipe").
+By default only unwiped blocks (or SSD pages) are overwritten though it is possible to force the overwriting of every block or even use a two pass wipe (1st pass writes random values). Instead of zeros you can choose to overwrite with any other Byte given in hex (0 - ff).
 
-Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file ("Head of log file", *hdzero_log_head.txt* by default).
+Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file ("Head of log file", *log_head.txt* by default).
 
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
 

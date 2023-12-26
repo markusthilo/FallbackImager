@@ -3,7 +3,7 @@
 
 __app_name__ = 'IsoVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-21'
+__version__ = '0.3.0_2023-12-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,7 +22,7 @@ from lib.logger import Logger
 from lib.hashes import FileHashes
 from lib.fsreader import FsReader
 
-class IsoVerify(PyCdlib):
+class IsoVerify:
 	'''Verify UDF ISO image file'''
 
 	def read_udf(self, iso, outdir=None, filename=None, echo=print, log=None):
@@ -40,38 +40,29 @@ class IsoVerify(PyCdlib):
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head=f'isoverify.IsoVerify', echo=echo)
 		self.log.info(f'Reading UDF file system from {self.iso_path}', echo=True)
-		self.open(self.iso_path)
-		self.files_posix = set()
-		self.dirs_posix = set()
-		for root, dirs, files in self.walk(udf_path='/'):
-			for name in dirs:
-				self.dirs_posix.add('/'+f'{root}/{name}'.strip('/')+'/')
-			for name in files:
-				self.files_posix.add('/'+f'{root}/{name}'.strip('/'))
-		self.close()
+		self.iso = PyCdlib()
+		self.iso.open(self.iso_path)
+		self.files_posix = ['/'+f'{root}/{file}'.strip('/')
+			for root, dirs, files in self.iso.walk(udf_path='/')
+			for file in files
+		]
+		self.iso.close()
 		self.log.info(
-			f'ISO/UDF contains {len(self.dirs_posix)} directories and {len(self.files_posix)} files', echo=True)
-		with ExtPath.child(f'{self.filename}_udf.txt', parent=self.outdir).open('w') as fh:
-			fh.write('\n'.join(sorted(list(self.dirs_posix|self.files_posix))))
+			f'ISO/UDF contains {len(self.files_posix)} files', echo=True)
+		with ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir).open('w') as fh:
+			fh.write('\n'.join(self.files_posix))
 
 	def compare(self, root):
 		'''Compare to local file system structure'''
 		self.root_path = Path(root)
 		self.log.info(f'Getting structure of {self.root_path.name}', echo=True)
-		fs = FsReader(self.root_path)
-		files = len(fs.files_posix)
-		dirs = len(fs.dirs_posix)
-		others = len(fs.others_posix)
-		msg = f'Source {self.root_path.name}:'
-		msg += f' {files+dirs+others}'
-		msg += f' / {files} / {dirs} / {others}'
-		msg += ' (all/files/dirs/other)'
-		self.log.info(msg, echo=True)
-		missing_files = set(fs.files_posix) - self.files_posix
-		if missing_files:
+		missing = [posix for path, posix, tp in ExtPath.walk_posix(root)
+			if tp == 'file' and posix not in self.files_posix
+		]
+		if missing:
 			with ExtPath.child(f'{self.filename}_missing.txt', parent=self.outdir).open('w') as fh:
-				fh.write('\n'.join(sorted(list(missing_files))))
-			self.log.warning(f'{len(missing_files)} file(s) is/are missing in ISO')
+				fh.write('\n'.join(missing))
+			self.log.warning(f'{len(missing)} missing file(s) in ISO/UDF')
 
 class IsoVerifyCli(ArgumentParser):
 	'''CLI for IsoVerify'''

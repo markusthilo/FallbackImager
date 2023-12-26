@@ -3,7 +3,7 @@
 
 __app_name__ = 'MkIsoImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-21'
+__version__ = '0.3.0_2023-12-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -55,14 +55,9 @@ class MkIsoImager:
 				raise RuntimeError('Uanbale to locate mkisofs.exe')
 			raise RuntimeError('Uanbale to locate mkisofs')
 
-	def labelize(string):
-		'''Generate ISO conform label from string'''
-		return ''.join(char for char in string if char.isalnum() or char in ['_', '-'])[:32]
-
 	def create(self, root,
 			filename = None,
 			outdir = None,
-			name = None,
 			log = None,
 			echo = print
 		):
@@ -70,29 +65,21 @@ class MkIsoImager:
 		self.root_path = Path(root)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
-		self.label = ''.join(char for char in self.root_path.stem
-			if char.isalnum() or char in ['_', '-'])[:32]
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		if log:
 			self.log = log
 		else:
 			self.log = Logger(self.filename, outdir=self.outdir, head='mkisoimager.MkIsoImager', echo=echo)
-		self.cmd = list(f'{self.mkisofs_path}')
-		self.cmd.append('-udf')
-		self.cmd.extend(['-o', f'"{self.image_path}"'])
-		self.cmd.extend(['-V', f'"{self.label}"'])
-		self.cmd.append(f'"{self.root_path}"')
-		self.log.info(f'> {" ".join(self.cmd)}', echo=True)
-		proc = OpenProc(self.cmd)
-		for line in proc.stdout:
-			if line.strip():
-				echo(line.strip())
-		proc.stdout_str = None
-		proc.stderr_str = None
-		if self.image_path.is_file():
-			self.log.finished(proc, echo=True)
-		else:
-			self.log.finished(proc, error=': Could not create image\n')
+		cmd = [f'{self.mkisofs_path}',
+			'-udf',
+			'-o', f'{self.image_path}',
+			f'{self.root_path}'
+		]
+		self.log.info(f'> {" ".join(cmd)}', echo=True)
+		proc = OpenProc(cmd)
+		proc.echo_output(self.log)
+		if not self.image_path.is_file():
+			self.log.error(f'Could not create image file {self.image_path}')
 		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}', echo=True)
 
 class MkIsoImagerCli(ArgumentParser):
@@ -103,9 +90,6 @@ class MkIsoImagerCli(ArgumentParser):
 		super().__init__(description=__description__, prog=__app_name__.lower(), **kwargs)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
-		)
-		self.add_argument('-n', '--name', type=str,
-			help='Label of the ISO', metavar='STRING'
 		)
 		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
@@ -119,17 +103,14 @@ class MkIsoImagerCli(ArgumentParser):
 		args = super().parse_args(*cmd)
 		self.root = args.root[0]
 		self.filename = args.filename
-		self.name = args.name
 		self.outdir = args.outdir
 
 	def run(self, echo=print):
 		'''Run the imager'''
 		imager = MkIsoImager()
-
 		imager.create(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
-			name = self.name,
 			echo = echo
 		)
 		ver = IsoVerify()
@@ -140,7 +121,7 @@ class MkIsoImagerCli(ArgumentParser):
 			log = imager.log
 		)
 		ver.compare(self.root)
-		image.log.close()
+		imager.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = MkIsoImagerCli()

@@ -52,6 +52,11 @@ class ExtPath:
 		return normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
 
 	@staticmethod
+	def labelize(string):
+		'''Generate UDF/ISO conform label from string'''
+		return ''.join(char for char in string if char.isalnum() or char in ['_', '-'])[:32]
+
+	@staticmethod
 	def normalize(path):
 		'''Normalize path for better comparison'''
 		path = path.rstrip('\\/\t\n')

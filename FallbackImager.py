@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-19'
+__version__ = '0.3.0_2023-12-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -19,8 +19,10 @@ from os import name as __os_name__
 from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
-from isoverify import IsoVerifyCli
-from lib.isoverifygui import IsoVerifyGui
+#from mkisoimager import MkIsoImagerCli
+#from lib.mkisoimagergui import MkIsoImagerGui
+#from isoverify import IsoVerifyCli
+#from lib.isoverifygui import IsoVerifyGui
 from zipimager import ZipImagerCli
 from lib.zipimagergui import ZipImagerGui
 from axchecker import AxCheckerCli
@@ -32,8 +34,6 @@ from lib.sqlitegui import SQLiteGui
 __not_admin__ = None
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
-	from mkisoimager import MkIsoImagerCli
-	from lib.mkisoimagergui import MkIsoImagerGui
 	from oscdimager import OscdImagerCli
 	from lib.oscdimagergui import OscdImagerGui
 	from dismimager import DismImagerCli
@@ -43,8 +43,8 @@ if __os_name__ == 'nt':
 	if IsUserAnAdmin():
 		__modules__ = {
 		#	MkIsoImagerGui: MkIsoImagerCli,
-		#	OscdImagerGui: OscdImagerCli,
 		#	IsoVerifyGui: IsoVerifyCli,
+			OscdImagerGui: OscdImagerCli,
 			DismImagerGui: DismImagerCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
@@ -54,8 +54,8 @@ if __os_name__ == 'nt':
 	else:
 		__modules__ = {
 		#	MkIsoImagerGui: MkIsoImagerCli,
-		#	OscdimgGui: OscdimgCli,
 		#	IsoVerifyGui: IsoVerifyCli,
+			OscdImagerGui: OscdImagerCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli
@@ -86,7 +86,7 @@ class Gui(GuiBase):
 	PAD = 4
 	JOB_HEIGHT = 4
 	INFO_HEIGHT = 8
-	ENTRY_WIDTH = 128
+	ENTRY_WIDTH = 144
 	MIN_ENTRY_WIDTH = 8
 	MAX_ENTRY_WIDTH = 32
 	MAX_ENTRY_HEIGHT = 8
@@ -94,7 +94,7 @@ class Gui(GuiBase):
 	MAX_COLUMN_QUANT = 10
 	FILES_FIELD_WIDTH = 94
 	SMALL_FIELD_WIDTH = 24
-	BUTTON_WIDTH = 16
+	BUTTON_WIDTH = 24
 	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
 	NOT_ADMIN = 'No Admin Privileges'

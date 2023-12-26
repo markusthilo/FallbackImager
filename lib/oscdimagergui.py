@@ -17,28 +17,15 @@ class OscdImagerGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.DESTINATION)
+		GridLabel(root, frame, root.DESTINATION, columnspan=2)
 		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR)
-		self.name_str = StringSelector(root, frame, root.IMAGE_NAME, root.IMAGE_NAME,
-			command=self._gen_name)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.CONFIGURATION)
-		FileSelector(root, frame, root.OSCDIMG_EXE, root.OSCDIMG_EXE, root.SELECT_OSCDIMG_EXE,
-			filetype=(root.OSCDIMG_EXE, 'oscdimg.exe'), default=__oscdimg_exe_path__)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
 			column=0, columnspan=3)
 		self.root = root
-	
-	def _gen_name(self):
-		'''Generate a name for the image'''
-		self.root.settings.section = self.CMD
-		if not self.name_str.string.get() and self.root.settings.get(self.root.SOURCE):
-			self.name_str.string.set(
-				Oscdimg._label(Path(self.root.settings.get(self.root.SOURCE)).stem))
-	
+
 	def _add_job(self):
 		'''Generate command line'''
 		self.root.settings.section = self.CMD

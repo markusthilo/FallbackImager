@@ -142,3 +142,35 @@ assign letter={driveletter}
 						return driveletter
 				except OSError:
 					pass
+
+class WinPopen(Popen):
+	'''Use Popen to run tools on Windows'''
+
+	def __init__(self, cmd):
+		'''Launch process'''
+		self.startupinfo = STARTUPINFO()
+		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
+		super().__init__(cmd,
+			stdout = PIPE,
+			stderr = STDOUT,
+			encoding = 'utf-8',
+			errors = 'ignore',
+			universal_newlines = True,
+			startupinfo = self.startupinfo
+		)
+
+	def exec(self, log):
+		'''Echo stdout'''
+		stack = list()
+		for line in self.stdout:
+			if line:
+				stack.append(line.strip())
+				log.echo(stack[-1])
+			if len(stack) > 10:
+				stack.pop(0)
+		self.wait()
+		info = 'Process finished'
+		if stack:
+			info += ' with (last ten output lines:\n'
+			info += '\n'.join(stack)
+		log.info(info)
