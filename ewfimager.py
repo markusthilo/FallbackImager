@@ -47,7 +47,10 @@ class EwfImager:
 
 	def acquire(self, sources, *args, outdir=None filename=None, echo=print, log=None, **kwargs):
 		'''Run ewfacquire'''
-		self.filename = TimeStamp.now_or(filename)
+		if filename:
+			self.filename = filename
+		else:
+			self.filename = Path(sources[0]).name
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
 		if log:
@@ -59,20 +62,7 @@ class EwfImager:
 				head = 'ewfimager.EwfImager',
 				echo = self.echo
 			)
-		cmd = [f'{self.ewfverify_path}']
-		if blocksize:
-			cmd.extend(['-b', f'{blocksize}'])
-		if value:
-			cmd.extend(['-f', f'{value}'])
-		if maxbadblocks:
-			cmd.extend(['-m', f'{maxbadblocks}'])
-		if maxretries:
-			cmd.extend(['-r', f'{maxretries}'])
-		if verify:
-			cmd.append('-v')
-		elif allbytes:
-			cmd.append('-a')
-
+		cmd = [f'{self.ewfverify_path}', '-t', f'{self.outdir/self.filename}']
 		for arg in args:
 			cmd.append(f'-{arg}')
 		for arg, par in kwargs.items():
@@ -83,19 +73,10 @@ class EwfImager:
 		print(cmd)
 		exit()
 
-		proc = Popen(cmd, stdout=PIPE, stderr=PIPE, text=True)
-		for line in proc.stdout:
-			msg = line.strip()
-			if msg.startswith('...'):
-				echo(msg)
-			elif msg == '':
-				self.echo('')
-			else:
-				self.log.info(msg, echo=True)
+		proc = OpenProc(cmd, stderr=True)
+		proc.echo_output(self.log)
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfacquire terminated with: {stderr}')
-
-
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''

@@ -13,9 +13,9 @@ Wrapper for ewfverify.
 
 from sys import executable as __executable__
 from pathlib import Path
-from subprocess import Popen, PIPE
 from argparse import ArgumentParser
 from lib.extpath import ExtPath, FilesPercent
+from lib.openproc import OpenProc
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 
@@ -57,8 +57,10 @@ class EwfVerify:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='ewfverify.EwfVerify', echo=self.echo)
 		self.log.info('Creating image', echo=True)
-		proc = Popen([f'{self.ewfverify_path}', f'{self.image_path}'], stdout=PIPE, stderr=PIPE, text=True)
+		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], stderr=True)
 		proc.echo_output(self.log)
+		if stderr := proc.stderr.read():
+			self.log.error(f'ewfverify terminated with: {stderr}')
 
 class EwfVerifyCli(ArgumentParser):
 	'''CLI for EwfVerify'''

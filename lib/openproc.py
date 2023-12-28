@@ -9,7 +9,7 @@ if __os_name__ == 'nt':
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
 
-	def __init__(self, cmd):
+	def __init__(self, cmd, stderr=False):
 		'''Launch process'''
 		if __os_name__ == 'nt':
 			self.startupinfo = STARTUPINFO()
@@ -23,7 +23,11 @@ class OpenProc(Popen):
 				startupinfo = self.startupinfo
 			)
 		else:
-			super().__init__(cmd, stdout=PIPE, stderr=STDOUT, encoding = 'utf-8')
+			if stderr:
+				stderr = PIPE
+			else:
+				stderr = STDOUT
+			super().__init__(cmd, stdout=PIPE, stderr=stderr, encoding='utf-8')
 
 	def echo_output(self, log):
 		'''Echo stdout'''
