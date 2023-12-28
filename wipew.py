@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.0.1_2023-12-20'
+__version__ = '0.3.0_2023-12-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -20,13 +20,7 @@ Be aware that this module is extremely dangerous as it is designed to erase data
 from sys import executable as __executable__
 from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
-from functools import partial
 from argparse import ArgumentParser
-from tkinter import StringVar
-from tkinter.ttk import Frame, Radiobutton, Button, Checkbutton
-from tkinter.messagebox import askyesno, showerror
-from tkinter.filedialog import askopenfilenames
-from tkinter.scrolledtext import ScrolledText
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger

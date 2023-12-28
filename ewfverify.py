@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-26'
+__version__ = '0.3.0_2023-12-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,19 +11,35 @@ __description__ = '''
 Wrapper for ewfverify.
 '''
 
+from sys import executable as __executable__
 from pathlib import Path
-from subprocess import run, Popen, PIPE
+from subprocess import Popen, PIPE
 from argparse import ArgumentParser
 from lib.extpath import ExtPath, FilesPercent
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 
+__executable__ = Path(__executable__)
+__file__ = Path(__file__)
+if __executable__.stem.lower() == __file__.stem.lower():
+	__parent_path__ = __executable__.parent
+else:
+	__parent_path__ = __file__.parent
+
 class EwfVerify:
 	'''Verify E01/EWF image file'''
 
 	def __init__(self):
-		'''Check if ewfverify is callable'''
-		if run(['ewfverify' '-h'], capture_output=True, text=True).stderr:
+		'''Check if ewfverify are present'''
+		for self.ewfverify_path in (
+			Path('/usr/bin/ewfverify'),
+			Path('/usr/local/bin/ewfverify'),
+			__parent_path__/'bin/ewfverify',
+			__parent_path__/'ewfverify'
+		):
+			if self.ewfverify_path.is_file():
+				break
+		if not self.ewfverify_path.is_file():
 			raise RuntimeError('Unable to use ewfverify from ewf-tools')
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None):
@@ -39,16 +55,10 @@ class EwfVerify:
 			self.log = log
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
-				head=f'isoverify.IsoVerify', echo=echo)
-		self.log.info(f'Verifying {self.image_path}', echo=True)
-		proc = Popen(['isoverify', f'{self.image_path}'], stdout=PIPE, stderr=PIPE)
-		for line in proc.stdout:
-			if line:
-				print(line)
-		#self.log.info(
-		#	f'ISO/UDF contains {len(self.files_posix)} files', echo=True)
-		#with ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir).open('w') as fh:
-		#	fh.write('\n'.join(self.files_posix))
+				head='ewfverify.EwfVerify', echo=self.echo)
+		self.log.info('Creating image', echo=True)
+		proc = Popen([f'{self.ewfverify_path}', f'{self.image_path}'], stdout=PIPE, stderr=PIPE, text=True)
+		proc.echo_output(self.log)
 
 class EwfVerifyCli(ArgumentParser):
 	'''CLI for EwfVerify'''

@@ -23,7 +23,7 @@ class OpenProc(Popen):
 				startupinfo = self.startupinfo
 			)
 		else:
-			super().__init__(cmd, stdout=PIPE, stderr=STDOUT)
+			super().__init__(cmd, stdout=PIPE, stderr=STDOUT, encoding = 'utf-8')
 
 	def echo_output(self, log):
 		'''Echo stdout'''
