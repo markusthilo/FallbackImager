@@ -39,18 +39,22 @@ class EwfImager:
 			__parent_path__/'bin/ewfacquire',
 			__parent_path__/'ewfacquire'
 		):
-			if self.ewfverify_path.is_file():
+			if self.ewfacquire_path.is_file():
 				break
-		if not self.ewfverify_path.is_file():
+		if not self.ewfacquire_path.is_file():
 			raise RuntimeError('Unable to use ewfacquire from ewf-tools')
 		self.ewfverify = EwfVerify()
 
-	def acquire(self, sources, *args, outdir=None filename=None, echo=print, log=None, **kwargs):
+	def acquire(self, sources, case_number, evidence_number, examiner_name, description, *args,
+			outdir = None,
+			compression_values = None,
+			media_type = None,
+			echo = print,
+			log = None,
+			**kwargs
+		):
 		'''Run ewfacquire'''
-		if filename:
-			self.filename = filename
-		else:
-			self.filename = Path(sources[0]).name
+		self.filename = Path(ExtPath.mkfname(f'{case_number}_{evidence_number}'))
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
 		if log:
@@ -62,7 +66,17 @@ class EwfImager:
 				head = 'ewfimager.EwfImager',
 				echo = self.echo
 			)
-		cmd = [f'{self.ewfverify_path}', '-t', f'{self.outdir/self.filename}']
+		cmd = [f'{self.ewfacquire_path}', '-t', f'{self.outdir/self.filename}']
+		cmd.extend(['-C', case_number])
+		cmd.extend(['-D', description])
+		cmd.extend(['-e', examiner_name])
+		cmd.extend(['-E', evidence_number])
+		if compression_values:
+			cmd.extend(['-c', compression_values])
+		else:
+			cmd.extend(['-c', 'fast'])
+		if media_type:
+			cmd.extend(['-m', media_type])
 		for arg in args:
 			cmd.append(f'-{arg}')
 		for arg, par in kwargs.items():
@@ -84,103 +98,65 @@ class WipeRCli(ArgumentParser):
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__, **kwargs)
-
-		self.add_argument('-f', '--filename', type=str,
-			help='Filename to generated (without extension)', metavar='STRING'
-		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
-			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
-		)
-
-
-
-		self.add_argument('-a', '--allbytes', action='store_true',
-			help='Write every byte/block (do not check before overwriting block)'
-		)
-		self.add_argument('-b', '--blocksize', type=int,
-			help='Block size in bytes (=n*512, >=512, <= 32768,default is 4096)', metavar='INTEGER'
-		)
-		self.add_argument('-c', '--create', type=str,
-			choices=['ntfs', 'fat32', 'exfat', 'NTFS', 'FAT32', 'EXFAT', 'ExFAT', 'exFAT'],
-			help='Create partition [fat32/exfat/ntfs] after wiping a physical drive',
+		self.add_argument('-c', '--compression_values', type=str,
+			help='Compression level options: none, empty-block, fast (default) or best',
 			metavar='STRING'
 		)
-		self.add_argument('-f', '--filename', type=str,
-			help='Byte to overwrite with as hex (00 - ff)',
-			metavar='HEX_BYTE'
-		)
-		self.add_argument('-g', '--loghead', type=Path,
-			help='Use the given file as head when writing log to new drive',
-			metavar='FILE'
-		)
-		self.add_argument('-m', '--mbr', action='store_true',
-			help='Use mbr instead of gpt Partition table (when target is a physical drive)'
-		)
-		self.add_argument('-n', '--name', type=str,
-			help='Name/label of the new partition (when target is a physical drive)',
+		self.add_argument('-C', '--case_number', type=str, required=True,
+			help='Case number',
 			metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
-			help='Directory to write log', metavar='DIRECTORY'
+		self.add_argument('-D', '--description', type=str, required=True,
+			help='Description (e.g. used write blocker)',
+			metavar='STRING'
 		)
-		self.add_argument('-q', '--maxbadblocks', type=int,
-			help='Abort after given number of bad blocks (default is 200)', metavar='INTEGER'
+		self.add_argument('-e', '--examiner_name', type=str, required=True,
+			help='Examiner name',
+			metavar='STRING'
 		)
-		self.add_argument('-r', '--maxretries', type=int,
-			help='Maximum of retries after read or write error (default is 200)',
-			metavar='INTEGER'
+		self.add_argument('-E', '--evidence_number', type=str, required=True,
+			help='Evidence number',
+			metavar='STRING'
 		)
-		self.add_argument('-v', '--verify', action='store_true',
-			help='Verify, but do not wipe'
+		self.add_argument('-m', '--media_type', type=str,
+			choices=['fixed', 'removable', 'optical', 'memory'],
+			help='Media type, options: fixed (default), removable, optical, memory',
+			metavar='STRING'
 		)
-		self.add_argument('-x', '--extra', action='store_true',
-			help='Overwrite all bytes/blocks twice, write random bytes at 1st pass'
+		self.add_argument('-O', '--outdir', type=ExtPath.path,
+			help='Directory to write generated files (default: current)',
+			metavar='DIRECTORY'
 		)
 		self.add_argument('source', nargs=1, type=str,
-			help='The source file(s) or device', metavar='BLOCKDEVICE/FILE'
+			help='The source device, partition or anything else that works with ewfacquire',
+			metavar='BLOCKDEVICE/PARTITON/DIRECTORY/FILE'
 		)
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.targets = args.targets
-		self.allbytes = args.allbytes
-		self.blocksize = args.blocksize
-		self.create = args.create
-		self.loghead = args.loghead
-		self.maxbadblocks = args.maxbadblocks
-		self.maxretries = args.maxretries
-		self.mbr = args.mbr
-		self.name = args.name
+		self.source = args.source
+		self.compression_values = args.compression_values
+		self.case_number = args.case_number
+		self.description = args.description
+		self.examiner_name = args.examiner_name
+		self.evidence_number = args.evidence_number
+		self.media_type = args.media_type
 		self.outdir = args.outdir
-		self.value = args.value
-		self.verify = args.verify
-		self.extra = args.extra
 
 	def run(self, echo=print):
-		'''Run zd'''
-		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
-			raise RuntimeError(f'Arguments incompatible with --verify/-v')
-		wiper = WipeR()
-		wiper.wipe(self.targets,
-			allbytes = self.allbytes,
-			blocksize = self.blocksize,
-			maxbadblocks = self.maxbadblocks,
-			maxretries = self.maxretries,
+		'''Run EwfImager and EsfVerify'''
+		imager = EwfImager()
+		imager.acquire(self.source,
+			self.case_number, self.evidence_number,
+			self.examiner_name, self.description,
+			compression_values = self.compression_values,
+			media_type = self.media_type,
 			outdir = self.outdir,
-			value = self.value,
-			verify = self.verify,
-			extra = self.extra,
 			echo = echo
 		)
-		if self.create:
-			wiper.mkfs(self.targets[0],
-				fs = self.create,
-				loghead = self.loghead,
-				mbr = self.mbr,
-				name = self.name
-			)
-		wiper.log.close()
+
+		imager.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = WipeRCli()

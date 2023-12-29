@@ -3,6 +3,7 @@
 
 from pathlib import Path, WindowsPath, PosixPath
 from unicodedata import normalize
+from string import ascii_letters, digits
 
 __utf__ = 'utf-16-le', 'utf-16-be', 'utf-16', 'utf-8'
 
@@ -51,10 +52,16 @@ class ExtPath:
 		'''Decode to UTF-8'''
 		return normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
 
+	#@staticmethod
+	#def labelize(string):
+	#	'''Generate UDF/ISO conform label from string'''
+	#	return ''.join(char for char in string if char.isalnum() or char in ['_', '-'])[:32]
+
 	@staticmethod
-	def labelize(string):
-		'''Generate UDF/ISO conform label from string'''
-		return ''.join(char for char in string if char.isalnum() or char in ['_', '-'])[:32]
+	def mkfname(string):
+		'''Eleminate chars that do not work in filenames'''
+		string = normalize('NFKD', string).encode('ASCII', errors='ignore').decode('utf-8', errors='ignore').replace('/', '_')
+		return ''.join(char for char in string if char in f'-_{ascii_letters}{digits}')
 
 	@staticmethod
 	def normalize(path):
