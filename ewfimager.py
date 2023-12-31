@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-28'
+__version__ = '0.3.0_2023-12-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,12 +12,12 @@ This tool runs ewfacquire and ewfverify.
 '''
 
 from sys import executable as __executable__
-from subprocess import Popen, PIPE
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger
+from lib.openproc import OpenProc
 from lib.linutils import LinUtils
 from ewfverify import EwfVerify
 
@@ -49,6 +49,7 @@ class EwfImager:
 			outdir = None,
 			compression_values = None,
 			media_type = None,
+			notes = None,
 			echo = print,
 			log = None,
 			**kwargs
@@ -66,7 +67,7 @@ class EwfImager:
 				head = 'ewfimager.EwfImager',
 				echo = self.echo
 			)
-		cmd = [f'{self.ewfacquire_path}', '-t', f'{self.outdir/self.filename}']
+		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.outdir/self.filename}']
 		cmd.extend(['-C', case_number])
 		cmd.extend(['-D', description])
 		cmd.extend(['-e', examiner_name])
@@ -77,17 +78,22 @@ class EwfImager:
 			cmd.extend(['-c', 'fast'])
 		if media_type:
 			cmd.extend(['-m', media_type])
+		if notes:
+			cmd.extend(['-N', notes])
+		else:
+			cmd.extend(['-N', '-'])
+		cmd.extend(['-S', ])
 		for arg in args:
 			cmd.append(f'-{arg}')
 		for arg, par in kwargs.items():
 			cmd.extend([f'-{arg}', f'{par}'])
 		for source in sources:
 			cmd.append(source)
+		proc = OpenProc(cmd, log=self.log)
 
 		print(cmd)
 		exit()
 
-		proc = OpenProc(cmd, stderr=True)
 		proc.echo_output(self.log)
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfacquire terminated with: {stderr}')
@@ -107,7 +113,7 @@ class WipeRCli(ArgumentParser):
 			metavar='STRING'
 		)
 		self.add_argument('-D', '--description', type=str, required=True,
-			help='Description (e.g. used write blocker)',
+			help='Description (e.g. drive number, example: "PC01_HD01")',
 			metavar='STRING'
 		)
 		self.add_argument('-e', '--examiner_name', type=str, required=True,
@@ -121,6 +127,10 @@ class WipeRCli(ArgumentParser):
 		self.add_argument('-m', '--media_type', type=str,
 			choices=['fixed', 'removable', 'optical', 'memory'],
 			help='Media type, options: fixed (default), removable, optical, memory',
+			metavar='STRING'
+		)
+		self.add_argument('-N', '--notes', type=str,
+			help='Notes (e.g. used write blocker), default is "-"',
 			metavar='STRING'
 		)
 		self.add_argument('-O', '--outdir', type=ExtPath.path,
@@ -142,16 +152,18 @@ class WipeRCli(ArgumentParser):
 		self.examiner_name = args.examiner_name
 		self.evidence_number = args.evidence_number
 		self.media_type = args.media_type
+		self.notes = args.notes
 		self.outdir = args.outdir
 
 	def run(self, echo=print):
-		'''Run EwfImager and EsfVerify'''
+		'''Run EwfImager and EwfVerify'''
 		imager = EwfImager()
 		imager.acquire(self.source,
 			self.case_number, self.evidence_number,
 			self.examiner_name, self.description,
 			compression_values = self.compression_values,
 			media_type = self.media_type,
+			notes = self.notes,
 			outdir = self.outdir,
 			echo = echo
 		)

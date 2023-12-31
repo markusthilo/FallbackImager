@@ -57,8 +57,8 @@ class EwfVerify:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='ewfverify.EwfVerify', echo=self.echo)
 		self.log.info('Creating image', echo=True)
-		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], stderr=True)
-		proc.echo_output(self.log)
+		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], log=self.log)
+		proc.echo_output()
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfverify terminated with: {stderr}')
 
