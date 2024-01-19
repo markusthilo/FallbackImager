@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-28'
+__version__ = '0.3.0_2024-01-19'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -45,22 +45,24 @@ class EwfVerify:
 	def check(self, image, outdir=None, filename=None, echo=print, log=None):
 		'''Verify image'''
 		self.image_path = Path(image)
-		self.outdir = ExtPath.mkdir(outdir)
-		if filename:
-			self.filename = filename
-		else:
-			self.filename = TimeStamp.now_or(filename)
+		if not self.image_path.suffix:
+			self.image_path = self.image_path.with_suffix('.E01')
 		self.echo = echo
 		if log:
 			self.log = log
 		else:
+			self.outdir = ExtPath.mkdir(outdir)
+			if filename:
+				self.filename = filename
+			else:
+				self.filename = TimeStamp.now_or(filename)
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='ewfverify.EwfVerify', echo=self.echo)
-		self.log.info('Creating image', echo=True)
+		self.log.info('Verifying image', echo=True)
 		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], log=self.log)
 		proc.echo_output()
 		if stderr := proc.stderr.read():
-			self.log.error(f'ewfverify terminated with: {stderr}')
+			self.log.error(f'ewfverify terminated with: {stderr}', exception=stderr.split('\n')[0])
 
 class EwfVerifyCli(ArgumentParser):
 	'''CLI for EwfVerify'''

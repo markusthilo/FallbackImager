@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-30'
+__version__ = '0.3.0_2024-01-19'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -45,29 +45,31 @@ class EwfImager:
 			raise RuntimeError('Unable to use ewfacquire from ewf-tools')
 		self.ewfverify = EwfVerify()
 
-	def acquire(self, sources, case_number, evidence_number, examiner_name, description, *args,
+	def acquire(self, source, case_number, evidence_number, examiner_name, description, *args,
 			outdir = None,
 			compression_values = None,
 			media_type = None,
 			notes = None,
+			size = None,
 			echo = print,
 			log = None,
 			**kwargs
 		):
 		'''Run ewfacquire'''
-		self.filename = Path(ExtPath.mkfname(f'{case_number}_{evidence_number}'))
+		self.source = Path(source)
+		self.filename = Path(ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}'))
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
 		if log:
 			self.log = log
 		else:
 			self.log = Logger(
-				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_log.txt',
+				filename = f'{self.filename}_log.txt',
 				outdir = self.outdir, 
 				head = 'ewfimager.EwfImager',
 				echo = self.echo
 			)
-		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.outdir/self.filename}']
+		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.outdir/self.filename}', '-d', 'sha256']
 		cmd.extend(['-C', case_number])
 		cmd.extend(['-D', description])
 		cmd.extend(['-e', examiner_name])
@@ -82,21 +84,24 @@ class EwfImager:
 			cmd.extend(['-N', notes])
 		else:
 			cmd.extend(['-N', '-'])
-		cmd.extend(['-S', ])
+		if not size:
+			source_size = ExtPath.get_size(self.source)
+			if not source_size:
+				if self.source.is_block_device():
+					source_size = LinUtils.blkdevsize(self.source)
+				else:
+					raise RuntimeError(f'Unable to get size of {source}')
+			size = max(int(source_size/85899345920) * 1073741824, 4294967296)
+		cmd.extend(['-S', f'{size}'])
 		for arg in args:
 			cmd.append(f'-{arg}')
 		for arg, par in kwargs.items():
 			cmd.extend([f'-{arg}', f'{par}'])
-		for source in sources:
-			cmd.append(source)
+		cmd.append(f'{self.source}')
 		proc = OpenProc(cmd, log=self.log)
-
-		print(cmd)
-		exit()
-
 		proc.echo_output(self.log)
 		if stderr := proc.stderr.read():
-			self.log.error(f'ewfacquire terminated with: {stderr}')
+			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -130,22 +135,26 @@ class WipeRCli(ArgumentParser):
 			metavar='STRING'
 		)
 		self.add_argument('-N', '--notes', type=str,
-			help='Notes (e.g. used write blocker), default is "-"',
+			help='Notes, e.g. used write blocker (default is "-")',
 			metavar='STRING'
 		)
 		self.add_argument('-O', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)',
 			metavar='DIRECTORY'
 		)
-		self.add_argument('source', nargs=1, type=str,
+		self.add_argument('-S', '--size', type=int,
+			help='Segment file size in bytes (default: calculated)',
+			metavar='INTEGER'
+		)
+		self.add_argument('source', nargs=1, type=Path,
 			help='The source device, partition or anything else that works with ewfacquire',
-			metavar='BLOCKDEVICE/PARTITON/DIRECTORY/FILE'
+			metavar='BLOCKDEVICE/PARTITON/FILE'
 		)
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.source = args.source
+		self.source = args.source[0]
 		self.compression_values = args.compression_values
 		self.case_number = args.case_number
 		self.description = args.description
@@ -154,21 +163,23 @@ class WipeRCli(ArgumentParser):
 		self.media_type = args.media_type
 		self.notes = args.notes
 		self.outdir = args.outdir
+		self.size = args.size
 
 	def run(self, echo=print):
 		'''Run EwfImager and EwfVerify'''
-		imager = EwfImager()
-		imager.acquire(self.source,
+		image = EwfImager()
+		image.acquire(self.source,
 			self.case_number, self.evidence_number,
 			self.examiner_name, self.description,
 			compression_values = self.compression_values,
 			media_type = self.media_type,
 			notes = self.notes,
+			size = self.size,
 			outdir = self.outdir,
 			echo = echo
 		)
-
-		imager.log.close()
+		EwfVerify().check(image.filename, echo=echo, log=image.log)
+		image.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = WipeRCli()

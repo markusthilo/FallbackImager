@@ -41,6 +41,16 @@ class ExtPath:
 		return path
 
 	@staticmethod
+	def get_size(path):
+		'''Get size'''
+		if not path:
+			path = Path.cwd()
+		if path.is_dir():
+			return sum(f.stat().st_size for f in path.glob('**/*') if f.is_file())
+		if path.is_file():
+			return path.stat().st_size
+
+	@staticmethod
 	def windowize(path):
 		'''Replace slashes with backslashes'''
 		if isinstance(path, PosixPath):

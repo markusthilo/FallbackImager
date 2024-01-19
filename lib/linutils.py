@@ -26,11 +26,17 @@ class LinUtils:
 	@staticmethod
 	def diskinfo(dev):
 		'''Use lsblk with JSON output to get infos about a disk'''
-		return [(dev['path'], dev['label'], dev['size'], dev['mountpoints'])
-			for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
+		return [(d['path'], d['label'], d['size'], d['mountpoints'])
+			for d in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
 				capture_output=True, text=True).stdout)['blockdevices']
-				if dev['type'] == 'part'
+				if d['type'] == 'part'
 		]
+
+	@staticmethod
+	def blkdevsize(dev):
+		'''Use lsblk with JSON output to get disk ort partition size'''
+		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
+				capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
 
 	@staticmethod
 	def init_dev(dev, mbr=False, fs='ntfs'):
