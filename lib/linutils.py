@@ -18,19 +18,20 @@ class LinUtils:
 	@staticmethod
 	def lspart(dev):
 		'''Use lsblk with JSON output to get partitions'''
-		return [dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE', f'{dev}'],
-			capture_output=True, text=True).stdout)['blockdevices']
-			if dev['type'] == 'part'
+		return [(dev['path'], dev['label'], dev['size'], dev['mountpoints'])
+			for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] == 'part'
 		]
 
 	@staticmethod
-	def diskinfo(dev):
-		'''Use lsblk with JSON output to get infos about a disk'''
-		return [(d['path'], d['label'], d['size'], d['mountpoints'])
-			for d in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
+	def diskinfo():
+		'''Use lsblk with JSON output to get infos about disks'''
+		return {dev['path']: (dev['label'], dev['size'], dev['mountpoints'], LinUtils.lspart(dev['path']))
+			for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
-				if d['type'] == 'part'
-		]
+				if dev['type'] == 'disk'  and not dev['path'].startswith('/dev/zram')
+		}
 
 	@staticmethod
 	def blkdevsize(dev):
@@ -45,7 +46,7 @@ class LinUtils:
 			cmd = 'label: dos\n'
 			if fs.lower() == 'fat32':
 				cmd += ',,0c\n'
-			elif fs.lower in ('ntfs', 'exfat'):
+			elif fs.lower() in ('ntfs', 'exfat'):
 				cmd += ',,07\n'
 			else:
 				cmd += ',,83\n'

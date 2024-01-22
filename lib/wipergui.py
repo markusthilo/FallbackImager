@@ -100,7 +100,7 @@ class WipeRGui:
 			Button(frame, text=disk, command=partial(self._put_drive, disk)).grid(
 				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
 			text = ScrolledText(frame, width=self.root.ENTRY_WIDTH,
-				height=min(len(f'{disk}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
+				height=min(len(f'{(disk)}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
 			text.grid(row=self.root.row, column=1)
 			text.bind('<Key>', lambda dummy: 'break')
 			text.insert('end', f'{disk}')
