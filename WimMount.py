@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'WmiMount'
+__app_name__ = 'WimMount'
 __author__ = 'Markus Thilo'
-__version__ = '0.2.3_2023-11-23'
+__version__ = '0.3.0_2024-01-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Mount WMI Images, GUI to use with DismImager
+Mount WIM Images, GUI to use with DismImager
 '''
 
 from win32com.shell.shell import IsUserAnAdmin
@@ -37,10 +37,10 @@ class Gui(Tk):
 		if not any(self.cwd.glob('*.wim')):
 			showwarning(
 				f'{__app_name__}: Error',
-				f'{self.cwd}\n\nDid not find files in Windows Imaging Format (WMI) '
+				f'{self.cwd}\n\nDid not find files in Windows Imaging Format (.wim) '
 			)
 			filename = askopenfilename(
-				title = 'Select one image file (WMI)',
+				title = 'Select one image file (.wim)',
 				filetypes=[('Image files', '*.wim'), ('All files', '*.*')]
 			)
 			if not filename:

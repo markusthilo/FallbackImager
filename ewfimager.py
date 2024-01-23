@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2024-01-19'
+__version__ = '0.3.0_2024-01-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -98,12 +98,13 @@ class EwfImager:
 		for arg, par in kwargs.items():
 			cmd.extend([f'-{arg}', f'{par}'])
 		cmd.append(f'{self.source}')
+		print(cmd)
 		proc = OpenProc(cmd, log=self.log)
 		proc.echo_output(self.log)
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
 
-class WipeRCli(ArgumentParser):
+class EwfImagerCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
 
 	def __init__(self, **kwargs):
@@ -114,19 +115,19 @@ class WipeRCli(ArgumentParser):
 			metavar='STRING'
 		)
 		self.add_argument('-C', '--case_number', type=str, required=True,
-			help='Case number',
+			help='Case number (required)',
 			metavar='STRING'
 		)
 		self.add_argument('-D', '--description', type=str, required=True,
-			help='Description (e.g. drive number, example: "PC01_HD01")',
+			help='Description (required, e.g. drive number, example: "PC01_HD01")',
 			metavar='STRING'
 		)
 		self.add_argument('-e', '--examiner_name', type=str, required=True,
-			help='Examiner name',
+			help='Examiner name (required)',
 			metavar='STRING'
 		)
 		self.add_argument('-E', '--evidence_number', type=str, required=True,
-			help='Evidence number',
+			help='Evidence number (required)',
 			metavar='STRING'
 		)
 		self.add_argument('-m', '--media_type', type=str,
@@ -182,6 +183,6 @@ class WipeRCli(ArgumentParser):
 		image.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = WipeRCli()
+	app = EwfImagerCli()
 	app.parse()
 	app.run()

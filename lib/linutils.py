@@ -18,19 +18,24 @@ class LinUtils:
 	@staticmethod
 	def lspart(dev):
 		'''Use lsblk with JSON output to get partitions'''
-		return [(dev['path'], dev['label'], dev['size'], dev['mountpoints'])
-			for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
-				capture_output=True, text=True).stdout)['blockdevices']
-				if dev['type'] == 'part'
-		]
+		return {
+			dev['path']: [dev['size'], dev['label']] + dev['mountpoints']
+				for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS', f'{dev}'],
+					capture_output=True, text=True).stdout)['blockdevices']
+					if dev['type'] == 'part'
+		}
 
 	@staticmethod
 	def diskinfo():
 		'''Use lsblk with JSON output to get infos about disks'''
-		return {dev['path']: (dev['label'], dev['size'], dev['mountpoints'], LinUtils.lspart(dev['path']))
-			for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS'],
+		return {
+			dev['path']: {
+					'disk': [dev['size'], dev['label']] + dev['mountpoints'],
+					'partitions': LinUtils.lspart(dev['path'])
+				}
+				for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
-				if dev['type'] == 'disk'  and not dev['path'].startswith('/dev/zram')
+				if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
 		}
 
 	@staticmethod

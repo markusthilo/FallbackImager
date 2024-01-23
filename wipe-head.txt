@@ -1,9 +1,0 @@
-Dieser Datenträger wurde per Überschreiben unwiederherstellbar gelöscht.
-Eingesetzt wurde das Modul WipeR/WipeW des Projekts FallbackImager.
-
-This data carrier was irrecoverably deleted by overwriting.
-The WipeR/WipeW module of the FallbackImager project was used.
-
-https://github.com/markusthilo/FallbackImager
-
-Log:

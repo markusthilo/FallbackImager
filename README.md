@@ -5,44 +5,78 @@ The tool is currently developed for Linux based OS and Windows (>=10). It is wor
 
 ## Installation
 
-### Out of the box
+### Linux
+
+#### Python
+To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on you distro:
+```
+$ sudo apt install python3-tk
+```
+```
+$ sudo pacman install tk
+```
+```
+$ sudo dnf install python3-tkinter
+```
+
+#### C
+The compiler *gcc* is needed. Use
+```
+$ gcc -o bin/zd c/zd.c
+```
+to compile the wipe tool *zd*.
+
+#### 3rd party tools
+Install *libewf* from your distro repo(s):
+```
+$ sudo apt install python3-tk
+```
+```
+$ sudo pacman install tk
+```
+```
+$ sudo dnf install python3-tkinter
+```
+FallbackImager tries to locate *ewfacquire* and *ewfverify* on your system (e.g. at */usr/bin*). Alternatively it might be possible to copy the binaries manually into the (sub-)folder *bin*.
+
+### Windows
+
+#### Out of the box
 The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed.
 
-### Python
+#### Python
 To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pyinstaller*, *pywin32* and *WMI*. You might want to use
 ```
 $ pip install -r requirements.txt
 ```
-to install them. The scripts *make-FallbackImager-exe.py*, *make-WimMount-exe.py* and *make-win-cli-apps-exe.py* uses *PyInstaller* to generate the executables if needed.
+to install them. The scripts *make-FallbackImager-exe.py*, *make-WimMount-exe.py* and *make-win-cli-apps-exe.py* use *PyInstaller* to generate the executables if needed.
 
-As *pycdlib* and *mkisofs.exe* are not properly working, the modules MkIsoImager and IsoVerify were dropped.
-
-### C
-
-On Linux based OS *gcc* is needed:
-```
-$ gcc -o bin/zd c/zd.c
-```
-To compile zd-win.c on Windows you can use MSYS2 with MinGW-w64:
+#### C
+To compile zd-win.c you can use MSYS2 with MinGW-w64:
 ```
 $ pacman -Syu
 $ pacman -S mingw-w64-ucrt-x86_64-gcc
 $ gcc -o bin/zd-win.exe c/zd-win.c
 ```
 
-### 3rd party tools
-The wipe tool zd has to be in a (sub-)folder *bin*. On Windows you need *oscdimg.exe* in *bin*. This folder is also the home for *WimMount.exe* and *zd-win.exe*.
+#### 3rd party tools
+You need the free MS tool *oscdimg.exe* in *bin*. This folder is also the home for *WimMount.exe* and *zd-win.exe*.
 
 ## Usage of the GUI
 
 ### Start
 
-When used without admin privileges some features are not available.
-Use the Python file with
+On WIndows the executable *FallbackImager.exe* can be lauched by double clicking.
+
+When used without admin privileges most features are not available. Launch from the terminal using
 ```
-$ python FallbackImager
+$ sudo python FallbackImager.py
 ```
-or launch the executable (*FallbackImager.exe*) on Windows.
+or open the PowerShell or CMD on Windos and run
+```
+$ python.exe FallbackImager.py
+```
+as Admin.
 
 ### Tabs
 Each module is represented by a tab in the upper part of the window.
@@ -61,11 +95,19 @@ The execution job after job is started with the button "Start jobs" on the left 
 
 ## Modules
 
+### EwfImager
+
+This is a conveniant interface for *ewfacquire* and *ewfverify*. This module is not available on Windows.
+
+### EwfVerify
+
+The module simply uses *ewfverify* and is not available on Windows.
+
 ### OscdImager
 The module uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system). Obviously this module is only available on Windows.
 
 ### DismImager
-This module is only availible on Windows with Admin privileges. It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WMI image or just verify an existing. When "Copy WimMount.exe to destination directory" a little GUI to mount and dismount is copied from *bin* to the destination. *WimMount.exe* needs to be run as Admin.
+This module is only availible on Windows with Admin privileges. It generates an image in the WIM format using DISM/*dism.exe*. The CLI tool is built into Windows. You can either generate and verify a WIM image or just verify an existing. When "Copy WimMount.exe to destination directory" is selected the little GUI tool *WimMount.exe* is copied from *bin* to the destination. *WimMount.exe* needs to be run as Admin and can mount and dismount WIM image files.
 
 ### ZipImager
 Using the Python library *zipfile* this module generates an ZIP archive from a source file structure. By giving a file list (CSV/TSV) it is possible to select what to include. In addition you can use a whitelist (excludes files) or a blacklist (selects files).

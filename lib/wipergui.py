@@ -11,6 +11,7 @@ from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
 from lib.linutils import LinUtils
+from lib.stringutils import StringUtils
 
 class WipeRGui:
 	'''Notebook page for WipeR'''
@@ -83,8 +84,10 @@ class WipeRGui:
 		self.filenames = None
 
 	def _default_head(self):
-		'''Edit log header file with Notepad'''
+		'''Set default log header'''
 		self.root.settings.section = self.CMD
+		if self.root.settings.get(self.root.LOG_HEAD):
+			return
 		self.root.settings.raw(self.root.LOG_HEAD).set(self.default_wlh_path)
 
 	def _select_target(self):
@@ -95,15 +98,18 @@ class WipeRGui:
 		self.root.settings.section = self.CMD
 		frame = ExpandedFrame(self.root, self.target_window)
 		self.root.row = 0
-		GridLabel(self.root, frame, self.root.SELECT_DRIVE)
-		for disk in LinUtils.lsdisk():
-			Button(frame, text=disk, command=partial(self._put_drive, disk)).grid(
+		GridLabel(self.root, frame, self.root.SELECT_SOURCE)
+		for diskpath, diskinfo in LinUtils.diskinfo().items():
+			infotext = f'Disk size: {StringUtils.join(diskinfo["disk"], delimiter=", ")}'
+			for partition, info in diskinfo['partitions'].items():
+				infotext += f'\n- {partition}: {StringUtils.join(info, delimiter=", ")}'
+			Button(frame, text=diskpath, command=partial(self._put_drive, diskpath), width=self.root.BUTTON_WIDTH).grid(
 				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
 			text = ScrolledText(frame, width=self.root.ENTRY_WIDTH,
-				height=min(len(f'{(disk)}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
+				height=min(len(f'{(infotext)}'.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
 			text.grid(row=self.root.row, column=1)
 			text.bind('<Key>', lambda dummy: 'break')
-			text.insert('end', f'{disk}')
+			text.insert('end', infotext)
 			text.configure(state='disabled')
 			self.root.row += 1
 		frame = ExpandedFrame(self.root, self.target_window)

@@ -1,0 +1,6 @@
+Dieser Datenträger wurde vollständig gelöscht (wiped).
+Hierfür wurde das Modul WipeR der freien, quelloffenen Software FallbackImager
+(https://github.com/markusthilo/FallbackImager) eingesetzt.
+Thilo, KHK, Polizei Berlin, LKA 712
+
+Protokoll des Löschens:

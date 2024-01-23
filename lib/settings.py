@@ -76,5 +76,9 @@ class Settings(dict):
 
 	def write(self):
 		'''Write config file'''
-		with self.path.open('w') as fh:
-			dump(self.decoded(), fh)
+		try:
+			with self.path.open('w') as fh:
+				dump(self.decoded(), fh)
+		except PermissionError as err:
+			return err
+

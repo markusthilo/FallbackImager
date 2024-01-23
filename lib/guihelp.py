@@ -16,7 +16,6 @@ class Help(Thread):
 	def run(self):
 		window = Tk()
 		window.title(self.root.HELP)
-		window.iconbitmap(self.root.icon_path)
 		text = ScrolledText(window,
 			width = self.root.ENTRY_WIDTH,
 			height = 4*self.root.INFO_HEIGHT,
@@ -26,8 +25,11 @@ class Help(Thread):
 		text.bind('<Key>', lambda dummy: 'break')
 		text.insert('end', f'{self.root.app_name} v{self.root.version}\n\n')
 		text.insert('end', f'{self.root.DESCRIPTION}\n\n\n')
-		for ImagerGui in self.root.IMAGERS:
-			text.insert('end', f'{ImagerGui.CMD}:\n{ImagerGui.DESCRIPTION}\n\n')
+		try:
+			help_text = (self.root.parent_path/'help.txt').read_text(encoding='utf-8')
+		except:
+			help_text = 'Error: Unable to read help.txt'
+		text.insert('end', f'{help_text}\n')
 		text.configure(state='disabled')
 		frame = Frame(window)
 		frame.pack(fill='both', expand=True)

@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2023-12-27'
+__version__ = '0.3.0_2024-01-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -62,11 +62,14 @@ if __os_name__ == 'nt':
 		}
 		__not_admin__ = 'No Admin Privileges'
 else:
+		from ewfimager import EwfImagerCli
+		from lib.ewfimagergui import EwfImagerGui
 		from ewfverify import EwfVerifyCli
 		from lib.ewfverifygui import EwfVerifyGui
 		from wiper import WipeRCli
 		from lib.wipergui import WipeRGui
 		__modules__ = {
+			EwfImagerGui: EwfImagerCli,
 			EwfVerifyGui: EwfVerifyCli,
 		#	MkIsoImagerGui: MkIsoImagerCli,
 		#	IsoVerifyGui: IsoVerifyCli,
@@ -244,6 +247,17 @@ class Gui(GuiBase):
 	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
 	SQLITE_DB_REQUIRED = 'SQLite database file is required'
 	SQL_FILE_REQUIRED = 'SQL file is required'
+	CASE_NO = 'Case number'
+	EVIDENCE_NO = 'Evidence number'
+	DEF_EVIDENCE_NO = 'EAV'
+	DESCRIPTION = 'Description'
+	DEF_DESCRIPTION = 'HD'
+	EXAMINER_NAME = 'Examiner name'
+	NOTES = 'Notes'
+	MEDIA_TYPE = 'Media type'
+	SEGMENT_SIZE = 'Segment size (MiB)'
+	AUTO = 'Auto'
+	SELECT_SOURCE = 'Select source'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

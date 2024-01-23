@@ -88,7 +88,7 @@ class GridIntMenu(OptionMenu):
 	def __init__(self, root, parent, key, text, values,
 		default=None, column=0, columnspan=1):
 		self.variable = root.settings.init_intvar(key, default=default)
-		Label(parent, text=text).grid(
+		Label(parent, text=f'{text}    ').grid(
 			sticky='e', row=root.row, column=column, columnspan=columnspan)
 		super().__init__(parent, self.variable, self.variable.get(), *values)
 		self.grid(sticky='w', row=root.row, column=column+columnspan)
@@ -99,7 +99,7 @@ class GridStringMenu(OptionMenu):
 	def __init__(self, root, parent, key, text, values,
 		default=None, column=0, columnspan=1):
 		self.variable = root.settings.init_stringvar(key, default=default)
-		Label(parent, text=text).grid(
+		Label(parent, text=f'{text}    ').grid(
 			sticky='e', row=root.row, column=column, columnspan=columnspan)
 		super().__init__(parent, self.variable, self.variable.get(), *values)
 		self.grid(sticky='w', row=root.row, column=column+columnspan)

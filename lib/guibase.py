@@ -131,5 +131,6 @@ class GuiBase(Tk):
 					title = f'{self.QUIT} {self.app_name}',
 					message = self.ARE_YOU_SURE
 		):
-			self.settings.write()
+			if err := self.settings.write():
+				showerror(title=self.ERROR, message=err, timeout=5000)
 			self.destroy()
