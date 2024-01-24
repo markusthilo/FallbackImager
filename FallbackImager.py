@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2024-01-23'
+__version__ = '0.3.0_2024-01-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -256,8 +256,9 @@ class Gui(GuiBase):
 	NOTES = 'Notes'
 	MEDIA_TYPE = 'Media type'
 	SEGMENT_SIZE = 'Segment size (MiB)'
-	AUTO = 'Auto'
+	AUTO = 'auto'
 	SELECT_SOURCE = 'Select source'
+	IMAGE_DETAILS_REQUIRED = 'Image details required'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

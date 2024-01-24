@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.0_2024-01-23'
+__version__ = '0.3.0_2024-01-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -98,7 +98,6 @@ class EwfImager:
 		for arg, par in kwargs.items():
 			cmd.extend([f'-{arg}', f'{par}'])
 		cmd.append(f'{self.source}')
-		print(cmd)
 		proc = OpenProc(cmd, log=self.log)
 		proc.echo_output(self.log)
 		if stderr := proc.stderr.read():

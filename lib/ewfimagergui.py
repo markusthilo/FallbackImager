@@ -20,6 +20,7 @@ class EwfImagerGui:
 
 	CMD = 'EwfImager'
 	MEDIA_TYPES = ['fixed', 'removable', 'optical']
+	COMPRESSIONS = ['fast', 'best', 'none']
 
 	def __init__(self, root):
 		'''Notebook page'''
@@ -30,28 +31,31 @@ class EwfImagerGui:
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.SOURCE)
 		StringSelector(root, frame, root.SOURCE, root.SOURCE,
-			command=self._select_source, columnspan=4)
+			command=self._select_source, columnspan=5)
 		root.settings.raw(root.SOURCE).set('')
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION)
-		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=4)
+		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=5)
 		StringSelector(root, frame, root.CASE_NO, root.CASE_NO,
-			command=self._set_ts_case_no, columnspan=4)
+			command=self._set_ts_case_no, columnspan=5)
 		StringSelector(root, frame, root.EVIDENCE_NO, root.EVIDENCE_NO,
-			command=self._set_def_evidence_no, columnspan=4)
+			command=self._set_def_evidence_no, columnspan=5)
 		StringSelector(root, frame, root.DESCRIPTION, root.DESCRIPTION,
-			command=self._set_def_description, columnspan=4)
+			command=self._set_def_description, columnspan=5)
 		StringSelector(root, frame, root.EXAMINER_NAME, root.EXAMINER_NAME,
-			command=self._set_def_examiner_name, columnspan=4)
+			command=self._set_def_examiner_name, columnspan=5)
 		notes = [f'Notes {index}' for index in ('A', 'B', 'C')]
 		StringRadiobuttons(root, frame, root.NOTES, notes, notes[0])
 		for choice in notes:
-			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice), columnspan=4)
+			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice), columnspan=5)
 		StringSelector(root, frame, root.SEGMENT_SIZE, root.SEGMENT_SIZE, default=root.AUTO, command=self._set_auto,
 			width=root.SMALL_FIELD_WIDTH, columnspan=4)
 		root.row -= 1
+		GridStringMenu(root, frame, root.COMPRESSION, root.COMPRESSION,
+			self.COMPRESSIONS, default=self.COMPRESSIONS[0], column=3)
+		root.row -= 1
 		GridStringMenu(root, frame, root.MEDIA_TYPE, root.MEDIA_TYPE,
-				 self.MEDIA_TYPES, default=self.MEDIA_TYPES[0], column=2)
+			self.MEDIA_TYPES, default=self.MEDIA_TYPES[0], column=5)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
@@ -142,9 +146,13 @@ class EwfImagerGui:
 		self.root.settings.section = self.CMD
 		source = self.root.settings.get(self.root.SOURCE)
 		outdir = self.root.settings.get(self.root.OUTDIR)
-		filename = self.root.settings.get(self.root.FILENAME)
-		name = self.root.settings.get(self.root.IMAGE_NAME)
-		oscdimg_exe = self.root.settings.get(self.root.OSCDIMG_EXE)
+		case_no = self.root.settings.get(self.root.CASE_NO)
+		evidence_number = self.root.settings.get(self.root.EVIDENCE_NO)
+		description = self.root.settings.get(self.root.DESCRIPTION)
+		examiner_name = self.root.settings.get(self.root.EXAMINER_NAME)
+		notes = self.root.settings.get(self.root.settings.get(self.root.NOTES))
+		media_type = self.root.settings.get(self.root.MEDIA_TYPE)
+		compression = self.root.settings.get(self.root.COMPRESSION)
 		if not source:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
@@ -157,18 +165,17 @@ class EwfImagerGui:
 				message = self.root.DEST_DIR_REQUIRED
 			)
 			return
-		if not filename:
+		if not case_no or not evidence_number or not description or not examiner_name:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_FN_REQUIRED
+				message = self.root.IMAGE_DETAILS_REQUIRED
 			)
 			return
 		cmd = self.root.settings.section.lower()
-		if oscdimg_exe and Path(oscdimg_exe) != __oscdimg_exe_path__:
-			cmd += f' --exe "{oscdimg_exe}"'
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		if name:
-			cmd += f' --{self.root.IMAGE_NAME.lower()} "{name}"'
+		cmd += f' -C "{case_no}" -E "{evidence_number}" -D "{description}" -e "{examiner_name}"'
+		if notes:
+			cmd += f' -N "{notes}"'
+		cmd += f' -m {media_type} -c {compression}'
 		cmd += f' "{source}"'
 		self.root.append_job(cmd)
