@@ -8,34 +8,39 @@ The tool is currently developed for Linux based OS and Windows (>=10). It is wor
 ### Linux
 
 #### Python
-To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on you distro:
+To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on you distro, e.g.:
 ```
-$ sudo apt install python3-tk
-```
-```
-$ sudo pacman install tk
+$ sudo apt install python3 python3-tk
 ```
 ```
-$ sudo dnf install python3-tkinter
+$ sudo pacman install python tk
+```
+```
+$ sudo dnf install python3 python3-tkinter
+```
+```
+$ sudo zypper install python3 python3-tk
 ```
 
 #### C
-The compiler *gcc* is needed. Use
+The realease brings a pre-compiled version of the wipe tool zd. To compile the source *gcc* is needed:
 ```
 $ gcc -o bin/zd c/zd.c
 ```
-to compile the wipe tool *zd*.
 
 #### 3rd party tools
-Install *libewf* from your distro repo(s):
+Install *libewf* from your distro repos, e.g.:
 ```
-$ sudo apt install python3-tk
-```
-```
-$ sudo pacman install tk
+$ sudo apt install libewf
 ```
 ```
-$ sudo dnf install python3-tkinter
+$ sudo pacman install libewf
+```
+```
+$ sudo dnf install libewf
+```
+```
+$ sudo zypper install libewf
 ```
 FallbackImager tries to locate *ewfacquire* and *ewfverify* on your system (e.g. at */usr/bin*). Alternatively it might be possible to copy the binaries manually into the (sub-)folder *bin*.
 
@@ -132,8 +137,7 @@ Be aware that this module is extremely dangerous as it is designed to erase data
 ## Legal Notice
 
 ### License
-Respect GPL-3:
-https://www.gnu.org/licenses/gpl-3.0.en.html
+Respect GPL-3: https://www.gnu.org/licenses/gpl-3.0.en.html
 
 ### Disclaimer
 Use the software on your own risk.
