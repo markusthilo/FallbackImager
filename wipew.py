@@ -26,12 +26,10 @@ from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.winutils import WinUtils
 
-__executable__ = Path(__executable__)
-__file__ = Path(__file__)
-if __executable__.stem.lower() == __file__.stem.lower():
-	__parent_path__ = __executable__.parent
+if Path(__file__).suffix.lower() == '.py':
+	__parent_path__ = Path(__file__).parent
 else:
-	__parent_path__ = __file__.parent
+	__parent_path__ = Path(__executable__).parent
 
 class WipeW(WinUtils):
 	'''Frontend and Python wrapper for zd-win.exe'''
@@ -42,6 +40,10 @@ class WipeW(WinUtils):
 
 	def __init__(self):
 		'''Create Object'''
+		
+		print(__executable__, __file__, __parent_path__)
+		
+		
 		for self.zd_path in (
 			__parent_path__/'bin/zd-win.exe',
 			__parent_path__/'zd-win.exe'
@@ -49,7 +51,7 @@ class WipeW(WinUtils):
 			if self.zd_path.is_file():
 				break
 		if not self.zd_path.is_file():
-			raise RuntimeError('Uanbale to locate zd.exe')
+			raise RuntimeError(f'Unabale to locate zd-win.exe: {self.zd_path} - {(__executable__, __file__, __parent_path__)}')
 
 	def wipe(self, targets,
 			verify = False,

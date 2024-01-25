@@ -78,12 +78,10 @@ else:
 			AxCheckerGui: AxCheckerCli,
 			WipeRGui: WipeRCli
 		}
-__executable__ = Path(__executable__)
-__file__ = Path(__file__)
-if __executable__.stem.lower() == __file__.stem.lower():
-	__parent_path__ = __executable__.parent
+if Path(__file__).suffix.lower() == '.py':
+	__parent_path__ = Path(__file__).parent
 else:
-	__parent_path__ = __file__.parent
+	__parent_path__ = Path(__executable__).parent
 ###############
 
 class Gui(GuiBase):

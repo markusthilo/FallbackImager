@@ -11,6 +11,7 @@ __description__ = '''
 The module uses oscdimg.exe (from the Windows ADK Package) to generate an ISO file (UDF file system).
 '''
 
+from sys import executable as __executable__
 from pathlib import Path
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
@@ -19,6 +20,11 @@ from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.winutils import WinPopen
 from lib.hashes import FileHashes
+
+if Path(__file__).suffix.lower() == '.py':
+	__parent_path__ = Path(__file__).parent
+else:
+	__parent_path__ = Path(__executable__).parent
 
 class OscdImager:
 	'''OSCDIMG via subprocess (oscdimg.exe -h -m -l$label -u2 $source $image)'''
@@ -31,14 +37,9 @@ class OscdImager:
 	def __init__(self):
 		'''Find oscdimg.exe to gnerate object'''
 		for self.exe_path in (
-			Path.cwd()/'oscdimg.exe',
+			__parent_path__/'oscdimg.exe',
 			Path.cwd()/'bin'/'oscdimg.exe',
-			Path(__file__)/'oscdimg.exe',
-			Path(__file__)/'bin'/'oscdimg.exe',
-			(Path('C:')/
-				'Program Files (x86)'/'Windows Kits'/'10'/'Assessment and Deployment Kit'/
-				'Deployment Tools'/'amd64'/'Oscdimg'/'oscdimg.exe'
-			)
+			Path('C:')/'Program Files (x86)'/'Windows Kits'/'10'/'Assessment and Deployment Kit'/'Deployment Tools'/'amd64'/'Oscdimg'/'oscdimg.exe'
 		):
 			if self.exe_path.is_file():
 				return
