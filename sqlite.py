@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.3_2023-12-18'
+__version__ = '0.3.1_2024-01-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
