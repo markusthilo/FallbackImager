@@ -36,11 +36,11 @@ class MkExe:
 		dir_path = Path.cwd()
 		if tobin:
 			dir_path = dir_path/'bin'
-		print(self.exe_path, dir_path, dir_path/self.exe_path.name)
-		self.exe_path = self.exe_path.rename(dir_path/self.exe_path.name)
+		self.exe_path = self.exe_path.replace(dir_path/self.exe_path.name)
 		rmtree('build')
 		rmtree('dist')
 		self.py_path.with_suffix('.spec').unlink()
+		return self.exe_path
 
 if __name__ == '__main__':	# start here if called as application
 	argparser = ArgumentParser(description=__description__)
@@ -51,16 +51,22 @@ if __name__ == '__main__':	# start here if called as application
 		help='Additional Python files to compile', metavar='FILE'
 	)
 	args = argparser.parse_args()
+	exes = list()
 	if args.cli or len(argv) == 1:
-		MkExe('axchecker.py').move()
-		MkExe('dismimager.py', admin=True).move()
-		MkExe('oscdimager.py').move()
-		MkExe('sqlite.py').move()
-		MkExe('wipew.py', admin=True).move()
-		MkExe('zipimager.py').move()
+		exes.append(MkExe('axchecker.py').move())
+		exes.append(MkExe('dismimager.py', admin=True).move())
+		exes.append(MkExe('oscdimager.py').move())
+		exes.append(MkExe('sqlite.py').move())
+		exes.append(MkExe('wipew.py', admin=True).move())
+		exes.append(MkExe('zipimager.py').move())
 	if args.gui:
-		MkExe('FallbackImager.py', admin=True, noconsole=True).move()
+		exes.append(MkExe('FallbackImager.py', admin=True, noconsole=True).move())
 	if args.wim or len(argv) == 1:
-		MkExe('WimMount.py', admin=True, noconsole=True).move(tobin=True)
-
+		exes.append(MkExe('WimMount.py', admin=True, noconsole=True).move(tobin=True))
+	if exes:
+		print('\nBuild:')
+		for path in exes:
+			print(f'{path}')
+	else:
+		raise RuntimeError('No executables were generated')
 
