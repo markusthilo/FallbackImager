@@ -132,5 +132,9 @@ class GuiBase(Tk):
 					message = self.ARE_YOU_SURE
 		):
 			if err := self.settings.write():
-				showerror(title=self.ERROR, message=err, timeout=5000)
+				try:
+					self.after(5000, self.destroy)
+					showerror(title=self.ERROR, message=err)
+				except:
+					pass
 			self.destroy()
