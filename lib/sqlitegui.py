@@ -125,7 +125,7 @@ class SQLiteGui:
 			cmd += f' --schema'
 		else:
 			if table:
-				cmd += f' --column "{table}"'
+				cmd += f' --table "{table}"'
 			if column:
 				cmd += f' --column "{column}"'
 		cmd += f' "{db}"'
