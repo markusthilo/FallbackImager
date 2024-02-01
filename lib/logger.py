@@ -36,12 +36,6 @@ class Logger:
 		print(TimeStamp.now(), 'WARNING', *args, file=self._fh)
 		if echo:
 			self.echo('WARNING', *args)
-		if string:
-			print(file=self._fh)
-			self.write(string)
-			if echo:
-				self.echo()
-				self.echo(string)
 
 	def error(self, *args, exception='Unspecified error occured'):
 		'''Print error to log'''

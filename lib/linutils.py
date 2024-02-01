@@ -46,7 +46,7 @@ class LinUtils:
 
 	@staticmethod
 	def init_dev(dev, mbr=False, fs='ntfs'):
-		'''Create partition table a one big partition'''
+		'''Create partition table and one big partition'''
 		if mbr:
 			cmd = 'label: dos\n'
 			if fs.lower() == 'fat32':
@@ -81,13 +81,15 @@ class LinUtils:
 	@staticmethod
 	def mount(dev, target):
 		'''Use mount'''
-		return run(['mount', f'{dev}', f'{target}'], capture_output=True, text=True).stderr
+		ret = run(['mount', f'{dev}', f'{target}'], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
 
 	@staticmethod
 	def umount(target):
 		'''Use umount'''
 		run(['sync'], check=True)
-		return run(['umount', f'{target}'], capture_output=True, text=True).stderr
+		ret = run(['umount', f'{target}'], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
 
 
 

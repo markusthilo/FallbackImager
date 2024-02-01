@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-01-25'
+__version__ = '0.3.1_2024-02-01'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -26,10 +26,11 @@ from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.winutils import WinUtils
 
-if Path(__file__).suffix.lower() == '.py':
-	__parent_path__ = Path(__file__).parent
-else:
+
+if Path(__executable__).stem == __app_name__:
 	__parent_path__ = Path(__executable__).parent
+else:
+	__parent_path__ = Path(__file__).parent
 
 class WipeW(WinUtils):
 	'''Frontend and Python wrapper for zd-win.exe'''
@@ -40,10 +41,6 @@ class WipeW(WinUtils):
 
 	def __init__(self):
 		'''Create Object'''
-		
-		print(__executable__, __file__, __parent_path__)
-		
-		
 		for self.zd_path in (
 			__parent_path__/'bin/zd-win.exe',
 			__parent_path__/'zd-win.exe'

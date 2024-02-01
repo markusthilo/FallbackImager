@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-01-25'
+__version__ = '0.3.1_2024-01-31'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -26,12 +26,7 @@ from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.linutils import LinUtils
 
-__executable__ = Path(__executable__)
-__file__ = Path(__file__)
-if __executable__.stem.lower() == __file__.stem.lower():
-	__parent_path__ = __executable__.parent
-else:
-	__parent_path__ = __file__.parent
+__parent_path__ = Path(__file__).parent
 
 class WipeR:
 	'''Frontend and Python wrapper for zd'''
@@ -144,19 +139,24 @@ class WipeR:
 		if stderr:
 			self.log.warning(stderr, echo=True)
 		for retry in range(10):
-			partitions = LinUtils.lspart(target)
+			partitions = LinUtils.lspart(target).keys()
 			if partitions:
-				partition = partitions[0]
+				partition = list(partitions)[0]
 				break
 			if retry == 9:
-				self.log.error('Could not create new partition')
+				self.log.warning('Could not create new partition', echo=True)
+				self.log.close()
+				return
 		stdout, stderr = LinUtils.mkfs(partition, fs=fs, label=name)
 		if stderr:
 			self.log.warning(stderr, echo=True)
 		mnt = ExtPath.mkdir(self.outdir/'mnt')
-		stderr = LinUtils.mount(partition, mnt)
+		stdout, stderr = LinUtils.mount(partition, mnt)
 		if stderr:
-			self.log.error(stderr)
+			self.log.warning(stderr, echo=True)
+			self.log.close()
+			return
+		self.log.info('Disk preparation successful', echo=True)
 		self.log.close()
 		log_path = mnt/'wipe-log.txt'
 		try:
@@ -165,9 +165,9 @@ class WipeR:
 			head = ''
 		with log_path.open('w') as fh:
 			fh.write(head + self.log.path.read_text())
-		stderr = LinUtils.umount(mnt)
+		stdout, stderr = LinUtils.umount(mnt)
 		if stderr:
-			raise RuntimeError(stderr)
+			raise RuntimeError(f'{stdout}\n{stderr}')
 		mnt.rmdir()
 
 class WipeRCli(ArgumentParser):
