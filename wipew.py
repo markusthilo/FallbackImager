@@ -26,8 +26,7 @@ from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.winutils import WinUtils
 
-
-if Path(__executable__).stem == __app_name__:
+if Path(__file__).suffix.lower() == '.pyc':
 	__parent_path__ = Path(__executable__).parent
 else:
 	__parent_path__ = Path(__file__).parent
@@ -48,7 +47,7 @@ class WipeW(WinUtils):
 			if self.zd_path.is_file():
 				break
 		if not self.zd_path.is_file():
-			raise RuntimeError(f'Unabale to locate zd-win.exe: {self.zd_path} - {(__executable__, __file__, __parent_path__)}')
+			raise RuntimeError(f'Unabale to locate zd-win.exe')
 
 	def wipe(self, targets,
 			verify = False,
@@ -153,6 +152,7 @@ class WipeW(WinUtils):
 		)
 		if not driveletter:
 			self.log.error('Could not assign a letter to the wiped drive')
+		self.log.info('Disk preparation successful', echo=True)
 		self.log.close()
 		log_path = Path(f'{driveletter}:\\wipe-log.txt')
 		try:
