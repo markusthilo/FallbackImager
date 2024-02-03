@@ -62,11 +62,6 @@ class ExtPath:
 		'''Decode to UTF-8'''
 		return normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
 
-	#@staticmethod
-	#def labelize(string):
-	#	'''Generate UDF/ISO conform label from string'''
-	#	return ''.join(char for char in string if char.isalnum() or char in ['_', '-'])[:32]
-
 	@staticmethod
 	def mkfname(string):
 		'''Eleminate chars that do not work in filenames'''
@@ -101,35 +96,19 @@ class ExtPath:
 	@staticmethod
 	def walk(root):
 		'''Recursivly give all sub-paths'''
-		return root.rglob('*')
+		for path in root.rglob('*'):
+			if path.is_file():
+				tp = 'f'
+			elif path.is_dir():
+				tp = 'd'
+			else:
+				tp = None
+			yield path, path.relative_to(root), tp
 
 	@staticmethod
 	def sum_files(root):
 		'''Get sum of all files'''
-		return sum(path.is_file() for path in ExtPath.walk(root))
-
-	@staticmethod
-	def walk_files(root):
-		'''Recursivly find all files'''
-		if isinstance(root, WindowsPath):
-			slash = '\\'
-		else:
-			slash = '/'
-		for path in ExtPath.walk(root):
-			if path.is_file():
-				yield path, f'{slash}{path.relative_to(root)}'
-
-	@staticmethod
-	def walk_posix(root):
-		'''Recursivly find all sub-paths for files or dirs and give posix'''
-		for path in ExtPath.walk(root):
-			posix = f'/{path.relative_to(root).as_posix()}'
-			if path.is_file():
-				yield path, posix, 'file'
-			elif path.is_dir():
-				yield path, f'{posix}/', 'dir'
-			else:
-				yield path, posix, None
+		return sum(path.is_file() for path in root.rglob('*'))
 
 	@staticmethod
 	def read_utf_head(path, after=0):

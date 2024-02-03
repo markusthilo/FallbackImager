@@ -84,7 +84,7 @@ DismImager
 This module is only availible on Windows with Admin privileges. It generates an image in the WIM format using DISM/dism.exe. The CLI tool is built into Windows. You can either generate and verify a WIM image or just verify an existing. When “Copy WimMount.exe to destination directory” is selected the little GUI tool WimMount.exe is copied from bin to the destination. WimMount.exe needs to be run as Admin and can mount and dismount WIM image files.
 
 ZipImager
-Using the Python library zipfile this module generates an ZIP archive from a source file structure. By giving a file list (CSV/TSV) it is possible to select what to include. In addition you can use a whitelist (excludes files) or a blacklist (selects files).
+Using the Python library zipfile this module generates an ZIP archive from a source file structure. The process is robust to unreadable paths and a TSV path list is generated.
 
 Sqlite
 The Sqlite module uses the Python library sqlite3. It can show the structure of a .db file (“Dump schema”) or dump the content as CSV/TSV (“Dump content”). In addition SQL code can be executed (“Execute SQL”) by the library. An alternative method is implemented (“Alternative”) that is designed to generate a .db file from a MySQL dump file in case sqlite3 fails.
