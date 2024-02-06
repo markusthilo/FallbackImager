@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-01-31'
+__version__ = '0.4.0_2024-02-06'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -26,7 +26,10 @@ from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.linutils import LinUtils
 
-__parent_path__ = Path(__file__).parent
+if Path(__file__).suffix.lower() == '.pyc':
+	__parent_path__ = Path(__executable__).parent
+else:
+	__parent_path__ = Path(__file__).parent
 
 class WipeR:
 	'''Frontend and Python wrapper for zd'''

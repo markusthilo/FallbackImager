@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-03'
+__version__ = '0.4.0_2024-02-06'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -28,10 +28,11 @@ from lib.sqlitegui import SQLiteGui
 
 ### MODULES, SYSTEM AND SYSTEM REALTED SETTINGS ###
 __not_admin__ = None
-__parent_path__ = Path(__file__).parent
+if Path(__executable__).stem == __app_name__:
+	__parent_path__ = Path(__executable__).parent
+else:
+	__parent_path__ = Path(__file__).parent
 if __os_name__ == 'nt':
-	if Path(__executable__).stem == __app_name__:
-		__parent_path__ = Path(__executable__).parent
 	from win32com.shell.shell import IsUserAnAdmin
 	from oscdimager import OscdImagerCli
 	from lib.oscdimagergui import OscdImagerGui

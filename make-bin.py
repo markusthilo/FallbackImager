@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-05'
+__version__ = '0.4.0_2024-02-06'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,7 +15,6 @@ from shutil import rmtree
 from sys import argv
 from argparse import ArgumentParser
 import PyInstaller.__main__
-
 
 class MkBin:
 	'''Use PyInstaller to build executable binary files'''
@@ -47,12 +46,12 @@ if __name__ == '__main__':	# start here if called as application
 	)
 	args = argparser.parse_args()
 	bins = list()
-	if args.cli or len(argv) == 1:
+	if args.cli:
 		bins.append(MkBin('axchecker.py').move())
 		bins.append(MkBin('sqlite.py').move())
 		bins.append(MkBin('wiper.py').move())
 		bins.append(MkBin('zipimager.py').move())
-	if args.gui:
+	if args.gui or len(argv) == 1:
 		bins.append(MkBin('FallbackImager.py').move())
 	if bins:
 		print('\nBuild:')

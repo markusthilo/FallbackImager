@@ -51,13 +51,6 @@ class ExtPath:
 			return path.stat().st_size
 
 	@staticmethod
-	def windowize(path):
-		'''Replace slashes with backslashes'''
-		if isinstance(path, PosixPath):
-			return Path(str(path).replace('/', '\\'))
-		return path
-
-	@staticmethod
 	def decode(path):
 		'''Decode to UTF-8'''
 		return normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')

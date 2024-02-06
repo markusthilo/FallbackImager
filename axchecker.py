@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-02-01'
+__version__ = '0.4.0_2024-02-06'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -28,28 +28,27 @@ from lib.tsvreader import TsvReader
 class AxChecker:
 	'''Compare AXIOM case file / SQlite data base with paths'''
 
-	def __init__(self):
+	def __init__(self, mfdb, echo = print):
 		'''Create Object'''
-		pass
+		self.mfdb = MfdbReader(mfdb)
+		self.mfdb_path = Path(mfdb)
+		self.echo = echo
 
-	def list_partitions(self, mfdb, echo=print):
+	def list_partitions(self):
 		'''List the partitions'''
-		for n, partition_id in enumerate(MfdbReader().get_partition_ids(mfdb), start=1):
+		for n, partition_id in enumerate(self.mfdb.get_partition_ids(), start=1):
 			self.echo(f'{n}: {self.mfdb.paths[partition_id]}')
 
-	def check(self, mfdb,
+	def check(self,
 			filename = None,
 			outdir = None,
 			diff = None,
 			partition = None,
 			column = None,
 			nohead = False,
-			log = None,
-			echo = print
+			log = None
 		):
 		'''Check AXIOM case file'''
-		self.mfdb_path = Path(mfdb)
-		self.mfdb = MfdbReader(self.mfdb_path)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		if diff:
@@ -65,7 +64,6 @@ class AxChecker:
 			self.partition = None
 		self.column = column
 		self.nohead = nohead
-		self.echo = echo
 		if log:
 			self.log = log
 		else:
@@ -106,20 +104,23 @@ class AxChecker:
 		if not self.diff_path:	# end here if nothing to compare is given
 			self.log.info('Done', echo=True)
 			return
+		if not self.partition:
+			raise ValueError('Missing partition to compare')
 		self.log.info(f'Comparing AXIOM partition {partition_name} to {self.diff_path.name}', echo=True)
-		short_paths = {path[len(partition_name):] for path in paths}
+		part_name_len = len(partition_name)
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
+			short_paths = {Path(path[part_name_len:]) for path in paths}
 			progress = FilesPercent(self.diff_path, echo=self.echo)
 			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
 				).open(mode='w', encoding='utf-8') as fh:
-				for absolut_path, relative_path in ExtPath.walk_files(self.diff_path):
+				for absolut_path, relative_path, tp in ExtPath.walk(self.diff_path):
 					progress.inc()
-					path = ExtPath.windowize(relative_path)
-					if not path in short_paths:
+					if not relative_path in short_paths:
 						print(absolut_path, file=fh)
 						missing_cnt += 1
 		elif self.diff_path.is_file:	# compare to file
+			short_paths = {ExtPath.normalize(path[part_name_len:]) for path in paths}
 			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
 			if tsv.column < 0:
 				self.log.error('Column out of range/undetected')
@@ -127,8 +128,8 @@ class AxChecker:
 				).open(mode='w', encoding='utf-8') as fh:
 				if not self.nohead:
 					print(tsv.head, file=fh)
-				for full_path, line in tsv.read_lines():
-					if not ExtPath.normalize(full_path) in short_paths:
+				for tsv_path, line in tsv.read_lines():
+					if not ExtPath.normalize(tsv_path) in short_paths:
 						print(line, file=fh)
 						missing_cnt += 1
 			if tsv.errors:
@@ -187,18 +188,17 @@ class AxCheckerCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run AxChecker'''
+		axchecker = AxChecker(self.mfdb, echo=echo)
 		if self.list:
-			AxChecker().list_partitions(self.mfdb, echo=echo)
+			axchecker.list_partitions()
 			return
-		axchecker = AxChecker()
-		axchecker.check(self.mfdb,
+		axchecker.check(
 			filename = self.filename,
 			outdir = self.outdir,
 			diff = self.diff,
 			column = self.column,
 			nohead = self.nohead,
-			partition = self.partition,
-			echo = echo,
+			partition = self.partition
 		)
 		axchecker.log.close()
 
