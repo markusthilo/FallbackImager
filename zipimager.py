@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-03'
+__version__ = '0.4.0_2024-02-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -14,7 +14,7 @@ Using the Python library zipfile this module generates an ZIP archive from a sou
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 from argparse import ArgumentParser
-from lib.extpath import ExtPath, FilesPercent
+from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
@@ -44,7 +44,7 @@ class ZipImager:
 		other_cnt = 0
 		file_error_cnt = 0
 		dir_error_cnt = 0
-		progress = FilesPercent(self.root_path, echo=self.echo)
+		progress = Progressor(self.root_path, echo=self.echo)
 		with (
 			ZipFile(self.image_path, 'w', ZIP_DEFLATED) as zf,
 			self.tsv_path.open('w') as tsv_fh

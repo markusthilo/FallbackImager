@@ -51,40 +51,29 @@ class ExtPath:
 			return path.stat().st_size
 
 	@staticmethod
-	def decode(path):
-		'''Decode to UTF-8'''
-		return normalize('NFD', path).encode(errors='ignore').decode('utf-8', errors='ignore')
-
-	@staticmethod
 	def mkfname(string):
 		'''Eleminate chars that do not work in filenames'''
 		string = normalize('NFKD', string).encode('ASCII', errors='ignore').decode('utf-8', errors='ignore').replace('/', '_')
 		return ''.join(char for char in string if char in f'-_{ascii_letters}{digits}')
 
 	@staticmethod
-	def normalize(path):
-		'''Normalize path for better comparison'''
-		path = path.rstrip('\\/\t\n')
-		path = path.lstrip('\t\n')
-		path = path.replace('\n', ' ').replace('\t', ' ').replace('/', ':').replace('\r', '')
-		path = path.replace(b'\xe2\x86\xb2'.decode(), '')
-		path = path.replace(b'\x00\x00\x00\x00'.decode(), '.')
-		return path
+	def normalize_str(string):
+		'''Normalize path given as string for better comparison'''
+		string = normalize('NFD', string).encode(errors='ignore').decode('utf-8', errors='ignore').strip('\t\n\\/')
+		string = string.replace('\n', ' ').replace('\t', ' ').replace('\r', '')
+		string = string.replace(b'\xe2\x86\xb2'.decode(), '')
+		string = string.replace(b'\x00\x00\x00\x00'.decode(), '.')
+		return string
 
 	@staticmethod
-	def to_posix(path):
-		'''Translate to Posix'''
-		return path.replace('/', '_').replace('\\', '/')
-	
-	@staticmethod
-	def norm_to_posix(path):
-		'''Normalize path and get rid of the stupid win backslashes'''
-		return ExtPath.to_posix(ExtPath.normalize(path))
+	def normalize_posix(path):
+		'''Normalize Posix path for better comparison'''
+		return f'{path}'.strip('\t\n/').replace('\n', ' ').replace('\t', ' ').replace('\r', '').replace('/', '\\')
 
 	@staticmethod
-	def flatten(path):
-		'''Normalize path and get rid of the stupid win backslashes'''
-		return ExtPath.normalize(path).lstrip('\\/').replace('/', '_').replace('\\', '_')
+	def normalize_win(path):
+		'''Normalize Windows path for better comparison'''
+		return f'{path}'.strip('\t\n\\').replace('\n', ' ').replace('\t', ' ').replace('\r', '')
 
 	@staticmethod
 	def walk(root):
@@ -99,9 +88,9 @@ class ExtPath:
 			yield path, path.relative_to(root), tp
 
 	@staticmethod
-	def sum_files(root):
-		'''Get sum of all files'''
-		return sum(path.is_file() for path in root.rglob('*'))
+	def quantitiy(root):
+		'''Get quantitiy of all items'''
+		return len(list(root.rglob('*')))
 
 	@staticmethod
 	def read_utf_head(path, after=0):
@@ -122,7 +111,7 @@ class ExtPath:
 
 	@staticmethod
 	def readable_size(size):
-		'Genereate readable size string'
+		'''Genereate readable size string'''
 		try:
 			size = int(size)
 		except (TypeError, ValueError):
@@ -143,16 +132,34 @@ class ExtPath:
 			strings.append(f'{rnd} {u}')
 		return ' / '.join(strings)
 
-class FilesPercent:
+	@staticmethod
+	def readable_bin(path, offset=0, lines=64, bytes_per_line=16):
+		'''Genereate string from binary file'''
+		string = ''
+		with path.open('rb') as fh:
+			for line_offset in range(offset, offset+lines):
+				string += f'{line_offset:016x} '
+				line = fh.read(bytes_per_line)
+				chars = ''
+				for byte in line:
+					string += f'{byte:02x} '
+					if 31 < byte < 127:
+						chars += chr(byte)
+					else:
+						chars += '.'
+				string += f'{chars}\n'
+		return string
+
+class Progressor:
 	'''Show progress when going through file structure'''
 
 	def __init__(self, root, echo=print):
 		'''Get quantitiy of files under root'''
 		self.echo = echo
-		self.all_files = ExtPath.sum_files(root)
+		self.quantitiy = ExtPath.quantitiy(root)
 		self.counter = 0
 		self.percent = 0
-		self.factor = 100/self.all_files
+		self.factor = 100/self.quantitiy
 
 	def inc(self):
 		'''Check and display message'''
@@ -160,4 +167,4 @@ class FilesPercent:
 		percent = int(self.factor*self.counter)
 		if percent > self.percent:
 			self.percent = percent
-			self.echo(f'{self.percent}%, processing file {self.counter} of {self.all_files}')
+			self.echo(f'{self.percent}%, processing file {self.counter} of {self.quantitiy}')

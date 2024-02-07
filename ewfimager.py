@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-02-01'
+__version__ = '0.4.0_2024-02-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -21,28 +21,19 @@ from lib.openproc import OpenProc
 from lib.linutils import LinUtils
 from ewfverify import EwfVerify
 
-__executable__ = Path(__executable__)
-__file__ = Path(__file__)
-if __executable__.stem.lower() == __file__.stem.lower():
-	__parent_path__ = __executable__.parent
+if Path(__file__).suffix.lower() == '.pyc':
+	__parent_path__ = Path(__executable__).parent
 else:
-	__parent_path__ = __file__.parent
+	__parent_path__ = Path(__file__).parent
 
 class EwfImager:
 	'''Acquire and verify E01/EWF image'''
 
 	def __init__(self):
-		'''Check if ewfverify and ewfverify are present'''
-		for self.ewfacquire_path in (
-			Path('/usr/bin/ewfacquire'),
-			Path('/usr/local/bin/ewfacquire'),
-			__parent_path__/'bin/ewfacquire',
-			__parent_path__/'ewfacquire'
-		):
-			if self.ewfacquire_path.is_file():
-				break
-		if not self.ewfacquire_path.is_file():
-			raise RuntimeError('Unable to use ewfacquire from ewf-tools')
+		'''Check if ewfacquire and ewfverify are present'''
+		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', __parent_path__)
+		if not self.ewfacquire_path:
+			raise RuntimeError('Unable to find ewfacquire from libewf')
 		self.ewfverify = EwfVerify()
 
 	def acquire(self, source, case_number, evidence_number, examiner_name, description, *args,

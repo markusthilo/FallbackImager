@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
 from subprocess import run
 from json import loads
 
 class LinUtils:
-	'Use command line tools'
+	'Tools for Linux based systems'
+
+	@staticmethod
+	def find_bin(name, parent_path):
+		'''Find a binary'''
+		for parent in (parent_path/'bin', parent_path, Path('/usr/bin/'), Path('/usr/local/bin/')):
+			bin_path = parent/name
+			if bin_path.is_file():
+				return bin_path
 
 	@staticmethod
 	def lsdisk():
@@ -90,7 +99,3 @@ class LinUtils:
 		run(['sync'], check=True)
 		ret = run(['umount', f'{target}'], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
-
-
-
-

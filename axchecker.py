@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-06'
+__version__ = '0.4.0_2024-02-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,11 +15,12 @@ Hits are files, that are represented in the artifacts. Obviously this tool can o
 
 from pathlib import Path
 from argparse import ArgumentParser
+from os import name as __os_name__
 from tkinter import StringVar
 from tkinter.ttk import Radiobutton, Button, Checkbutton
 from tkinter.messagebox import showerror
 from tkinter.scrolledtext import ScrolledText
-from lib.extpath import ExtPath, FilesPercent
+from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.mfdbreader import MfdbReader
@@ -108,30 +109,42 @@ class AxChecker:
 			raise ValueError('Missing partition to compare')
 		self.log.info(f'Comparing AXIOM partition {partition_name} to {self.diff_path.name}', echo=True)
 		part_name_len = len(partition_name)
+		short_paths = {ExtPath.normalize_str(path[part_name_len:]) for path in paths}
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
-			short_paths = {Path(path[part_name_len:]) for path in paths}
-			progress = FilesPercent(self.diff_path, echo=self.echo)
+			progress = Progressor(self.diff_path, echo=self.echo)
+			if __os_name__ == 'nt':
+				normalize = ExtPath.normalize_win
+			else:
+				normalize = ExtPath.normalize_posix
 			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
 				).open(mode='w', encoding='utf-8') as fh:
 				for absolut_path, relative_path, tp in ExtPath.walk(self.diff_path):
 					progress.inc()
-					if not relative_path in short_paths:
-						print(absolut_path, file=fh)
+					if tp == 'f' and not normalize(relative_path) in short_paths:
+						print(relative_path, file=fh)
 						missing_cnt += 1
 		elif self.diff_path.is_file:	# compare to file
-			short_paths = {ExtPath.normalize(path[part_name_len:]) for path in paths}
 			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
+			tsv_cnt = 0
 			if tsv.column < 0:
 				self.log.error('Column out of range/undetected')
 			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
 				).open(mode='w', encoding='utf-8') as fh:
 				if not self.nohead:
 					print(tsv.head, file=fh)
+				if self.echo == print:
+					echo = lambda msg: print(f'\r{msg}', end='')
+				else:
+					echo = lambda msg: self.echo(msg, overwrite=True)
+				echo(1)
 				for tsv_path, line in tsv.read_lines():
-					if not ExtPath.normalize(tsv_path) in short_paths:
+					if not ExtPath.normalize_str(tsv_path) in short_paths:
 						print(line, file=fh)
 						missing_cnt += 1
+					if tsv_cnt % 10000 == 0:
+						echo(tsv_cnt)
+			echo('')
 			if tsv.errors:
 				self.log.warning(
 					f'Found unprocessable line(s) in {diff_path.name}:\n'+

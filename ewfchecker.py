@@ -8,7 +8,7 @@ __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Wrapper for ewfverify.
+Verify EWF/E01 image using disktype. ewfinfo, ewfverify and ewfexport.
 '''
 
 from sys import executable as __executable__
@@ -20,21 +20,28 @@ from lib.timestamp import TimeStamp
 from lib.linutils import LinUtils
 from lib.logger import Logger
 
-__executable__ = Path(__executable__)
-__file__ = Path(__file__)
-if __executable__.stem.lower() == __file__.stem.lower():
-	__parent_path__ = __executable__.parent
+if Path(__file__).suffix.lower() == '.pyc':
+	__parent_path__ = Path(__executable__).parent
 else:
-	__parent_path__ = __file__.parent
+	__parent_path__ = Path(__file__).parent
 
-class EwfVerify:
+class EwfChecker:
 	'''Verify E01/EWF image file'''
 
 	def __init__(self):
-		'''Check if ewfverify are present'''
+		'''Check if the needed binaries are present'''
 		self.ewfverify_path = LinUtils.find_bin('ewfverify', __parent_path__)
 		if not self.ewfverify_path:
 			raise RuntimeError('Unable to find ewfverify from libewf')
+		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', __parent_path__)
+		if not self.ewfinfo_path:
+			raise RuntimeError('Unable to find ewfinfo from libewf')
+		self.ewfexport_path = LinUtils.find_bin('ewfexport', __parent_path__)
+		if not self.ewfexport_path:
+			raise RuntimeError('Unable to find ewfexport from libewf')
+		self.disktype_path = LinUtils.find_bin('disktype', __parent_path__)
+		if not self.disktype_path:
+			raise RuntimeError('Unable to find disktype')
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None):
 		'''Verify image'''
@@ -51,14 +58,42 @@ class EwfVerify:
 			else:
 				self.filename = TimeStamp.now_or(filename)
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
-				head='ewfverify.EwfVerify', echo=self.echo)
+				head='ewfchecker.EwfChecker', echo=self.echo)
+		self.log.info('Image informations', echo=True)
+		proc = OpenProc([f'{self.ewfinfo_path}', f'{self.image_path}'], log=self.log)
+		proc.echo_output()
+		if stderr := proc.stderr.read():
+			self.log.warning(stderr)
+		target = (self.outdir/self.filename).with_suffix('')
+		cmd = [f'{self.ewfexport_path}', '-B', '10240',
+			'-u', '-q',
+			'-t', f'{target}',
+			f'{self.image_path}'
+			]
+		print(cmd)
+
+		return
+		proc = OpenProc([
+			f'{self.ewfexport_path}',
+			'-B', '10240',
+			'-u', '-q',
+			'-t', f'target',
+			f'{self.image_path}'
+			], log=self.log
+		)
+		if stderr := proc.stderr.read():
+			self.log.warning(stderr)
+
+
+
+		return
 		self.log.info('Verifying image', echo=True)
 		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], log=self.log)
 		proc.echo_output()
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfverify terminated with: {stderr}', exception=stderr.split('\n')[0])
 
-class EwfVerifyCli(ArgumentParser):
+class EwfCheckerCli(ArgumentParser):
 	'''CLI for EwfVerify'''
 
 	def __init__(self):
@@ -83,15 +118,15 @@ class EwfVerifyCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the verification'''
-		ver = EwfVerify()
-		ver.check(self.image,
+		checker = EwfChecker()
+		checker.check(self.image,
 			filename = self.filename,
 			outdir = self.outdir,
 			echo = echo
 		)
-		ver.log.close()
+		checker.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = EwfVerifyCli()
+	app = EwfCheckerCli()
 	app.parse()
 	app.run()

@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-01-25'
+__version__ = '0.4.0_2024-02-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -59,14 +59,14 @@ class SQLite:
 		executor = SQLiteExec(self.db_path)
 		executed_cnt = 0
 		warning_cnt = 0
-		if self.echo == print:
-			echo = lambda msg: print(f'\r{msg}', end='')
-		else:
-			echo = lambda msg: self.echo(msg, overwrite=True)
 		if alternative:
 			gen_ex = self.trans_ex(sql_path, executor)
 		else:
 			gen_ex = executor.from_file(sql_path)
+		if self.echo == print:
+			echo = lambda msg: print(f'\r{msg}', end='')
+		else:
+			echo = lambda msg: self.echo(msg, overwrite=True)
 		echo(1)
 		for warning in gen_ex:
 			if warning:
