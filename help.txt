@@ -27,10 +27,10 @@ $ gcc -o bin/zd c/zd.c
 
 Install libewf from your distro repos, e.g.:
 
-$ sudo apt install libewf
-$ sudo pacman install libewf
-$ sudo dnf install libewf
-$ sudo zypper install libewf
+$ sudo apt install libewf disktype
+$ sudo pacman install libewf disktype
+$ sudo dnf install libewf disktype
+$ sudo zypper install libewf disktype
 
 FallbackImager tries to locate ewfacquire and ewfverify on your system (e.g. at /usr/bin). Alternatively it might be possible to copy the binaries manually into the (sub-)folder bin.
 
@@ -57,6 +57,7 @@ $ gcc -o bin/zd-win.exe c/zd-win.c
 You need the free MS tool oscdimg.exe in bin. This folder is also the home for WimMount.exe and zd-win.exe.
 
 Usage of the GUI
+
 Start
 On WIndows the executable FallbackImager.exe can be lauched by double clicking.
 
