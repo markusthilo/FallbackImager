@@ -84,7 +84,7 @@ class EwfChecker:
 			self.log.error(proc.stderr.read())
 		info = proc.stdout.read().splitlines()[0]
 		self.log.info(f'Using {info}', echo=True)
-		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], log=self.log)
+		proc = OpenProc([f'{self.ewfverify_path}', '-d', 'sha256', f'{self.image_path}'], log=self.log)
 		proc.echo_output(cnt=8)
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))

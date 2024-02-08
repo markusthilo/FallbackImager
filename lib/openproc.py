@@ -34,19 +34,20 @@ class OpenProc(Popen):
 		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''
 		if self.log:
 			stdout_cnt = 0
-			stack = list()
+			self.stack = list()
 			for line in self.stdout:
 				if line:
 					stdout_cnt += 1
 					stripped = line.strip()
 					self.log.echo(stripped)
 					if stdout_cnt > skip:
-						stack.append(stripped)
-				if cnt and len(stack) > cnt:
-					stack.pop(0)
-			if stack:
-				self.log.info('\n' + '\n'.join(stack))
+						self.stack.append(stripped)
+				if cnt and len(self.stack) > cnt:
+					self.stack.pop(0)
+			if self.stack:
+				self.log.info('\n' + '\n'.join(self.stack))
 		else:
 			for line in self.stdout:
 				if line:
 					echo(line.strip())
+		return self.stderr.read()

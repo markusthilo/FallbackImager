@@ -7,4 +7,4 @@ class StringUtils:
 	@staticmethod
 	def join(iterable, delimiter=' '):
 		'''Join iterable to list but be telerant'''
-		return delimiter.join([f'{item}' for item in iterable if item])
+		return delimiter.join([f'{item.strip()}' for item in iterable if item])

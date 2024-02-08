@@ -17,6 +17,12 @@ class LinUtils:
 				return bin_path
 
 	@staticmethod
+	def set_ro(dev):
+		'''Set block device to read only'''
+		ret = run(['blockdev', '--setro', f'{dev}'], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	@staticmethod
 	def lsdisk():
 		'''Use lsblk with JSON output to get disks'''
 		return [dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
@@ -39,19 +45,25 @@ class LinUtils:
 		'''Use lsblk with JSON output to get infos about disks'''
 		return {
 			dev['path']: {
-					'disk': [dev['size'], dev['label']] + dev['mountpoints'],
+					'disk': [dev['size'], dev['label'], dev['vendor'], dev['model']] + dev['mountpoints'],
 					'partitions': LinUtils.lspart(dev['path'])
 				}
-				for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,MOUNTPOINTS'],
+				for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
 				if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
 		}
 
 	@staticmethod
+	def diskdetails(dev):
+		'''Use lsblk with JSON output to get enhanced infos about block devoce'''
+		return loads(run(['lsblk', '--json', '-o', 'LABEL,SIZE,VENDOR,MODEL,REV,SERIAL', f'{dev}'],
+			capture_output=True, text=True).stdout)['blockdevices'][0]
+
+	@staticmethod
 	def blkdevsize(dev):
 		'''Use lsblk with JSON output to get disk ort partition size'''
 		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
-				capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
+			capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
 
 	@staticmethod
 	def init_dev(dev, mbr=False, fs='ntfs'):

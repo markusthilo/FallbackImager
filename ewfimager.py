@@ -42,6 +42,7 @@ class EwfImager:
 			media_type = None,
 			notes = None,
 			size = None,
+			setro = False,
 			echo = print,
 			log = None,
 			**kwargs
@@ -56,11 +57,17 @@ class EwfImager:
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir,
 				head='ewfimager.EwfImager', echo=self.echo)
+		if setro:
+			stdout, stderr = LinUtils.set_ro(source)
+			if stderr:
+				self.log.warning(stderr)
+		self.source_details = LinUtils.diskdetails(source)
+		msg = '\n'.join(f'{key.upper()}:\t{value}' for key, value in self.source_details.items())
+		self.log.info(f'Source:\n{msg}', echo=True)
 		proc = OpenProc([f'{self.ewfacquire_path}', '-V'])
 		if proc.wait() != 0:
 			self.log.warning(proc.stderr.read())
-		info = proc.stdout.read().splitlines()[0]
-		self.log.info(f'Using {info}')
+		self.log.info(f'Using {proc.stdout.read().splitlines()[0]}')
 		self.image_path = self.outdir/self.filename
 		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
 		cmd.extend(['-C', case_number])
@@ -93,6 +100,9 @@ class EwfImager:
 		cmd.append(f'{self.source}')
 		proc = OpenProc(cmd, log=self.log)
 		proc.echo_output(cnt=9)
+		print(proc.stack)
+		exit()
+
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
 
@@ -124,7 +134,7 @@ class EwfImagerCli(ArgumentParser):
 		)
 		self.add_argument('-m', '--media_type', type=str,
 			choices=['fixed', 'removable', 'optical', 'memory'],
-			help='Media type, options: fixed (default), removable, optical, memory',
+			help='Media type, options: fixed, removable, optical, memory (auto if not set)',
 			metavar='STRING'
 		)
 		self.add_argument('-N', '--notes', type=str,
@@ -138,6 +148,9 @@ class EwfImagerCli(ArgumentParser):
 		self.add_argument('-S', '--size', type=int,
 			help='Segment file size in bytes (default: calculated)',
 			metavar='INTEGER'
+		)
+		self.add_argument('--setro', action='store_true',
+			help='Set target block device to read only'
 		)
 		self.add_argument('source', nargs=1, type=Path,
 			help='The source device, partition or anything else that works with ewfacquire',
@@ -157,6 +170,7 @@ class EwfImagerCli(ArgumentParser):
 		self.notes = args.notes
 		self.outdir = args.outdir
 		self.size = args.size
+		self.setro = args.setro
 
 	def run(self, echo=print):
 		'''Run EwfImager and EwfVerify'''
@@ -168,6 +182,7 @@ class EwfImagerCli(ArgumentParser):
 			media_type = self.media_type,
 			notes = self.notes,
 			size = self.size,
+			setro = self.setro,
 			outdir = self.outdir,
 			echo = echo
 		)
