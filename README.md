@@ -102,11 +102,11 @@ The execution job after job is started with the button "Start jobs" on the left 
 
 ### EwfImager
 
-This is a conveniant interface for *ewfacquire* and *ewfverify*. This module is not available on Windows.
+This is a conveniant interface for *ewfacquire* from libewf. This module is not available on Windows.
 
-### EwfVerify
+### EwfChecker
 
-The module simply uses *ewfverify* and is not available on Windows.
+The module simply uses *ewfinfo*. *ewfexport* and *ewfewfverify* to check an EWF/E01 image file. It is used by EwfImager. This is not available on Windows.
 
 ### OscdImager
 The module uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system). Obviously this module is only available on Windows.

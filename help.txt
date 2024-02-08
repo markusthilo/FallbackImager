@@ -5,38 +5,49 @@ This is a modular utility for forensic work as a complement or fallback to the c
 The tool is currently developed for Linux based OS and Windows (>=10). It is work in progress.
 
 Installation
+
 Linux
+
 Python
+
 To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on you distro, e.g.:
 
 $ sudo apt install python3 python3-tk
 $ sudo pacman install python tk
 $ sudo dnf install python3 python3-tkinter
 $ sudo zypper install python3 python3-tk
+
 C
+
 The realease brings a pre-compiled version of the wipe tool zd. To compile the source gcc is needed:
 
 $ gcc -o bin/zd c/zd.c
+
 3rd party tools
+
 Install libewf from your distro repos, e.g.:
 
 $ sudo apt install libewf
 $ sudo pacman install libewf
 $ sudo dnf install libewf
 $ sudo zypper install libewf
+
 FallbackImager tries to locate ewfacquire and ewfverify on your system (e.g. at /usr/bin). Alternatively it might be possible to copy the binaries manually into the (sub-)folder bin.
 
 Windows
+
 Out of the box
 The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed.
 
 Python
+
 To use the python sources you need Python (3.11 or newer), the cloned git and the libraries pyinstaller, pywin32 and WMI. You might want to use
 
 $ pip install -r requirements.txt
 to install them. The scripts make-FallbackImager-exe.py, make-WimMount-exe.py and make-win-cli-apps-exe.py use PyInstaller to generate the executables if needed.
 
 C
+
 To compile zd-win.c you can use MSYS2 with MinGW-w64:
 
 $ pacman -Syu
@@ -71,11 +82,12 @@ Start jobs
 The execution job after job is started with the button “Start jobs” on the left above the info field. The jobs will show infos and progress.
 
 Modules
-EwfImager
-This is a conveniant interface for ewfacquire and ewfverify. This module is not available on Windows.
 
-EwfVerify
-The module simply uses ewfverify and is not available on Windows.
+EwfImager
+This is a conveniant interface for ewfacquire from libewf. This module is not available on Windows.
+
+EwfChecker
+The module simply uses ewfinfo. ewfexport and ewfewfverify to check an EWF/E01 image file. It is used by EwfImager. This is not available on Windows.
 
 OscdImager
 The module uses oscdimg.exe (from the Windows ADK Package) to generate an ISO file (UDF file system). Obviously this module is only available on Windows.
@@ -104,6 +116,7 @@ Whe the target is a physical drive, you can create a partition where (after a su
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no “Are you really really sure questions” as Windows users might be used to.
 
 Legal Notice
+
 License
 Respect GPL-3: https://www.gnu.org/licenses/gpl-3.0.en.html
 

@@ -3,12 +3,12 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-This tool runs ewfacquire and ewfverify.
+Use libewf to create and check an EWF/E01 image of a block device.
 '''
 
 from sys import executable as __executable__
@@ -19,7 +19,7 @@ from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.openproc import OpenProc
 from lib.linutils import LinUtils
-from ewfverify import EwfVerify
+from ewfchecker import EwfChecker
 
 if Path(__file__).suffix.lower() == '.pyc':
 	__parent_path__ = Path(__executable__).parent
@@ -34,7 +34,7 @@ class EwfImager:
 		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', __parent_path__)
 		if not self.ewfacquire_path:
 			raise RuntimeError('Unable to find ewfacquire from libewf')
-		self.ewfverify = EwfVerify()
+		self.ewfchecker = EwfChecker()
 
 	def acquire(self, source, case_number, evidence_number, examiner_name, description, *args,
 			outdir = None,
@@ -54,13 +54,15 @@ class EwfImager:
 		if log:
 			self.log = log
 		else:
-			self.log = Logger(
-				filename = f'{self.filename}_log.txt',
-				outdir = self.outdir, 
-				head = 'ewfimager.EwfImager',
-				echo = self.echo
-			)
-		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.outdir/self.filename}', '-d', 'sha256']
+			self.log = Logger(filename=self.filename, outdir=self.outdir,
+				head='ewfimager.EwfImager', echo=self.echo)
+		proc = OpenProc([f'{self.ewfacquire_path}', '-V'])
+		if proc.wait() != 0:
+			self.log.warning(proc.stderr.read())
+		info = proc.stdout.read().splitlines()[0]
+		self.log.info(f'Using {info}')
+		self.image_path = self.outdir/self.filename
+		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
 		cmd.extend(['-C', case_number])
 		cmd.extend(['-D', description])
 		cmd.extend(['-e', examiner_name])
@@ -90,7 +92,7 @@ class EwfImager:
 			cmd.extend([f'-{arg}', f'{par}'])
 		cmd.append(f'{self.source}')
 		proc = OpenProc(cmd, log=self.log)
-		proc.echo_output(self.log)
+		proc.echo_output(cnt=9)
 		if stderr := proc.stderr.read():
 			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
 
@@ -158,8 +160,8 @@ class EwfImagerCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run EwfImager and EwfVerify'''
-		image = EwfImager()
-		image.acquire(self.source,
+		imager = EwfImager()
+		imager.acquire(self.source,
 			self.case_number, self.evidence_number,
 			self.examiner_name, self.description,
 			compression_values = self.compression_values,
@@ -169,8 +171,12 @@ class EwfImagerCli(ArgumentParser):
 			outdir = self.outdir,
 			echo = echo
 		)
-		EwfVerify().check(image.filename, echo=echo, log=image.log)
-		image.log.close()
+		EwfChecker().check(imager.image_path,
+			outdir = self.outdir,
+			echo = echo,
+			log = imager.log
+		)
+		imager.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = EwfImagerCli()

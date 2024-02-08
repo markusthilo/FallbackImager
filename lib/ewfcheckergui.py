@@ -4,15 +4,15 @@
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridSeparator, GridLabel
 from lib.guielements import FilenameSelector, DirSelector, FileSelector
 from lib.guielements import StringRadiobuttons, GridButton, GridBlank
-from ewfverify import EwfVerify
+from ewfchecker import EwfChecker
 
-class EwfVerifyGui:
+class EwfCheckerGui:
 	'''Notebook page'''
-	CMD = 'EwfVerify'
+	CMD = 'EwfChecker'
 
 	def __init__(self, root):
 		'''Notebook page'''
-		EwfVerify()
+		EwfChecker()
 		root.settings.init_section(self.CMD)
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')

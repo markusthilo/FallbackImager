@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -49,49 +49,45 @@ class EwfChecker:
 		if not self.image_path.suffix:
 			self.image_path = self.image_path.with_suffix('.E01')
 		self.echo = echo
+		self.outdir = ExtPath.mkdir(outdir)
+		if filename:
+			self.filename = filename
+		else:
+			self.filename = self.image_path.name
 		if log:
 			self.log = log
 		else:
-			self.outdir = ExtPath.mkdir(outdir)
-			if filename:
-				self.filename = filename
-			else:
-				self.filename = TimeStamp.now_or(filename)
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='ewfchecker.EwfChecker', echo=self.echo)
 		self.log.info('Image informations', echo=True)
 		proc = OpenProc([f'{self.ewfinfo_path}', f'{self.image_path}'], log=self.log)
-		proc.echo_output()
-		if stderr := proc.stderr.read():
-			self.log.warning(stderr)
-		target = (self.outdir/self.filename).with_suffix('')
-		cmd = [f'{self.ewfexport_path}', '-B', '10240',
-			'-u', '-q',
-			'-t', f'{target}',
-			f'{self.image_path}'
-			]
-		print(cmd)
-
-		return
-		proc = OpenProc([
-			f'{self.ewfexport_path}',
-			'-B', '10240',
-			'-u', '-q',
-			'-t', f'target',
-			f'{self.image_path}'
-			], log=self.log
-		)
-		if stderr := proc.stderr.read():
-			self.log.warning(stderr)
-
-
-
-		return
+		proc.echo_output(skip=2)
+		if proc.returncode != 0:
+			self.log.warning(proc.stderr.read())
+		raw = (self.outdir/self.filename).with_suffix('')
+		proc = OpenProc([f'{self.ewfexport_path}', '-B', '10240', '-u', '-q', '-t', f'{raw}', f'{self.image_path}'])
+		if proc.wait() != 0:
+			self.log.warning(proc.stderr.read())
+		else:
+			raw = Path(f'{raw}.raw')
+			info = Path(f'{raw}.info')
+			xxd = ExtPath.readable_bin(raw)
+			self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
+			self.log.info('Probing for partition table')
+			proc = OpenProc([f'{self.disktype_path}', f'{raw}'], log=self.log)
+			proc.echo_output(skip=2)
+			raw.unlink(missing_ok=True)
+			info.unlink(missing_ok=True)
 		self.log.info('Verifying image', echo=True)
+		proc = OpenProc([f'{self.ewfverify_path}', '-V'])
+		if proc.wait() != 0:
+			self.log.error(proc.stderr.read())
+		info = proc.stdout.read().splitlines()[0]
+		self.log.info(f'Using {info}', echo=True)
 		proc = OpenProc([f'{self.ewfverify_path}', f'{self.image_path}'], log=self.log)
-		proc.echo_output()
+		proc.echo_output(cnt=8)
 		if stderr := proc.stderr.read():
-			self.log.error(f'ewfverify terminated with: {stderr}', exception=stderr.split('\n')[0])
+			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
 
 class EwfCheckerCli(ArgumentParser):
 	'''CLI for EwfVerify'''

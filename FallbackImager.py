@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-08'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -60,13 +60,13 @@ if __os_name__ == 'nt':
 else:
 		from ewfimager import EwfImagerCli
 		from lib.ewfimagergui import EwfImagerGui
-		from ewfverify import EwfVerifyCli
-		from lib.ewfverifygui import EwfVerifyGui
+		from ewfchecker import EwfCheckerCli
+		from lib.ewfcheckergui import EwfCheckerGui
 		from wiper import WipeRCli
 		from lib.wipergui import WipeRGui
 		__modules__ = {
 			EwfImagerGui: EwfImagerCli,
-			EwfVerifyGui: EwfVerifyCli,
+			EwfCheckerGui: EwfCheckerCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli,
