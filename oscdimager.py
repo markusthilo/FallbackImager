@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-02-01'
+__version__ = '0.4.0_2024-02-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -18,32 +18,24 @@ from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.winutils import WinPopen
+from lib.winutils import WinUtils, OpenProc
 from lib.hashes import FileHashes
 
-if Path(__file__).suffix.lower() == '.py':
-	__parent_path__ = Path(__file__).parent
-else:
+if Path(__file__).suffix.lower() == '.pyc':
 	__parent_path__ = Path(__executable__).parent
+else:
+	__parent_path__ = Path(__file__).parent
 
 class OscdImager:
-	'''OSCDIMG via subprocess (oscdimg.exe -h -m -l$label -u2 $source $image)'''
-
-	@staticmethod
-	def _label(string):
-		'''Normalize string so it can be used as ISO label'''
-		return ''.join(char for char in string if char.isalnum() or char in ['_', '-'])[:32]
+	'''OSCDIMG via subprocess (oscdimg.exe -h -m -u2 -l$label $source $image)'''
 
 	def __init__(self):
-		'''Find oscdimg.exe to gnerate object'''
-		for self.exe_path in (
-			__parent_path__/'oscdimg.exe',
-			Path.cwd()/'bin'/'oscdimg.exe',
+		'''Look for oscdimg.exe'''
+		self.oscdimg_path = WinUtils.find_exe('oscdimg.exe', __parent_path__,
 			Path('C:')/'Program Files (x86)'/'Windows Kits'/'10'/'Assessment and Deployment Kit'/'Deployment Tools'/'amd64'/'Oscdimg'/'oscdimg.exe'
-		):
-			if self.exe_path.is_file():
-				return
-		raise RuntimeError('Unable to find escdimg.exe')
+		)
+		if not self.oscdimg_path:
+			raise RuntimeError('Unable to find oscdimg.exe')
 
 	def create (self, root,
 			filename = None,
@@ -58,16 +50,25 @@ class OscdImager:
 		if filename:
 			self.label = filename
 		else:
-			self.label = self._label(self.root_path.stem)
+			self.filename = ''.join(char for char in self.root_path.stem
+				if char.isalnum() or char in ['_', '-']
+			)
+		self.label = self.filename[:32]
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
 		if log:
 			self.log = log
 		else:
-			self.log = Logger(self.filename, outdir=self.outdir, head='oscdimager.OscdImage', echo=echo)
-		self.cmd = [f'{self.exe_path}', '-u2', f'{self.root_path}', f'{self.image_path}']
+			self.log = Logger(self.filename, outdir=self.outdir, head='oscdimager.OscdImager', echo=echo)
+		self.cmd = [
+			f'{self.oscdimg_path}',
+			'-h', '-m', '-u2',
+			f'-l{self.label}',
+			f'{self.root_path}',
+			f'{self.image_path}'
+		]
 		self.log.info(f'> {" ".join(self.cmd)}', echo=True)
-		proc = WinPopen(self.cmd)
-		proc.exec(self.log)
+		proc = OpenProc(self.cmd, log=self.log)
+		proc.echo_output()
 		if not self.image_path.is_file():
 			self.log.error(f'Could not create image {self.image_path}')
 		self.log.info('Calculating hashes', echo=True)

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pythoncom import CoInitialize
+#from pythoncom import CoIntializeEx
 from wmi import WMI
 from win32api import GetCurrentProcessId, GetLogicalDriveStrings
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
 from time import sleep
 from pathlib import Path
-from lib.extpath import ExtPath, FilesPercent
+from lib.extpath import ExtPath, Progressor
 
 class WinUtils:
 	'Needed Windows functions'
@@ -16,52 +16,44 @@ class WinUtils:
 	WINCMD_RETRIES = 120
 	WINCMD_DELAY = 1
 
-	def __init__(self, outdir=None):
-		'''Generate Windows tools'''
-		CoInitialize()
-		self.conn = WMI()
-		self.cmd_startupinfo = STARTUPINFO()
-		self.cmd_startupinfo.dwFlags |= STARTF_USESHOWWINDOW
-		self.process_id = GetCurrentProcessId()
-		if outdir:
-			self.tmpscriptpath = Path(outdir)/f'_script_{self.process_id}.tmp'
+	@staticmethod
+	def find_exe(name, parent_path, *possible_paths):
+		'''Find executable file'''
+		for parent in parent_path/'bin', parent_path, *possible_paths:
+			exe_path = parent/name
+			if exe_path.is_file():
+				return exe_path
 
-	def cmd_launch(self, cmd):
-		'''Start command line subprocess without showing a terminal window'''
-		return Popen(
-			cmd,
-			shell = True,
-			stdout = PIPE,
-			stderr = PIPE,
-			encoding = 'utf-8',
-			errors = 'ignore',
-			universal_newlines = True,
-			startupinfo = self.cmd_startupinfo
-		)
-
-	def get_used_letters(self):
+	@staticmethod
+	def get_used_letters():
 		'''Get drive letters that are already in use as set'''
 		return {drive.rstrip(':\\') for drive in GetLogicalDriveStrings().split('\0') if drive}
 
-	def get_free_letters(self):
+	@staticmethod
+	def get_free_letters():
 		'''Get free drive letters'''
-		return sorted(set('DEFGHIJKLMNOPQRSTUVWXYZ') - self.get_used_letters())
+		return sorted(set('DEFGHIJKLMNOPQRSTUVWXYZ') - WinUtils.get_used_letters())
 
-	def drive_letter_is_free(self, letter):
+	@staticmethod
+	def drive_letter_is_free(letter):
 		'''Check if drive letter is free for new assignment'''
-		return not letter in self.get_used_letters()
+		return not letter in WinUtils.get_used_letters()
 
-	def is_physical_drive(self, path):
+	@staticmethod
+	def is_physical_drive(path):
 		'''Return True if physical drive'''
-		return str(path).upper().startswith('\\\\.\\PHYSICALDRIVE')
+		return f'{path}'.upper().startswith('\\\\.\\PHYSICALDRIVE')
 
-	def list_drives(self):
+	@staticmethod
+	def list_drives():
 		'''List drive infos, partitions and logical drives'''
+		#CoIntializeEx()
+		conn = WMI()
 		disk2part = {(rel.Antecedent.DeviceID, rel.Dependent.DeviceID)
-			for rel in self.conn.Win32_DiskDriveToDiskPartition()
+			for rel in conn.Win32_DiskDriveToDiskPartition()
 		}
 		part2logical = {(rel.Antecedent.DeviceID, rel.Dependent.DeviceID)
-			for rel in self.conn.Win32_LogicalDiskToPartition()
+			for rel in conn.Win32_LogicalDiskToPartition()
 		}
 		disk2logical = { logical: disk
 			for disk, part_disk in disk2part
@@ -69,7 +61,7 @@ class WinUtils:
 			if part_disk == part_log
 		}
 		log_disks = dict()
-		for log_disk in self.conn.Win32_LogicalDisk():
+		for log_disk in conn.Win32_LogicalDisk():
 			info = f'\n- {log_disk.DeviceID} '
 			if log_disk.VolumeName:
 				info += f'{log_disk.VolumeName}, '
@@ -78,7 +70,7 @@ class WinUtils:
 			info += f'{ExtPath.readable_size(log_disk.Size)}'
 			log_disks[log_disk.DeviceID] = info
 		drives = dict()
-		for drive in self.conn.Win32_DiskDrive():
+		for drive in conn.Win32_DiskDrive():
 			drive_info = f'{drive.Caption.strip()}, {drive.InterfaceType}, '
 			drive_info += f'{drive.MediaType}, {ExtPath.readable_size(drive.Size)}'
 			drives[drive.DeviceID] = drive_info
@@ -91,86 +83,92 @@ class WinUtils:
 						continue
 			yield drive_id, drive_info
 
-	def echo_drives(self, echo=print):
+	@staticmethod
+	def echo_drives(echo=print):
 		'''List drives and show infos'''
-		for drive_id, drive_info in self.list_drives():
+		for drive_id, drive_info in WinUtils.list_drives():
 			echo(f'\n{drive_id} - {drive_info}')
 		echo()
 
-	def run_diskpart(self, script):
+	@staticmethod
+	def diskpart(script, outdir):
 		'Run diskpart script'
-		self.tmpscriptpath.write_text(script)
-		proc = self.cmd_launch(f'diskpart /s {self.tmpscriptpath}')
+		tmpscriptpath = outdir/f'_script_{GetCurrentProcessId()}.tmp'
+		tmpscriptpath.write_text(script)
+		proc = OpenProc([f'diskpart', '/s', f'{tmpscriptpath}'])
 		try:
-			proc.wait(timeout=self.WINCMD_TIMEOUT)
+			proc.wait(timeout=WinUtils.WINCMD_TIMEOUT)
 		except TimeoutExpired:
 			pass
 		try:
-			self.tmpscriptpath.unlink()
+			tmpscriptpath.unlink()
 			return False
 		except:
 			return True
 
-	def get_drive_no(self, drive_id):
-		'Get number of physical drive from full drive id'
-		try:
-			return drive_id[17:]
-		except:
-			return
-
-	def create_partition(self, drive_id, label='Volume', driveletter=None, mbr=False, fs='ntfs'):
+	@staticmethod
+	def create_partition(drive_id, outdir, label='Volume', driveletter=None, mbr=False, fs='ntfs'):
 		'''Create partition using diskpart'''
-		if drive_no := self.get_drive_no(drive_id):
-			if not driveletter:
-				driveletter = self.get_free_letters()[0]
-			if mbr:
-				table = 'mbr'
-			else:
-				table = 'gpt'
-			self.run_diskpart(f'''select disk {drive_no}
+		if not driveletter:
+			driveletter = WinUtils.get_free_letters()[0]
+		if mbr:
+			table = 'mbr'
+		else:
+			table = 'gpt'
+		WinUtils.diskpart(f'''select disk {drive_id[17:]}
 clean
 convert {table}
 create partition primary
 format quick fs={fs} label={label}
 assign letter={driveletter}
-'''
-			)
-			for cnt in range(self.WINCMD_RETRIES):
-				sleep(self.WINCMD_DELAY)
-				try:
-					if Path(f'{driveletter}:\\').exists():
-						return driveletter
-				except OSError:
-					pass
+''', outdir)
+		for cnt in range(WinUtils.WINCMD_RETRIES):
+			sleep(WinUtils.WINCMD_DELAY)
+			try:
+				if Path(f'{driveletter}:\\').exists():
+					return driveletter
+			except OSError:
+				pass
 
-class WinPopen(Popen):
+class OpenProc(Popen):
 	'''Use Popen to run tools on Windows'''
 
-	def __init__(self, cmd):
+	def __init__(self, cmd, stderr=True, log=None):
 		'''Launch process'''
+		self.log = log
+		if stderr:
+			stderr = PIPE
+		else:
+			stderr = STDOUT
 		self.startupinfo = STARTUPINFO()
 		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
 		super().__init__(cmd,
 			stdout = PIPE,
-			stderr = STDOUT,
+			stderr = stderr,
 			encoding = 'utf-8',
 			errors = 'ignore',
 			universal_newlines = True,
 			startupinfo = self.startupinfo
 		)
 
-	def exec(self, log):
-		'''Echo stdout'''
-		stack = list()
-		for line in self.stdout:
-			if line:
-				stack.append(line.strip())
-				log.echo(stack[-1])
-			if len(stack) > 10:
-				stack.pop(0)
-		self.wait()
-		info = 'Process finished'
-		if stack:
-			info += ' with (last ten output lines:\n'
-			info += '\n'.join(stack)
-		log.info(info)
+	def echo_output(self, echo=print, cnt=None, skip=0):
+		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''
+		if self.log:
+			stdout_cnt = 0
+			self.stack = list()
+			for line in self.stdout:
+				stripped = line.strip()
+				if stripped:
+					stdout_cnt += 1
+					self.log.echo(stripped)
+					if stdout_cnt > skip:
+						self.stack.append(stripped)
+				if cnt and len(self.stack) > cnt:
+					self.stack.pop(0)
+			if self.stack:
+				self.log.info('\n' + '\n'.join(self.stack))
+		else:
+			for line in self.stdout:
+				if line:
+					echo(line.strip())
+		return self.stderr.read()

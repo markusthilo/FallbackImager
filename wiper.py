@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-09'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -39,17 +39,10 @@ class WipeR:
 	MAX_BLOCKSIZE = 32768
 
 	def __init__(self):
-		'''Create Object'''
-		for self.zd_path in (
-			__parent_path__/'bin/zd',
-			__parent_path__/'zd',
-			Path('/usr/bin/zd'),
-			Path('/usr/local/bin/zd')
-		):
-			if self.zd_path.is_file():
-				break
-		if not self.zd_path.is_file():
-			raise RuntimeError('Uanbale to locate zd binary')
+		'''Look for zd'''
+		self.zd_path = LinUtils.find_bin('zd', __parent_path__)
+		if not self.zd_path:
+			raise RuntimeError('Unable to find zd binary')
 
 	def wipe(self, targets,
 			verify = False,

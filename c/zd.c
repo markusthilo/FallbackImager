@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.0.1_2023-12-19";
+const char *VERSION = "0.1.0_2024-02-10";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -211,17 +211,18 @@ int uint_arg(const char *value, const char arg) {
 
 /* Print time delta */
 void print_time(const time_t start_time) {
-	time_t delta = time(NULL) - start_time;
-	struct tm *delta_tm = localtime(&delta);
+	int delta = time(NULL) - start_time;
+	int hours = delta / 3600;
+	delta -= hours * 3600;
+	int minutes = delta / 60;
+	delta -= minutes * 60;
 	printf("\n\nProcess took ");
-	if ( delta_tm->tm_yday == 1 ) printf("1 day, ");
-	else if ( delta_tm->tm_yday > 1 ) printf("%d days, ", delta_tm->tm_yday);
-	if ( delta_tm->tm_hour == 1 ) printf("1 hour, ");
-	else if ( delta_tm->tm_hour > 1 ) printf("%d hours, ", delta_tm->tm_hour);
-	if ( delta_tm->tm_min == 1 ) printf("1 minute, ");
-	else if ( delta_tm->tm_min > 1 ) printf("%d minutes, ", delta_tm->tm_min);
-	if ( delta_tm->tm_sec == 1 ) printf("1 second\n");
-	else printf("%d seconds\n", delta_tm->tm_sec);
+	if ( hours == 1 ) printf("1 hour, ");
+	else if ( hours > 1 ) printf("%d hours, ", hours);
+	if ( minutes == 1 ) printf("1 minute, ");
+	else if ( minutes > 1 ) printf("%d minutes, ", minutes);
+	if ( delta == 1 ) printf("1 second\n");
+	else printf ("%d seconds\n", delta);
 }
 
 /* Main function - program starts here */

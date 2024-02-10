@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-06'
+__version__ = '0.4.0_2024-02-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -24,14 +24,14 @@ from argparse import ArgumentParser
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger
-from lib.winutils import WinUtils
+from lib.winutils import WinUtils, OpenProc
 
 if Path(__file__).suffix.lower() == '.pyc':
 	__parent_path__ = Path(__executable__).parent
 else:
 	__parent_path__ = Path(__file__).parent
 
-class WipeW(WinUtils):
+class WipeW:
 	'''Frontend and Python wrapper for zd-win.exe'''
 
 	MIN_BLOCKSIZE = 512
@@ -39,15 +39,10 @@ class WipeW(WinUtils):
 	MAX_BLOCKSIZE = 32768
 
 	def __init__(self):
-		'''Create Object'''
-		for self.zd_path in (
-			__parent_path__/'bin/zd-win.exe',
-			__parent_path__/'zd-win.exe'
-		):
-			if self.zd_path.is_file():
-				break
-		if not self.zd_path.is_file():
-			raise RuntimeError(f'Unabale to locate zd-win.exe')
+		'''Look for zd-win.exe'''
+		self.zd_path = WinUtils.find_exe('zd-win.exe', __parent_path__)
+		if not self.zd_path:
+			raise RuntimeError('Unable to find zd-win.exe')
 
 	def wipe(self, targets,
 			verify = False,
@@ -87,8 +82,7 @@ class WipeW(WinUtils):
 				head = 'wipew.WipeW',
 				echo = self.echo
 			)
-		super().__init__(self.outdir)
-		if self.is_physical_drive(targets[0]):
+		if WinUtils.is_physical_drive(targets[0]):
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
 			if not IsUserAnAdmin():
@@ -118,7 +112,7 @@ class WipeW(WinUtils):
 		self.zd_error = False
 		for target in targets:
 			self.echo()
-			proc = self.cmd_launch(f'{cmd} ' + str(target).rstrip('\\'))
+			proc = OpenProc(f'{cmd} ' + str(target).rstrip('\\'))
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg.startswith('...'):
@@ -144,7 +138,7 @@ class WipeW(WinUtils):
 			loghead = __parent_path__/'wipe-log-head.txt'
 		if not name:
 			name = 'Volume'
-		driveletter = self.create_partition(target,
+		driveletter = WinUtils.create_partition(target, self.outdir,
 			label = name,
 			driveletter = driveletter,
 			mbr = mbr,
@@ -247,7 +241,7 @@ class WipeWCli(ArgumentParser):
 		if self.listdrives:
 			if len(self.targets) > 0:
 				raise RuntimeError('Giving targets makes no sense with --listdrives')
-			WinUtils().echo_drives()
+			WinUtils.echo_drives(echo=echo)
 			return
 		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')

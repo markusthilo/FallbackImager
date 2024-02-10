@@ -111,3 +111,37 @@ class LinUtils:
 		run(['sync'], check=True)
 		ret = run(['umount', f'{target}'], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
+
+class OpenProc(Popen):
+	'''Use Popen the way it is needed here'''
+
+	def __init__(self, cmd, stderr=True, log=None):
+		'''Launch process'''
+		self.log = log
+		if stderr:
+			stderr = PIPE
+		else:
+			stderr = STDOUT
+		super().__init__(cmd, stdout=PIPE, stderr=stderr, encoding='utf-8')
+
+	def echo_output(self, echo=print, cnt=None, skip=0):
+		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''
+		if self.log:
+			stdout_cnt = 0
+			self.stack = list()
+			for line in self.stdout:
+				if line:
+					stdout_cnt += 1
+					stripped = line.strip()
+					self.log.echo(stripped)
+					if stdout_cnt > skip:
+						self.stack.append(stripped)
+				if cnt and len(self.stack) > cnt:
+					self.stack.pop(0)
+			if self.stack:
+				self.log.info('\n' + '\n'.join(self.stack))
+		else:
+			for line in self.stdout:
+				if line:
+					echo(line.strip())
+		return self.stderr.read()
