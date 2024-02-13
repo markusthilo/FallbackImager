@@ -31,7 +31,7 @@ $ gcc -o bin/zd c/zd.c
 #### 3rd party tools
 Install *libewf* from your distro repos, e.g.:
 ```
-$ sudo apt install libewf disktype
+$ sudo apt install lib-ewf disktype
 ```
 ```
 $ sudo pacman install libewf disktype
@@ -42,7 +42,7 @@ $ sudo dnf install libewf disktype
 ```
 $ sudo zypper install libewf disktype
 ```
-FallbackImager tries to locate *ewfacquire* and *ewfverify* on your system (e.g. at */usr/bin*). Alternatively it might be possible to copy the binaries manually into the (sub-)folder *bin*.
+FallbackImager tries to locate *ewfacquire*, *ewfextract*, *ewfinfo* and *ewfverify* in the (sub-) folder *bin*. Alternatively it tries to find the binaries in usal system paths (e.g. at */usr/bin*).
 
 ### Windows
 
