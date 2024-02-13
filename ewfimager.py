@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-08'
+__version__ = '0.4.0_2024-02-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,13 +12,15 @@ Use libewf to create and check an EWF/E01 image of a block device.
 '''
 
 from sys import executable as __executable__
+from os import getlogin
 from pathlib import Path
 from argparse import ArgumentParser
+from datetime import datetime
+from json import dump
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger
-from lib.openproc import OpenProc
-from lib.linutils import LinUtils
+from lib.linutils import LinUtils, OpenProc
 from ewfchecker import EwfChecker
 
 if Path(__file__).suffix.lower() == '.pyc':
@@ -36,9 +38,10 @@ class EwfImager:
 			raise RuntimeError('Unable to find ewfacquire from libewf')
 		self.ewfchecker = EwfChecker()
 
-	def acquire(self, source, case_number, evidence_number, examiner_name, description, *args,
+	def acquire(self, source, case_number, evidence_number, description, *args,
 			outdir = None,
 			compression_values = None,
+			examiner_name = None,
 			media_type = None,
 			notes = None,
 			size = None,
@@ -57,11 +60,20 @@ class EwfImager:
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir,
 				head='ewfimager.EwfImager', echo=self.echo)
+		now = datetime.now()
+		self.infos = {'year': f'{now.year:04d}', 'month': f'{now.month:02d}', 'day': f'{now.day:02d}'}
 		if setro:
 			stdout, stderr = LinUtils.set_ro(source)
 			if stderr:
 				self.log.warning(stderr)
+		self.infos['size_in_bytes'] = ExtPath.get_size(self.source)
+		if not self.infos['size_in_bytes']:
+			if self.source.is_block_device():
+				self.infos['size_in_bytes'] = LinUtils.blkdevsize(self.source)
+			else:
+				raise RuntimeError(f'Unable to get size of {source}')
 		self.source_details = LinUtils.diskdetails(source)
+		self.infos.update(self.source_details)
 		msg = '\n'.join(f'{key.upper()}:\t{value}' for key, value in self.source_details.items())
 		self.log.info(f'Source:\n{msg}', echo=True)
 		proc = OpenProc([f'{self.ewfacquire_path}', '-V'])
@@ -69,42 +81,60 @@ class EwfImager:
 			self.log.warning(proc.stderr.read())
 		self.log.info(f'Using {proc.stdout.read().splitlines()[0]}')
 		self.image_path = self.outdir/self.filename
-		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
-		cmd.extend(['-C', case_number])
-		cmd.extend(['-D', description])
-		cmd.extend(['-e', examiner_name])
-		cmd.extend(['-E', evidence_number])
+		self.infos['case_number'] = case_number
+		if examiner_name:
+			self.infos['examiner_name'] = examiner_name
+		else:
+			self.infos['examiner_name'] = getlogin().upper()
+		self.infos['evidence_number'] = evidence_number
 		if compression_values:
-			cmd.extend(['-c', compression_values])
+			self.infos['compression_values'] = compression_values
 		else:
-			cmd.extend(['-c', 'fast'])
+			self.infos['compression_values'] = 'fast'
+		self.infos['description'] = description
 		if media_type:
-			cmd.extend(['-m', media_type])
-		if notes:
-			cmd.extend(['-N', notes])
+			self.infos['media_type'] = media_type
 		else:
-			cmd.extend(['-N', '-'])
-		if not size:
-			source_size = ExtPath.get_size(self.source)
-			if not source_size:
-				if self.source.is_block_device():
-					source_size = LinUtils.blkdevsize(self.source)
-				else:
-					raise RuntimeError(f'Unable to get size of {source}')
-			size = max(int(source_size/85899345920) * 1073741824, 4294967296)
-		cmd.extend(['-S', f'{size}'])
+			if self.infos['vendor'] == 'ATA':
+				self.infos['media_type'] = 'fixed'
+			else:
+				self.infos['media_type'] = 'removable'
+		if notes:
+			self.infos['notes'] = notes
+		else:
+			self.infos['notes'] = '-'
+		if size:
+			self.infos['size'] = size
+		else:
+			self.infos['segment_size'] = max(int(self.infos['size_in_bytes']/85899345920) * 1073741824, 4294967296)
+		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
+		cmd.extend(['-C', self.infos['case_number']])
+		cmd.extend(['-D', self.infos['description']])
+		cmd.extend(['-e', self.infos['examiner_name']])
+		cmd.extend(['-E', self.infos['evidence_number']])
+		cmd.extend(['-c', self.infos['compression_values']])
+		cmd.extend(['-m', self.infos['media_type']])
+		cmd.extend(['-N', self.infos['notes']])
+		cmd.extend(['-S', f'{self.infos["segment_size"]}'])
 		for arg in args:
 			cmd.append(f'-{arg}')
 		for arg, par in kwargs.items():
 			cmd.extend([f'-{arg}', f'{par}'])
 		cmd.append(f'{self.source}')
 		proc = OpenProc(cmd, log=self.log)
-		proc.echo_output(cnt=9)
-		print(proc.stack)
-		exit()
-
-		if stderr := proc.stderr.read():
-			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
+		if proc.echo_output(cnt=9) != 0:
+			self.log.error(f'ewfacquire terminated with:\n{proc.stderr.read()}')
+		for line in proc.stack:
+			if line.startswith('MD5 hash calculated over data:'):
+				self.infos['md5'] = line.split(':', 1)[1].strip()
+			elif line.startswith('SHA256 hash calculated over data:'):
+				self.infos['sha256'] = line.split(':', 1)[1].strip()
+		try:
+			with self.image_path.with_suffix('.json').open('w') as fh:
+				dump(self.infos, fh)
+		except Exception as err:
+			self.log.warning(f'Unable to create JSON file:\n{err}')
+		return self.infos
 
 class EwfImagerCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -124,7 +154,7 @@ class EwfImagerCli(ArgumentParser):
 			help='Description (required, e.g. drive number, example: "PC01_HD01")',
 			metavar='STRING'
 		)
-		self.add_argument('-e', '--examiner_name', type=str, required=True,
+		self.add_argument('-e', '--examiner_name', type=str,
 			help='Examiner name (required)',
 			metavar='STRING'
 		)
@@ -175,10 +205,9 @@ class EwfImagerCli(ArgumentParser):
 	def run(self, echo=print):
 		'''Run EwfImager and EwfVerify'''
 		imager = EwfImager()
-		imager.acquire(self.source,
-			self.case_number, self.evidence_number,
-			self.examiner_name, self.description,
+		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
 			compression_values = self.compression_values,
+			examiner_name = self.examiner_name,
 			media_type = self.media_type,
 			notes = self.notes,
 			size = self.size,
@@ -189,7 +218,8 @@ class EwfImagerCli(ArgumentParser):
 		EwfChecker().check(imager.image_path,
 			outdir = self.outdir,
 			echo = echo,
-			log = imager.log
+			log = imager.log,
+			hashes = hashes
 		)
 		imager.log.close()
 

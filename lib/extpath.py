@@ -37,6 +37,7 @@ class ExtPath:
 		'''Create directory or just give full dorectory path if exists'''
 		if not path:
 			return Path.cwd()
+		path = Path(path)
 		path.mkdir(exist_ok=True)
 		return path
 

@@ -33,6 +33,7 @@ class EwfImagerGui:
 		StringSelector(root, frame, root.SOURCE, root.SOURCE,
 			command=self._select_source, columnspan=5)
 		root.settings.raw(root.SOURCE).set('')
+		Checker(root, frame, root.SETRO, root.SETRO, column=3)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION)
 		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=5)
@@ -153,6 +154,7 @@ class EwfImagerGui:
 		notes = self.root.settings.get(self.root.settings.get(self.root.NOTES))
 		media_type = self.root.settings.get(self.root.MEDIA_TYPE)
 		compression = self.root.settings.get(self.root.COMPRESSION)
+		setro = self.root.settings.get(self.root.SETRO)
 		if not source:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
@@ -177,5 +179,7 @@ class EwfImagerGui:
 		if notes:
 			cmd += f' -N "{notes}"'
 		cmd += f' -m {media_type} -c {compression}'
+		if setro:
+			cmd += ' --setro'
 		cmd += f' "{source}"'
 		self.root.append_job(cmd)

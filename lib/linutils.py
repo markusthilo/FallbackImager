@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from subprocess import run
+from subprocess import Popen, PIPE, run
 from json import loads
 
 class LinUtils:
@@ -56,8 +56,14 @@ class LinUtils:
 	@staticmethod
 	def diskdetails(dev):
 		'''Use lsblk with JSON output to get enhanced infos about block devoce'''
-		return loads(run(['lsblk', '--json', '-o', 'LABEL,SIZE,VENDOR,MODEL,REV,SERIAL', f'{dev}'],
-			capture_output=True, text=True).stdout)['blockdevices'][0]
+		details = dict()
+		for key, value in loads(run(['lsblk', '--json', '-o', 'LABEL,SIZE,VENDOR,MODEL,REV,SERIAL', f'{dev}'],
+			capture_output=True, text=True).stdout)['blockdevices'][0].items():
+			if value:
+				details[key] = value.strip()
+			else:
+				details[key] = '-'
+		return details
 
 	@staticmethod
 	def blkdevsize(dev):
@@ -144,4 +150,5 @@ class OpenProc(Popen):
 			for line in self.stdout:
 				if line:
 					echo(line.strip())
-		return self.stderr.read()
+		self.poll()
+		return self.returncode

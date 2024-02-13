@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-08'
+__version__ = '0.4.0_2024-02-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,9 +15,8 @@ from sys import executable as __executable__
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.extpath import ExtPath
-from lib.openproc import OpenProc
 from lib.timestamp import TimeStamp
-from lib.linutils import LinUtils
+from lib.linutils import LinUtils, OpenProc
 from lib.logger import Logger
 
 if Path(__file__).suffix.lower() == '.pyc':
@@ -43,7 +42,7 @@ class EwfChecker:
 		if not self.disktype_path:
 			raise RuntimeError('Unable to find disktype')
 
-	def check(self, image, outdir=None, filename=None, echo=print, log=None):
+	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None):
 		'''Verify image'''
 		self.image_path = Path(image)
 		if not self.image_path.suffix:
@@ -85,9 +84,18 @@ class EwfChecker:
 		info = proc.stdout.read().splitlines()[0]
 		self.log.info(f'Using {info}', echo=True)
 		proc = OpenProc([f'{self.ewfverify_path}', '-d', 'sha256', f'{self.image_path}'], log=self.log)
-		proc.echo_output(cnt=8)
-		if stderr := proc.stderr.read():
-			self.log.error(f'ewfacquire terminated with: {stderr}', exception=stderr.split('\n'))
+		if proc.echo_output(cnt=8) != 0:
+			self.log.error(f'ewfverify terminated with:\n{proc.stderr.read()}')
+		self.hashes = dict()
+		for line in proc.stack:
+			if line.startswith('MD5 hash calculated over data:'):
+				self.hashes['md5'] = line.split(':', 1)[1].strip()
+			elif line.startswith('SHA256 hash calculated over data:'):
+				self.hashes['sha256'] = line.split(':', 1)[1].strip()
+		if hashes:
+			for alg, hash in self.hashes.items():
+				if hash.lower() != hashes[alg].lower():
+					selg.log.error('Mismatching hashes')
 
 class EwfCheckerCli(ArgumentParser):
 	'''CLI for EwfVerify'''

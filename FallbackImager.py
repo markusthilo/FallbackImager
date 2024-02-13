@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-08'
+__version__ = '0.4.0_2024-02-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -62,11 +62,14 @@ else:
 		from lib.ewfimagergui import EwfImagerGui
 		from ewfchecker import EwfCheckerCli
 		from lib.ewfcheckergui import EwfCheckerGui
+		from reporter import ReporterCli
+		from lib.reportergui import ReporterGui
 		from wiper import WipeRCli
 		from lib.wipergui import WipeRGui
 		__modules__ = {
 			EwfImagerGui: EwfImagerCli,
 			EwfCheckerGui: EwfCheckerCli,
+			ReporterGui: ReporterCli,
 			ZipImagerGui: ZipImagerCli,
 			SQLiteGui: SQLiteCli,
 			AxCheckerGui: AxCheckerCli,
@@ -248,6 +251,14 @@ class Gui(GuiBase):
 	AUTO = 'auto'
 	SELECT_SOURCE = 'Select source'
 	IMAGE_DETAILS_REQUIRED = 'Image details required'
+	SETRO = 'Set target to read only'
+	TEMPLATE = 'Template'
+	SELECT_TEMPLATE = 'Select template file'
+	JSON_FILE = 'JSON file'
+	SELECT_JSON = 'Select JSON file'
+	PARSE_NOW = 'Parse now'
+	PREVIEW = 'Preview'
+	WRITE_TO_FILE = 'Write to file'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
