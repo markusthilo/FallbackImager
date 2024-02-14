@@ -57,13 +57,16 @@ class ReporterGui:
 		filename = self.root.settings.get(self.root.FILENAME)
 		self.preview_window = ChildWindow(self.root, self.root.PREVIEW)
 		self.reporter = Reporter()
-		text = ScrolledText(self.preview_window,
+		self.text = ScrolledText(self.preview_window,
 			width = self.root.ENTRY_WIDTH,
 			height = 4*self.root.INFO_HEIGHT,
 			wrap = 'word'
 		)
-		text.pack(fill='both', expand=True)
-		text.insert('end', self.reporter.parse(json, template))
+		self.text.pack(fill='both', expand=True)
+		self.text.insert('1.0', self.reporter.parse(json, template))
+		if self.reporter.errors > 0:
+			self.text.insert('end', f'\n\n### {self.root.PARSER_REPORTED} {self.reporter.errors} {self.root.ERRORS} ###')
+
 		frame = ExpandedFrame(self.root, self.preview_window)
 		if outdir or filename:
 			LeftButton(self.root, frame, self.root.WRITE_TO_FILE, self._write)

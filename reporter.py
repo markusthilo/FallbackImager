@@ -3,7 +3,7 @@
 
 __app_name__ = 'Reporter'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-13'
+__version__ = '0.4.0_2024-02-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -33,6 +33,7 @@ class Reporter:
 			inserts = load(fh)
 		reg = regcompile('\\\\jinsert\{([^}]*)\}\{([^}]+)\}')
 		self.parsed_text = ''
+		self.errors = 0
 		for line in self.template.read_text().splitlines():
 			newline = ''
 			position = 0
@@ -49,7 +50,8 @@ class Reporter:
 						remove_line = True
 						break
 					else:
-						raise RuntimeError(f'Unable to find a value for {groups[1]}')
+						insert_text = f'### ERROR: unable to find a value for "{groups[1]}" ###'
+						self.errors += 1
 				newline += line[position:span[0]] + insert_text
 				position = span[1]
 			if not remove_line:
@@ -97,6 +99,8 @@ class ReporterCli(ArgumentParser):
 		'''Run the verification'''
 		reporter = Reporter()
 		echo(reporter.parse(self.json, self.template))
+		if reporter.errors > 0:
+			raise RuntimeError(f'Parser reported {reporter.errors} error(s)')
 		if self.outdir or self.filename:
 			reporter.write(filename=self.filename, outdir=self.outdir)
 

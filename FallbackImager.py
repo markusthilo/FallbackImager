@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-13'
+__version__ = '0.4.0_2024-02-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -259,6 +259,8 @@ class Gui(GuiBase):
 	PARSE_NOW = 'Parse now'
 	PREVIEW = 'Preview'
 	WRITE_TO_FILE = 'Write to file'
+	PARSER_REPORTED = 'Parser reported'
+	ERRORS = 'error(s)'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
