@@ -43,6 +43,7 @@ class EwfImager:
 			compression_values = None,
 			examiner_name = None,
 			media_type = None,
+			media_flags = None,
 			notes = None,
 			size = None,
 			setro = False,
@@ -99,6 +100,10 @@ class EwfImager:
 				self.infos['media_type'] = 'fixed'
 			else:
 				self.infos['media_type'] = 'removable'
+		if media_flags:
+			self.infos['media_flags']]) = media_flags
+		else:
+			self.infos['media_flags']]) = 'physical'
 		if notes:
 			self.infos['notes'] = notes
 		else:
@@ -114,6 +119,7 @@ class EwfImager:
 		cmd.extend(['-E', self.infos['evidence_number']])
 		cmd.extend(['-c', self.infos['compression_values']])
 		cmd.extend(['-m', self.infos['media_type']])
+		cmd.extend(['-M', self.infos['media_flags']])
 		cmd.extend(['-N', self.infos['notes']])
 		cmd.extend(['-S', f'{self.infos["segment_size"]}'])
 		for arg in args:
@@ -165,6 +171,11 @@ class EwfImagerCli(ArgumentParser):
 		self.add_argument('-m', '--media_type', type=str,
 			choices=['fixed', 'removable', 'optical', 'memory'],
 			help='Media type, options: fixed, removable, optical, memory (auto if not set)',
+			metavar='STRING'
+		)
+		self.add_argument('-M', '--media_flags', type=str,
+			choices=['logical', 'physical'],
+			help='Specify the media flags, options: logical, physical (default)',
 			metavar='STRING'
 		)
 		self.add_argument('-N', '--notes', type=str,
