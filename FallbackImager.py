@@ -19,64 +19,33 @@ from os import name as __os_name__
 from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
-from zipimager import ZipImagerCli
+from zipimager import ZipImager, ZipImagerCli
 from lib.zipimagergui import ZipImagerGui
-from axchecker import AxCheckerCli
+from axchecker import AxChecker, AxCheckerCli
 from lib.axcheckergui import AxCheckerGui
-from sqlite import SQLiteCli
+from sqlite import SQLite, SQLiteCli
 from lib.sqlitegui import SQLiteGui
-
-### MODULES, SYSTEM AND SYSTEM REALTED SETTINGS ###
-__not_admin__ = None
+from reporter import Reporter, ReporterCli
+from lib.reportergui import ReporterGui
+if __os_name__ == 'nt':
+	from win32com.shell.shell import IsUserAnAdmin
+	from oscdimager import OscdImager, OscdImagerCli
+	from lib.oscdimagergui import OscdImagerGui
+	from dismimager import DismImager, DismImagerCli
+	from lib.dismimagergui import DismImagerGui
+	from wipew import WipeW, WipeWCli
+	from lib.wipewgui import WipeWGui
+else:
+	from ewfimager import EwfImager, EwfImagerCli
+	from lib.ewfimagergui import EwfImagerGui
+	from ewfchecker import EwfChecker, EwfCheckerCli
+	from lib.ewfcheckergui import EwfCheckerGui
+	from wiper import WipeR, WipeRCli
+	from lib.wipergui import WipeRGui
 if Path(__executable__).stem == __app_name__:
 	__parent_path__ = Path(__executable__).parent
 else:
 	__parent_path__ = Path(__file__).parent
-if __os_name__ == 'nt':
-	from win32com.shell.shell import IsUserAnAdmin
-	from oscdimager import OscdImagerCli
-	from lib.oscdimagergui import OscdImagerGui
-	from dismimager import DismImagerCli
-	from lib.dismimagergui import DismImagerGui
-	from wipew import WipeWCli
-	from lib.wipewgui import WipeWGui
-	if IsUserAnAdmin():
-		__modules__ = {
-			OscdImagerGui: OscdImagerCli,
-			DismImagerGui: DismImagerCli,
-			ZipImagerGui: ZipImagerCli,
-			SQLiteGui: SQLiteCli,
-			AxCheckerGui: AxCheckerCli,
-			WipeWGui: WipeWCli
-		}
-	else:
-		__modules__ = {
-			OscdImagerGui: OscdImagerCli,
-			ZipImagerGui: ZipImagerCli,
-			SQLiteGui: SQLiteCli,
-			AxCheckerGui: AxCheckerCli
-		}
-		__not_admin__ = 'No Admin Privileges'
-else:
-		from ewfimager import EwfImagerCli
-		from lib.ewfimagergui import EwfImagerGui
-		from ewfchecker import EwfCheckerCli
-		from lib.ewfcheckergui import EwfCheckerGui
-		from reporter import ReporterCli
-		from lib.reportergui import ReporterGui
-		from wiper import WipeRCli
-		from lib.wipergui import WipeRGui
-		__modules__ = {
-			EwfImagerGui: EwfImagerCli,
-			EwfCheckerGui: EwfCheckerCli,
-			ReporterGui: ReporterCli,
-			ZipImagerGui: ZipImagerCli,
-			SQLiteGui: SQLiteCli,
-			AxCheckerGui: AxCheckerCli,
-			WipeRGui: WipeRCli
-		}
-
-###############
 
 class Gui(GuiBase):
 	'''GUI, not that I need one but there is Windows and Mac folks...'''
@@ -93,7 +62,6 @@ class Gui(GuiBase):
 	FILES_FIELD_WIDTH = 94
 	SMALL_FIELD_WIDTH = 24
 	BUTTON_WIDTH = 24
-	IMAGERS = __modules__
 	DESCRIPTION = __description__.strip()
 	NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
@@ -265,8 +233,32 @@ class Gui(GuiBase):
 
 	def __init__(self, debug=False):
 		'''Build GUI'''
+		not_admin = False
+		if __os_name__ == 'nt':
+			candidates = (
+				(OscdImager, OscdImagerCli, OscdImagerGui),
+				(DismImager, DismImagerCli, DismImagerGui),
+				(ZipImager, ZipImagerCli, ZipImagerGui),
+				(SQLite, SQLiteCli, SQLiteGui),
+				(Reporter, ReporterCli, ReporterGui),
+				(AxChecker, AxCheckerCli, AxCheckerGui),
+				(WipeW, WipeWCli, WipeWGui)
+			)
+			if not IsUserAnAdmin():
+				not_admin = True
+		else:
+			candidates = (
+				(EwfImager, EwfImagerCli, EwfImagerGui),
+				(EwfChecker, EwfCheckerCli, EwfCheckerGui),
+				(EwfChecker, ReporterCli, ReporterGui),
+				(ZipImager, ZipImagerCli, ZipImagerGui),
+				(SQLite, SQLiteCli, SQLiteGui),
+				(AxChecker, AxCheckerCli, AxCheckerGui),
+				(WipeR, WipeRCli, WipeRGui)
+			)
 		super().__init__(__app_name__,__version__, __parent_path__,
-			not_admin = __not_admin__,
+			[(Cli, Gui) for Module, Cli, Gui in candidates if Module().available],
+			not_admin = not_admin,
 			debug = debug
 		)
 

@@ -168,4 +168,4 @@ class Progressor:
 		percent = int(self.factor*self.counter)
 		if percent > self.percent:
 			self.percent = percent
-			self.echo(f'{self.percent}%, processing file {self.counter} of {self.quantitiy}')
+			self.echo(f'{self.percent}%, processing file/dir {self.counter} of {self.quantitiy}')

@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-02-01'
+__version__ = '0.3.1_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -16,8 +16,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from sys import executable as __executable__
 from shutil import copyfile
-from tkinter.messagebox import showerror
-from lib.extpath import ExtPath, FilesPercent
+from lib.extpath import ExtPath, Progressor
 from lib.logger import Logger
 from lib.dism import CaptureImage, ImageContent
 from lib.hashes import FileHashes
@@ -28,7 +27,14 @@ class DismImager:
 
 	WIMMOUNT = 'WimMount.exe'
 
-	def __init__(self, root,
+	def __init__(self):
+		'''Available with admin privileges'''
+		if IsUserAnAdmin():
+			self.available = True
+		else:
+			self.available = False
+
+	def create(self, root,
 			filename = None,
 			imagepath = None,
 			outdir = None,
@@ -38,7 +44,7 @@ class DismImager:
 			log = None,
 			echo = print
 		):
-		'''Definitihons'''
+		'''Create image'''
 		self.root_path = Path(root)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
@@ -57,9 +63,6 @@ class DismImager:
 			self.log = log
 		else:
 			self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=echo)
-
-	def create(self):
-		'''Create image'''
 		proc = CaptureImage(self.image_path, self.root_path,
 			name = self.name,
 			description = self.description,		
@@ -94,7 +97,7 @@ class DismImager:
 		missing_dir_cnt = 0
 		missing_else_cnt = 0
 		self.echo(f'Comparing {self.image_path.name} to {self.root_path.name}')
-		progress = FilesPercent(self.root_path, echo=self.echo)
+		progress = Progressor(self.root_path, echo=self.echo)
 		with ExtPath.child(f'{self.filename}_missing.txt',
 			parent=self.outdir).open(mode='w', encoding='utf-8') as fh:
 			for path in ExtPath.walk(self.root_path):

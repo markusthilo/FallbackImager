@@ -29,21 +29,21 @@ class Worker(Thread):
 			if len(args) == 0 or not args[0]:
 				continue
 			cmd = args[0]
-			for ImagerGui, ImagerCli in self.gui.IMAGERS.items():
-				if args[0].lower() == ImagerGui.CMD.lower():
+			for Cli, Gui  in self.gui.modules:
+				if args[0].lower() == Gui.CMD.lower():
 					break
 			else:
 				echo(self.gui.UNDETECTED)
 				continue
 			if self.gui.debug:
-				imager = ImagerCli()
-				imager.parse(args[1:])
-				imager.run(echo=echo)
+				module = Cli()
+				module.parse(args[1:])
+				module.run(echo=echo)
 			else:
 				try:
-					imager = ImagerCli()
-					imager.parse(args[1:])
-					imager.run(echo=echo)
+					module = Cli()
+					module.parse(args[1:])
+					module.run(echo=echo)
 				except Exception as ex:
 					echo(ex)
 					ex_cnt += 1

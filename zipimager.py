@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,7 +22,11 @@ from lib.hashes import FileHashes
 class ZipImager:
 	'''Imager using ZipFile'''
 
-	def __init__(self, root, filename=None, outdir=None, echo=print, log=None):
+	def __init__(self):
+		'''Create object'''
+		self.available = True
+
+	def create(self, root, filename=None, outdir=None, echo=print, log=None):
 		'''Create object'''
 		self.root_path = Path(root)
 		self.filename = TimeStamp.now_or(filename)
@@ -36,9 +40,6 @@ class ZipImager:
 		self.echo('Creating Zip file')
 		self.image_path = ExtPath.child(f'{self.filename}.zip', parent=self.outdir)
 		self.tsv_path = ExtPath.child(f'{self.filename}.tsv', parent=self.outdir)
-
-	def create(self):
-		'''Create zip file'''
 		file_cnt = 0
 		dir_cnt = 0
 		other_cnt = 0

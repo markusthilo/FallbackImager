@@ -30,17 +30,13 @@ class EwfChecker:
 	def __init__(self):
 		'''Check if the needed binaries are present'''
 		self.ewfverify_path = LinUtils.find_bin('ewfverify', __parent_path__)
-		if not self.ewfverify_path:
-			raise RuntimeError('Unable to find ewfverify from libewf')
 		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', __parent_path__)
-		if not self.ewfinfo_path:
-			raise RuntimeError('Unable to find ewfinfo from libewf')
 		self.ewfexport_path = LinUtils.find_bin('ewfexport', __parent_path__)
-		if not self.ewfexport_path:
-			raise RuntimeError('Unable to find ewfexport from libewf')
 		self.disktype_path = LinUtils.find_bin('disktype', __parent_path__)
-		if not self.disktype_path:
-			raise RuntimeError('Unable to find disktype')
+		if self.ewfverify_path and self.ewfinfo_path and self.ewfexport_path and self.disktype_path:
+			self.available = True
+		else:
+			self.available = False
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None):
 		'''Verify image'''

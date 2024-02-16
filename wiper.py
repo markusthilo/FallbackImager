@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-09'
+__version__ = '0.4.0_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -41,8 +41,10 @@ class WipeR:
 	def __init__(self):
 		'''Look for zd'''
 		self.zd_path = LinUtils.find_bin('zd', __parent_path__)
-		if not self.zd_path:
-			raise RuntimeError('Unable to find zd binary')
+		if self.zd_path:
+			self.available = True
+		else:
+			self.available = False
 
 	def wipe(self, targets,
 			verify = False,

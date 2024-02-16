@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-10'
+__version__ = '0.4.0_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -14,7 +14,6 @@ The module uses oscdimg.exe (from the Windows ADK Package) to generate an ISO fi
 from sys import executable as __executable__
 from pathlib import Path
 from argparse import ArgumentParser
-from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -31,11 +30,15 @@ class OscdImager:
 
 	def __init__(self):
 		'''Look for oscdimg.exe'''
-		self.oscdimg_path = WinUtils.find_exe('oscdimg.exe', __parent_path__,
-			Path('C:')/'Program Files (x86)'/'Windows Kits'/'10'/'Assessment and Deployment Kit'/'Deployment Tools'/'amd64'/'Oscdimg'/'oscdimg.exe'
-		)
-		if not self.oscdimg_path:
-			raise RuntimeError('Unable to find oscdimg.exe')
+		adk_path = Path('C:')/'Program Files (x86)'/'Windows Kits'/'10'
+		adk_path /= 'Assessment and Deployment Kit'
+		adk_path /= 'Deployment Tools'
+		adk_path /= 'amd64\Oscdimg'
+		self.oscdimg_path = WinUtils.find_exe('oscdimg.exe', __parent_path__, adk_path)
+		if self.oscdimg_path:
+			self.available = True
+		else:
+			self.available = False
 
 	def create (self, root,
 			filename = None,

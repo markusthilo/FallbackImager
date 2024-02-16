@@ -23,7 +23,7 @@ class Reporter:
 
 	def __init__(self):
 		'''Generate object'''
-		pass
+		self.available = True
 
 	def parse(self, json, template):
 		'''Parse json through template'''
@@ -31,7 +31,7 @@ class Reporter:
 		self.template = Path(template)
 		with self.json_path.open() as fh:
 			inserts = load(fh)
-		reg = regcompile('\\\\jinsert\{([^}]*)\}\{([^}]+)\}')
+		reg = regcompile('\\\\jinsert\\{([^}]*)\\}\\{([^}]+)\\}')
 		self.parsed_text = ''
 		self.errors = 0
 		for line in self.template.read_text().splitlines():

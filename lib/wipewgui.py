@@ -12,7 +12,7 @@ from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
 from lib.winutils import WinUtils
 
-class WipeWGui(WinUtils):
+class WipeWGui:
 	'''Notebook page for WipeW'''
 
 	CMD = 'WipeW'
@@ -28,7 +28,6 @@ class WipeWGui(WinUtils):
 
 	def __init__(self, root):
 		'''Notebook page'''
-		super().__init__(root.parent_path)
 		root.settings.init_section(self.CMD)
 		self.default_wlh_path = root.parent_path/'wipe-log-head.txt'
 		frame = ExpandedFrame(root, root.notebook)
@@ -62,7 +61,7 @@ class WipeWGui(WinUtils):
 			([root.DO_NOT_CREATE] + list(self.FS)), default=self.DEF_FS, column=6)
 		root.row -= 1
 		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
-			([root.NEXT_AVAILABLE] + self.get_free_letters()),
+			([root.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
 			default=root.NEXT_AVAILABLE, column=8)
 		root.row += 1
 		StringSelector(root, frame, root.VALUE, root.VALUE, default=self.DEF_VALUE,

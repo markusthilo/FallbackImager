@@ -34,9 +34,10 @@ class EwfImager:
 	def __init__(self):
 		'''Check if ewfacquire and ewfverify are present'''
 		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', __parent_path__)
-		if not self.ewfacquire_path:
-			raise RuntimeError('Unable to find ewfacquire from libewf')
-		self.ewfchecker = EwfChecker()
+		if self.ewfacquire_path and EwfChecker().available:
+			self.available = True
+		else:
+			self.available = False
 
 	def acquire(self, source, case_number, evidence_number, description, *args,
 			outdir = None,

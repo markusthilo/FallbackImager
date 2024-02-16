@@ -11,8 +11,14 @@ from .guihelp import Help
 
 class GuiBase(Tk):
 
-	def __init__(self, name, version, parent_path, not_admin=False, debug=False):
+	def __init__(self, name, version, parent_path, modules, not_admin=False, debug=False):
 		'''Add stuff to Tk'''
+		if len(modules) < 1:
+			showerror(
+				title = self.FATAL_ERROR,
+				message = self.MODULE_ERROR
+			)
+			raise ImportError(self.MODULE_ERROR)
 		self.app_name = name
 		self.version = version
 		self.debug = debug
@@ -32,18 +38,7 @@ class GuiBase(Tk):
 		LeftLabel(self, frame, self.AVAILABLE_MODULES)
 		RightButton(self, frame, self.HELP, self.show_help)	
 		self.notebook = ExpandedNotebook(self)
-		self.imagers = list()
-		for ImagerGui in self.IMAGERS:
-			try:
-				self.imagers.append(ImagerGui(self))
-			except RuntimeError:
-				pass
-		if len(self.imagers) < 1:
-			showerror(
-				title = self.FATAL_ERROR,
-				message = self.MODULE_ERROR
-			)
-			raise ImportError(self.MODULE_ERROR)
+		self.modules = [(Cli, Gui(self)) for Cli, Gui in modules]
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.JOBS)
 		self.rm_last_job_button = RightButton(self,

@@ -23,7 +23,11 @@ from lib.logger import Logger
 class SQLite:
 	'''The easy way to work with SQLite'''
 
-	def __init__(self, db,
+	def __init__(self):
+		'''Generate object'''
+		self.available = True
+
+	def open(self, db,
 		filename = None,
 		outdir = None,
 		echo = print,

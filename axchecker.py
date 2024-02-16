@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -16,10 +16,6 @@ Hits are files, that are represented in the artifacts. Obviously this tool can o
 from pathlib import Path
 from argparse import ArgumentParser
 from os import name as __os_name__
-from tkinter import StringVar
-from tkinter.ttk import Radiobutton, Button, Checkbutton
-from tkinter.messagebox import showerror
-from tkinter.scrolledtext import ScrolledText
 from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -29,8 +25,12 @@ from lib.tsvreader import TsvReader
 class AxChecker:
 	'''Compare AXIOM case file / SQlite data base with paths'''
 
-	def __init__(self, mfdb, echo = print):
+	def __init__(self):
 		'''Create Object'''
+		self.available = True
+
+	def open(self, mfdb, echo=print):
+		'''Open database'''
 		self.mfdb = MfdbReader(mfdb)
 		self.mfdb_path = Path(mfdb)
 		self.echo = echo
@@ -126,7 +126,6 @@ class AxChecker:
 						missing_cnt += 1
 		elif self.diff_path.is_file:	# compare to file
 			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
-			tsv_cnt = 0
 			if tsv.column < 0:
 				self.log.error('Column out of range/undetected')
 			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
@@ -138,7 +137,7 @@ class AxChecker:
 				else:
 					echo = lambda msg: self.echo(msg, overwrite=True)
 				echo(1)
-				for tsv_path, line in tsv.read_lines():
+				for tsv_cnt, (tsv_path, line) in enumerate(tsv.read_lines()):
 					if not ExtPath.normalize_str(tsv_path) in short_paths:
 						print(line, file=fh)
 						missing_cnt += 1
@@ -181,7 +180,7 @@ class AxCheckerCli(ArgumentParser):
 			help='Directory to write log and CSV list(s)', metavar='DIRECTORY'
 		)
 		self.add_argument('-p', '--partition', type=str,
-			help='Image and partiton to compare (--diff DIRECTORY)', metavar='STRING'
+			help='Partiton to compare (partition name or number in AXIOM case)', metavar='STRING/INT'
 		)
 		self.add_argument('mfdb', nargs=1, type=ExtPath.path,
 			help='AXIOM Case (.mfdb) / SQLite data base file', metavar='FILE'
