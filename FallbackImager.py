@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-14'
+__version__ = '0.4.0_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -247,6 +247,7 @@ class Gui(GuiBase):
 	EXAMINER_NAME = 'Examiner name'
 	NOTES = 'Notes'
 	MEDIA_TYPE = 'Media type'
+	MEDIA_FLAG = 'Media flag'
 	SEGMENT_SIZE = 'Segment size (MiB)'
 	AUTO = 'auto'
 	SELECT_SOURCE = 'Select source'

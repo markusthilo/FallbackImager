@@ -19,7 +19,8 @@ class EwfImagerGui:
 	'''Notebook page for EwfImager'''
 
 	CMD = 'EwfImager'
-	MEDIA_TYPES = ['fixed', 'removable', 'optical']
+	MEDIA_TYPES = ['auto', 'fixed', 'removable', 'optical']
+	MEDIA_FLAGS = ['auto', 'logical', 'physical']
 	COMPRESSIONS = ['fast', 'best', 'none']
 
 	def __init__(self, root):
@@ -31,32 +32,35 @@ class EwfImagerGui:
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.SOURCE)
 		StringSelector(root, frame, root.SOURCE, root.SOURCE,
-			command=self._select_source, columnspan=5)
+			command=self._select_source, columnspan=7)
 		root.settings.raw(root.SOURCE).set('')
-		Checker(root, frame, root.SETRO, root.SETRO, column=3)
+		Checker(root, frame, root.SETRO, root.SETRO, column=2)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION)
-		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=5)
+		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=7)
 		StringSelector(root, frame, root.CASE_NO, root.CASE_NO,
-			command=self._set_ts_case_no, columnspan=5)
+			command=self._set_ts_case_no, columnspan=7)
 		StringSelector(root, frame, root.EVIDENCE_NO, root.EVIDENCE_NO,
-			command=self._set_def_evidence_no, columnspan=5)
+			command=self._set_def_evidence_no, columnspan=7)
 		StringSelector(root, frame, root.DESCRIPTION, root.DESCRIPTION,
-			command=self._set_def_description, columnspan=5)
+			command=self._set_def_description, columnspan=7)
 		StringSelector(root, frame, root.EXAMINER_NAME, root.EXAMINER_NAME,
-			command=self._set_def_examiner_name, columnspan=5)
+			command=self._set_def_examiner_name, columnspan=7)
 		notes = [f'Notes {index}' for index in ('A', 'B', 'C')]
 		StringRadiobuttons(root, frame, root.NOTES, notes, notes[0])
 		for choice in notes:
-			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice), columnspan=5)
+			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice), columnspan=7)
 		StringSelector(root, frame, root.SEGMENT_SIZE, root.SEGMENT_SIZE, default=root.AUTO, command=self._set_auto,
-			width=root.SMALL_FIELD_WIDTH, columnspan=4)
+			width=root.SMALL_FIELD_WIDTH, columnspan=2)
 		root.row -= 1
 		GridStringMenu(root, frame, root.COMPRESSION, root.COMPRESSION,
 			self.COMPRESSIONS, default=self.COMPRESSIONS[0], column=3)
 		root.row -= 1
 		GridStringMenu(root, frame, root.MEDIA_TYPE, root.MEDIA_TYPE,
 			self.MEDIA_TYPES, default=self.MEDIA_TYPES[0], column=5)
+		root.row -= 1
+		GridStringMenu(root, frame, root.MEDIA_FLAG, root.MEDIA_FLAG,
+			self.MEDIA_FLAGS, default=self.MEDIA_FLAGS[0], column=7)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
@@ -153,6 +157,7 @@ class EwfImagerGui:
 		examiner_name = self.root.settings.get(self.root.EXAMINER_NAME)
 		notes = self.root.settings.get(self.root.settings.get(self.root.NOTES))
 		media_type = self.root.settings.get(self.root.MEDIA_TYPE)
+		media_flag = self.root.settings.get(self.root.MEDIA_FLAG)
 		compression = self.root.settings.get(self.root.COMPRESSION)
 		setro = self.root.settings.get(self.root.SETRO)
 		if not source:
@@ -178,7 +183,11 @@ class EwfImagerGui:
 		cmd += f' -C "{case_no}" -E "{evidence_number}" -D "{description}" -e "{examiner_name}"'
 		if notes:
 			cmd += f' -N "{notes}"'
-		cmd += f' -m {media_type} -c {compression}'
+		cmd += f' -c {compression}'
+		if media_type != self.MEDIA_TYPES[0]:
+			cmd += f' -m {media_type}'
+		if media_flag != self.MEDIA_FLAGS[0]:
+			cmd += f' -M {media_flag}'
 		if setro:
 			cmd += ' --setro'
 		cmd += f' "{source}"'

@@ -41,6 +41,15 @@ class LinUtils:
 		}
 
 	@staticmethod
+	def isdisk(dev):
+		'''Use lsblk with JSON output to check if device is a blockdevice'''
+		try:
+			return loads(run(['lsblk', '--json', '-o', 'TYPE', f'{dev}'],
+					capture_output=True, text=True).stdout)['blockdevices'][0]['type'] == 'disk'
+		except IndexError:
+			return False
+
+	@staticmethod
 	def diskinfo():
 		'''Use lsblk with JSON output to get infos about disks'''
 		return {

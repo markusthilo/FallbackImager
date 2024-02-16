@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-13'
+__version__ = '0.4.0_2024-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -101,9 +101,12 @@ class EwfImager:
 			else:
 				self.infos['media_type'] = 'removable'
 		if media_flags:
-			self.infos['media_flags']]) = media_flags
+			self.infos['media_flags'] = media_flags
 		else:
-			self.infos['media_flags']]) = 'physical'
+			if LinUtils.isdisk(source):
+				self.infos['media_flags'] = 'physical'
+			else:
+				self.infos['media_flags'] = 'logical'
 		if notes:
 			self.infos['notes'] = notes
 		else:
@@ -175,7 +178,7 @@ class EwfImagerCli(ArgumentParser):
 		)
 		self.add_argument('-M', '--media_flags', type=str,
 			choices=['logical', 'physical'],
-			help='Specify the media flags, options: logical, physical (default)',
+			help='Specify the media flags, options: logical, physical (auto if not set)',
 			metavar='STRING'
 		)
 		self.add_argument('-N', '--notes', type=str,
