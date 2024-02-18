@@ -81,9 +81,9 @@ class ExtPath:
 		'''Recursivly give all sub-paths'''
 		for path in root.rglob('*'):
 			if path.is_file():
-				tp = 'f'
+				tp = 'File'
 			elif path.is_dir():
-				tp = 'd'
+				tp = 'Dir'
 			else:
 				tp = None
 			yield path, path.relative_to(root), tp

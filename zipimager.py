@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-16'
+__version__ = '0.4.0_2024-02-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -48,11 +48,11 @@ class ZipImager:
 		progress = Progressor(self.root_path, echo=self.echo)
 		with (
 			ZipFile(self.image_path, 'w', ZIP_DEFLATED) as zf,
-			self.tsv_path.open('w') as tsv_fh
+			self.tsv_path.open('w', encoding='utf-8') as tsv_fh
 		):
 			print('Path\tType\tCopied', file=tsv_fh)
 			for path, relative, tp in ExtPath.walk(self.root_path):
-				if tp == 'f':
+				if tp == 'File':
 					try:
 						zf.write(path, relative)
 						print(f'"{relative}"\tFile\tyes', file=tsv_fh)
@@ -60,7 +60,7 @@ class ZipImager:
 					except:
 						print(f'"{relative}"\tFile\tno', file=tsv_fh)
 						file_error_cnt += 1
-				elif tp == 'd':
+				elif tp == 'Dir':
 					try:
 						zf.mkdir(f'{relative}')
 						print(f'"{relative}"\tDir\tyes', file=tsv_fh)

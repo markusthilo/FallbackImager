@@ -47,7 +47,7 @@ FallbackImager tries to locate *ewfacquire*, *ewfextract*, *ewfinfo* and *ewfver
 ### Windows
 
 #### Out of the box
-The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed.
+The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed. Of course, you still might need the 3rd party tools (see below)
 
 #### Python
 To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pyinstaller*, *pywin32* and *WMI*. You might want to use
@@ -65,7 +65,7 @@ $ gcc -o bin/zd-win.exe c/zd-win.c
 ```
 
 #### 3rd party tools
-You need the free MS tool *oscdimg.exe* in *bin*. This folder is also the home for *WimMount.exe* and *zd-win.exe*.
+For OscdImager and DismImager you need to install the Windows Assessment and Deployment Kit (Windows ADK) which is freely available from https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install. It is possible to put the tools in the *bin* subdirectory or just leave them at *C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64*.
 
 ## Usage of the GUI
 
