@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-02-18'
+__version__ = '0.4.0_2024-02-19'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -99,80 +99,29 @@ class DismImager:
 					self.log.info(msg, echo=True)
 		if not self.image_path.is_file():
 			self.log.error(f'Could not create image {self.image_path}')
-
-	def verify(self, root=None, image=None, filename=None, outdir=None, echo=print, log=None):
-		'''List content and compare if root is given'''
-		if image:
-			self.image_path = Path(image)
-		elif not hasattr(self, 'image_path'):
-			raise ValueError('Path to image is missing')
-		if root:
-			self.root_path = Path(root)
-		else:
-			if not hasattr(self, 'root_path'):
-				self.root_path = None
-		if filename:
-			self.filename = filename
-		elif not hasattr(self, 'filename'):
-				self.filename = TimeStamp.now_or(None)
-		if outdir:
-			self.outdir = ExtPath.mkdir(outdir)
-		self.tsv_path = ExtPath.child(f'{self.filename}.tsv', parent=self.outdir)
-		if echo:
-			self.echo = echo
-		if log:
-			self.log = log
-		elif not hasattr(self, 'log'):
-			self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=self.echo)
-		self.log.info(f'Verifying {self.image_path.name}', echo=True)
 		self.echo('Calculating hashes')
 		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}\n', echo=True)
 		cmd = f'{self.dism_path} /List-Image /ImageFile:"{self.image_path}" /Index:1'
-		self.paths = dict()
 		file_cnt = 0
 		dir_cnt = 0
 		self.log.info(f'> {cmd}', echo=True)
-		proc = OpenProc(cmd, log=self.log)
-		for line in proc.stdout:
-			msg = line.strip()
-			if msg:
-				if msg.startswith('\\'):
-					path = msg.lstrip('\\')
-					if path:
-						if path.endswith('\\'):
-							self.paths[Path(ExtPath.normalize_str(msg))] = 'Dir'
-							dir_cnt += 1
-						else:
-							self.paths[Path(ExtPath.normalize_str(msg))] = 'File'
-							file_cnt += 1
-				else:
-					self.log.info(msg, echo=True)
-		with self.tsv_path.open('w', encoding='utf-8') as tsv_fh:
-			if self.root_path:
-				missing_file_cnt = 0
-				missing_dir_cnt = 0
-				self.echo(f'Comparing {self.image_path.name} to {self.root_path.name}')
-				progress = Progressor(self.root_path, echo=self.echo)
-				print('Path\tType\tPresent', file=tsv_fh)
-				for path, relative, tp in ExtPath.walk(self.root_path):
-					if relative in self.paths:
-						print(f'"{relative}"\t{tp}\tyes', file=tsv_fh)
+		with self.outdir.joinpath(f'{self.filename}.tsv').open('w', encoding='utf-8') as tsv_fh:
+			print('Path\tType', file=tsv_fh)
+			proc = OpenProc(cmd, log=self.log)
+			for line in proc.stdout:
+				path = line.strip()
+				if path:
+					if path.startswith('\\'):
+						path = path.lstrip('\\')
+						if path:
+							if path.endswith('\\'):
+								print(f'"{path}"\tDir', file=tsv_fh)
+								dir_cnt += 1
+							else:
+								print(f'"{path}"\tFile', file=tsv_fh)
+								file_cnt += 1
 					else:
-						if tp == 'File':
-							print(f'"{relative}"\tFile\tno', file=tsv_fh)
-							missing_file_cnt += 1
-						elif tp == 'Dir':
-							print(f'"{relative}\\"\tDir\tno', file=tsv_fh)
-							missing_dir_cnt += 1
-					progress.inc()
-				if missing_file_cnt > 0 or missing_dir_cnt > 0:
-					msg = f'Missing files: {missing_file_cnt}, missing directories: {missing_dir_cnt}'
-					msg += f'\nCheck {self.tsv_path} if relevant content is missing!'
-					self.log.warning(msg)
-			else:
-				print('Path\tType', file=tsv_fh)
-				for path, tp in self.paths.items():
-					print(f'"{path}"\t{tp}', file=tsv_fh)
+						self.log.info(msg, echo=True)
 		self.log.info(f'Image contains {file_cnt} file(s) and {dir_cnt} dir(s)', echo=True)
 
 	def copy_exe(self, path=None):
@@ -207,17 +156,11 @@ class DismImagerCli(ArgumentParser):
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
-		self.add_argument('-i', '--image', type=ExtPath.path,
-			help='Image path', metavar='FILE'
-		)
 		self.add_argument('-n', '--name', type=str,
 			help='Intern name of the image in the WMI file', metavar='STRING'
 		)
 		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
-		)
-		self.add_argument('-v', '--verify', default=False, action='store_true',
-			help='Compare content of image to source, do not create'
 		)
 		self.add_argument('-x', '--exe', default=False, action='store_true',
 			help='Copy WimMount.exe to destination directory'
@@ -232,35 +175,22 @@ class DismImagerCli(ArgumentParser):
 		self.root = args.root
 		self.description = args.description
 		self.filename = args.filename
-		self.image = args.image
 		self.outdir = args.outdir
 		self.name = args.name
 		self.compress = args.compress
 		self.exe = args.exe
-		self.verify = args.verify
 
 	def run(self, echo=print):
 		'''Run the imager'''
 		imager = DismImager()
-		if self.verify:
-			imager.verify(
-				root = self.root,
-				filename = self.filename,
-				image = self.image,
-				outdir = self.outdir,
-				echo = echo
-			)
-		else:
-			imager.create(self.root,
-				filename = self.filename,
-				image = self.image,
-				outdir = self.outdir,
-				name = self.name,
-				description = self.description,
-				compress = self.compress,
-				echo = echo
-			)
-			imager.verify()
+		imager.create(self.root,
+			filename = self.filename,
+			outdir = self.outdir,
+			name = self.name,
+			description = self.description,
+			compress = self.compress,
+			echo = echo
+		)
 		if self.exe:
 			imager.copy_exe()
 		imager.log.close()

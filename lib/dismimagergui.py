@@ -6,7 +6,6 @@ from lib.guielements import SourceDirSelector, Checker, VerticalButtons
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, GridBlank
-from lib.dism import Dism
 from lib.timestamp import TimeStamp
 
 class DismImagerGui:
@@ -16,9 +15,6 @@ class DismImagerGui:
 
 	def __init__(self, root):
 		'''Notebook page'''
-		stdout, stderr = Dism('').read_all()
-		if stderr:
-			raise RuntimeError(f'Unable tu run Dism\n{stout}\n{stderr}')
 		root.settings.init_section(self.CMD)
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
@@ -34,12 +30,7 @@ class DismImagerGui:
 			command=self._gen_description)
 		VerticalButtons(root, frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.TO_DO)
-		StringRadiobuttons(root, frame, root.TO_DO,
-			(root.CREATE_AND_VERIFY, root.VERIFY_FILE), root.CREATE_AND_VERIFY)
-		GridLabel(root, frame, root.CREATE_AND_VERIFY, column=1, columnspan=2)
-		FileSelector(root, frame, root.VERIFY_FILE, root.VERIFY_FILE, root.SELECT_VERIFY_FILE,
-			command=self._select_verify_file)
+
 		Checker(root, frame, root.COPY_EXE, root.COPY_EXE, columnspan=2)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
@@ -72,22 +63,8 @@ class DismImagerGui:
 		source = self.root.settings.get(self.root.SOURCE)
 		outdir = self.root.settings.get(self.root.OUTDIR)
 		filename = self.root.settings.get(self.root.FILENAME)
-		to_do = self.root.settings.get(self.root.TO_DO)
 		compression = self.root.settings.get(self.root.COMPRESSION)
-		image = self.root.settings.get(self.root.VERIFY_FILE)
 		cmd = self.root.settings.section.lower()
-		if to_do == self.root.VERIFY_FILE:
-			if not image:
-				showerror(
-					title = self.root.MISSING_ENTRIES,
-					message = self.root.IMAGE_REQUIRED
-				)
-				return
-			cmd += f' --verify --{self.root.PATH.lower()} {image}'
-			if not filename:
-				filename = Path(image).stem
-			if not outdir and image:
-				outdir = image.parent
 		if not outdir:
 			showerror(
 				title = self.root.MISSING_ENTRIES,

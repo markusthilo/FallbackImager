@@ -130,21 +130,25 @@ assign letter={driveletter}
 			except OSError:
 				pass
 
+	@staticmethod
+	def get_value(string):
+		'''Get value after colon'''
+		try:
+			return string.split(':', 1)[1].strip(' "')
+		except IndexError:
+			return ''
+
 class OpenProc(Popen):
 	'''Use Popen to run tools on Windows'''
 
-	def __init__(self, cmd, stderr=True, log=None):
+	def __init__(self, cmd, log=None):
 		'''Launch process'''
 		self.log = log
-		if stderr:
-			stderr = PIPE
-		else:
-			stderr = STDOUT
 		self.startupinfo = STARTUPINFO()
 		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
 		super().__init__(cmd,
 			stdout = PIPE,
-			stderr = stderr,
+			stderr = STDOUT,
 			encoding = 'utf-8',
 			errors = 'ignore',
 			universal_newlines = True,
@@ -171,4 +175,11 @@ class OpenProc(Popen):
 			for line in self.stdout:
 				if line:
 					echo(line.strip())
-		return self.stderr.read()
+
+	def grep_stdout(self, string, *ln_key):
+		'''Get values indicated by grep string'''
+		lower_str = string.lower()
+		stdout = self.stdout.read()
+		for ln, line in enumerate(stdout):
+			if line.lower().startswith(lower_str):
+				yield {key: WinUtils.get_value(stdout[ln+ln_delta]) for ln_delta, key in ln_key}

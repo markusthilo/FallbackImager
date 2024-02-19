@@ -3,7 +3,7 @@
 
 __app_name__ = 'WimMount'
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-01-25'
+__version__ = '0.4.0_2024-02-19'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,6 +11,7 @@ __description__ = '''
 Mount WIM Images, GUI to use with DismImager
 '''
 
+from sys import executable as __executable__
 from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
 from functools import partial
@@ -19,7 +20,51 @@ from tkinter import Tk, PhotoImage
 from tkinter.ttk import Frame, LabelFrame, Label, Button, Separator
 from tkinter.messagebox import askyesno, showerror, showwarning
 from tkinter.filedialog import askdirectory, askopenfilename
-from lib.dism import GetImageInfo, GetMountedImageInfo, MountImage, UnmountImage
+from lib.winutils import WinUtils, OpenProc
+
+if Path(__executable__).stem == __app_name__:
+	__parent_path__ = Path(__executable__).parent
+else:
+	__parent_path__ = Path(__file__).parent
+
+class Dism:
+	'''Use Dism'''
+
+	def __init__(self):
+		'''Init subprocess for Dism without showing a terminal window'''
+		self.dism_path = WinUtils.find_exe('dism.exe', __parent_path__,
+		Path(__parent_path__/'DISM'),
+		Path(__parent_path__/'bin'/'DISM'),
+		Path('C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\DISM'))
+
+	def get_mountedimageinfo(self):
+		'''Dism  /Get-MountedImageInfo'''
+		proc = OpenProc(f'{self.dism_path} /Get-MountedImageInfo')
+		return proc.grep_stdout('Imageindex:',
+			(-2, 'mnt'),
+			(-1, 'path'),
+			(0, 'index')
+		)
+
+	def get_imageinfo(self, image):
+		'''Dism /Get-ImageInfo /ImageFile:$image'''
+		proc = OpenProc(f'{self.dism_path} /Get-ImageInfo /ImageFile:"{image}"')
+		return proc.grep_stdout('Index:',
+			(0, 'index'),
+			(1, 'name' ),
+			(2, 'descr'),
+			(3, 'size')
+		)
+
+	def mount_image(self, image, index, mnt):
+		'''Dism /Mount-Image /ImageFile:$image /index:$i /MountDir:$mnt /ReadOnly'''
+		proc = OpenProc(f'{self.dism_path} /Mount-Image /ImageFile:"{image}" /index:{index} /MountDir:{mnt} /ReadOnly')
+		proc.wait()
+
+	def unmount_image(self, mnt):
+		'''Dism /Unmount-Image /MountDir:$mnt /discard'''
+		proc = OpenProc(f'{self.dism_path} /Unmount-Image /MountDir:{mnt} /discard')
+		proc.wait()
 
 class Gui(Tk):
 	'''GUI look and feel'''
@@ -27,26 +72,14 @@ class Gui(Tk):
 	PAD = 4
 	DESCR_WIDTH = -80
 
-	def __init__(self, icon_base64):
-		'Define the main window'
+	def __init__(self, cwd, dism, icon_base64):
+		'Open application window'
+		self.dism = dism
+		self.cwd = cwd
 		super().__init__()
 		self.title(f'{__app_name__} {__version__}')
 		self.resizable(0, 0)
 		self.iconphoto(False, PhotoImage(data = icon_base64))
-		self.cwd = Path.cwd()
-		if not any(self.cwd.glob('*.wim')):
-			showwarning(
-				f'{__app_name__}: Error',
-				f'{self.cwd}\n\nDid not find files in Windows Imaging Format (.wim) '
-			)
-			filename = askopenfilename(
-				title = 'Select one image file (.wim)',
-				filetypes=[('Image files', '*.wim'), ('All files', '*.*')]
-			)
-			if not filename:
-				self.cwd = None
-				return
-			self.cwd = Path(filename).parent
 		self.mk_main_frame(self)
 
 	def mk_main_frame(self, parent):
@@ -64,13 +97,13 @@ class Gui(Tk):
 			showerror(f'{__app_name__}: Error', f'Did not find image files in\n{self.cwd}')
 			self.destroy()
 		mounted = {(Path(image['path']), image['index']): image['mnt']
-			for image in GetMountedImageInfo().decode()
+			for image in self.dism.get_mountedimageinfo()
 		}
 		for file_path in self.file_paths:
 			file_frame = Frame(dir_frame)
 			file_frame.pack(padx=(4*self.PAD, self.PAD), fill='both', expand=True)
 			Label(file_frame, text=file_path.name).pack(side='left')
-			for image_info in GetImageInfo(file_path).decode():
+			for image_info in self.dism.get_imageinfo(file_path):
 				image_frame = LabelFrame(dir_frame, text=image_info['name'])
 				image_frame.pack(
 					padx=(8*self.PAD, self.PAD), fill='both', expand=True)
@@ -142,22 +175,37 @@ class Gui(Tk):
 			return
 		mnt_dir = Path(mnt_dir)
 		mnt_dir.mkdir(exist_ok=True)
-		proc = MountImage(file_path, image_index, mnt_dir)
-		if self.check_error(proc):
-			Popen(['explorer', f'{mnt_dir}'])
-			self.refresh()
+		self.dism.mount_image(file_path, image_index, mnt_dir)
+		self.refresh()
 
 	def unmount(self, path):
 		if self.ask_warning(f'{path}\n\nDismount?'):
-			proc = UnmountImage(path)
-			if self.check_error(proc):
-				self.refresh()
+			self.dism.unmount_image(path)
+			self.refresh()
 
 if __name__ == '__main__':  # start here
 	if not IsUserAnAdmin():
 		showerror(f'{__app_name__}: Error', 'Administrator privileges are reqired')
-	else:
-		gui = Gui('''
+		exit()
+	dism = Dism()
+	if not dism.dism_path:
+		showerror(f'{__app_name__}: Error', 'Unable to find dism.exe')
+		exit()
+	cwd = __parent_path__
+	if not any(cwd.glob('*.wim')):
+		showwarning(
+			f'{__app_name__}: Error',
+			f'{cwd}\n\nDid not find files in Windows Imaging Format (.wim) '
+		)
+		filename = askopenfilename(
+			title = 'Select one image file (.wim)',
+			filetypes=[('Image files', '*.wim'), ('All files', '*.*')]
+		)
+		if not filename:
+			showerror(f'{__app_name__}: Error', 'No image files (*.wim*) to wirk with')
+			exit()
+		cwd = Path(filename).parent
+	Gui(cwd, dism, '''
 iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAw1BMVEUAAAAAAACCgoJCQkLCwsIi
 IiKhoaFhYWHi4uISEhKSkpJSUlLR0dExMTGysrJycnLx8fEJCQmJiYlKSkrJyckqKiqpqalpaWnq
 6uoZGRmZmZlaWlrZ2dk5OTm6urp6enr6+voFBQWGhoZFRUXFxcUlJSWlpaVmZmbl5eUVFRWVlZVV
@@ -189,8 +237,4 @@ CdYrVgu4lMnVR70EuFQx4NLdAWzFgNn4Bsj5XgK42hjo32dmLsd7kIxUKSBd/+jtXI4LwZgJZ8Uf
 AfjhATzE28hQfb2YykdZprefvR/wsJy/ToQZu3KuCiwpt+WbL0hetj5/DDzTrku/xW3bUnmXJB9l
 QWw3WWZs90Od/suj7zldhKd40NeOOfV2lbTtLd/dVxK3Sp4aUzoNRO9c5iRJXSewOXw5bU00//pk
 fTKLQh/bYIT8twF58Yf9pwf9m2nqlTMc8D6aw1fS+r3b9/8BKtc/NFcHINi4Q8kAAAAASUVORK5C
-YII=''')
-		if gui.cwd:
-			gui.mainloop()
-		else:
-			showerror(f'{__app_name__}: Error', 'No image files (*.wim*) to wirk with')
+YII=''').mainloop()
