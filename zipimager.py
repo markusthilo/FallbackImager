@@ -112,12 +112,12 @@ class ZipImagerCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		imager = ZipImager(self.root,
+		imager = ZipImager()
+		imager.create(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
 			echo = echo
 		)
-		imager.create()
 		imager.log.close()
 
 if __name__ == '__main__':	# start here if called as application

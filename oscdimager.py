@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-18'
+__version__ = '0.4.0_2024-02-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -70,7 +70,7 @@ class OscdImager:
 		]
 		self.log.info(f'> {" ".join(self.cmd)}', echo=True)
 		proc = OpenProc(self.cmd, log=self.log)
-		proc.echo_output()
+		proc.echo_output(cnt=3)
 		if not self.image_path.is_file():
 			self.log.error(f'Could not create image {self.image_path}')
 		self.log.info('Calculating hashes', echo=True)

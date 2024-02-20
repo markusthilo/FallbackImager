@@ -8,7 +8,7 @@ The tool is currently developed for Linux based OS and Windows (>=10). It is wor
 ### Linux
 
 #### Python
-To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on you distro, e.g.:
+To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on your distro, e.g.:
 ```
 $ sudo apt install python3 python3-tk
 ```
@@ -42,12 +42,12 @@ $ sudo dnf install libewf disktype
 ```
 $ sudo zypper install libewf disktype
 ```
-FallbackImager tries to locate *ewfacquire*, *ewfextract*, *ewfinfo* and *ewfverify* in the (sub-) folder *bin*. Alternatively it tries to find the binaries in usal system paths (e.g. at */usr/bin*).
+FallbackImager tries to locate *ewfacquire*, *ewfextract*, *ewfinfo*, *ewfverify* and *disktype* in the (sub-) folder *bin*. Alternatively it tries to find the binaries in usal system paths (e.g. at */usr/bin*).
 
 ### Windows
 
 #### Out of the box
-The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed. Of course, you still might need the 3rd party tools (see below)
+The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed. Of course, you still might need the 3rd party tools (see below).
 
 #### Python
 To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pyinstaller*, *pywin32* and *WMI*. You might want to use
@@ -70,7 +70,7 @@ For OscdImager and DismImager you need to install the Windows Assessment and Dep
 ## Usage of the GUI
 
 ### Start
-On WIndows the executable *FallbackImager.exe* can be lauched by double clicking.
+On Windows the executable *FallbackImager.exe* can be lauched by double clicking.
 
 When used without admin privileges most features are not available. Launch from the terminal using
 ```
@@ -80,7 +80,19 @@ or open the PowerShell or CMD on Windos and run
 ```
 $ python.exe FallbackImager.py
 ```
-as Admin.
+as Admin. On Linux
+```
+$ ./FallbackImager.sh
+```
+should do the job but
+```
+$ sudo python FallbackImager.py
+```
+or
+```
+$ sudo python FallbackImager.py
+```
+would also launch Python.
 
 ### Tabs
 Each module is represented by a tab in the upper part of the window.
@@ -137,6 +149,12 @@ By default only unwiped blocks (or SSD pages) are overwritten though it is possi
 Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file ("Head of log file", *log_head.txt* by default).
 
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
+
+## Cli
+Every module is executable from the Terminal or CMD. Use the parameter *-h* to get the command line arguments, e.g.:
+```
+$ python axchecker.py -h
+```
 
 ## Legal Notice
 

@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-18'
+__version__ = '0.4.0_2024-02-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -200,7 +200,8 @@ class AxCheckerCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run AxChecker'''
-		axchecker = AxChecker(self.mfdb, echo=echo)
+		axchecker = AxChecker()
+		axchecker.open(self.mfdb, echo=echo)
 		if self.list:
 			axchecker.list_partitions()
 			return

@@ -148,7 +148,7 @@ class WipeWGui:
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
 		target = self.root.settings.get(self.root.TARGET)
-		target_is_pd = self.is_physical_drive(target)
+		target_is_pd = WinUtils.is_physical_drive(target)
 		if not target or ( not target_is_pd and not self.filenames ):
 			showerror(
 				title = self.root.MISSING_ENTRIES,
@@ -239,7 +239,7 @@ class WipeWGui:
 			log_head = self.root.settings.get(self.root.LOG_HEAD)
 			if log_head:
 				cmd += f' --loghead "{log_head}"'
-		if self.is_physical_drive(target):
+		if target_is_pd:
 			cmd += f' {target}'
 		else:
 			for filename in self.filenames:

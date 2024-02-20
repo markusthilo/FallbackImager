@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-#from pythoncom import CoIntializeEx
 from wmi import WMI
 from win32api import GetCurrentProcessId, GetLogicalDriveStrings
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
@@ -47,7 +46,6 @@ class WinUtils:
 	@staticmethod
 	def list_drives():
 		'''List drive infos, partitions and logical drives'''
-		#CoIntializeEx()
 		conn = WMI()
 		disk2part = {(rel.Antecedent.DeviceID, rel.Dependent.DeviceID)
 			for rel in conn.Win32_DiskDriveToDiskPartition()
@@ -141,14 +139,18 @@ assign letter={driveletter}
 class OpenProc(Popen):
 	'''Use Popen to run tools on Windows'''
 
-	def __init__(self, cmd, log=None):
+	def __init__(self, cmd, stderr=False, log=None):
 		'''Launch process'''
 		self.log = log
 		self.startupinfo = STARTUPINFO()
 		self.startupinfo.dwFlags |= STARTF_USESHOWWINDOW
+		if stderr:
+			stderr = PIPE
+		else:
+			stderr = STDOUT
 		super().__init__(cmd,
 			stdout = PIPE,
-			stderr = STDOUT,
+			stderr = stderr,
 			encoding = 'utf-8',
 			errors = 'ignore',
 			universal_newlines = True,

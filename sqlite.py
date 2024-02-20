@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-07'
+__version__ = '0.4.0_2024-02-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -225,7 +225,8 @@ class SQLiteCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run the imager'''
-		sqlite = SQLite(self.db,
+		sqlite = SQLite()
+		sqlite.open(self.db,
 			filename = self.filename,
 			outdir = self.outdir,
 			echo = echo
