@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.1.0_2024-02-10";
+const char *VERSION = "0.1.0_2024-02-20";
 
 #include <stdlib.h>
 #include <stdio.h>
