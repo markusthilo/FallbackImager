@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-16'
+__version__ = '0.4.0_2024-02-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -21,6 +21,7 @@ from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.linutils import LinUtils, OpenProc
+from lib.stringutils import StringUtils
 from ewfchecker import EwfChecker
 
 if Path(__file__).suffix.lower() == '.pyc':
@@ -65,16 +66,17 @@ class EwfImager:
 		now = datetime.now()
 		self.infos = {'year': f'{now.year:04d}', 'month': f'{now.month:02d}', 'day': f'{now.day:02d}'}
 		if setro:
-			stdout, stderr = LinUtils.set_ro(source)
+			stdout, stderr = LinUtils.set_ro(self.source)
 			if stderr:
 				self.log.warning(stderr)
-		self.infos['size_in_bytes'] = ExtPath.get_size(self.source)
-		if not self.infos['size_in_bytes']:
-			if self.source.is_block_device():
-				self.infos['size_in_bytes'] = LinUtils.blkdevsize(self.source)
-			else:
-				raise RuntimeError(f'Unable to get size of {source}')
-		self.source_details = LinUtils.diskdetails(source)
+		if self.source.is_block_device():
+			self.source_size = LinUtils.blkdevsize(self.source)
+		else:
+			self.source_size = ExtPath.get_size(self.source)
+		if not self.source_size:
+			selg.log.error(f'Unable to get size of {self.source}')
+		self.infos['source_size'] = StringUtils.bytes(self.source_size, format_k='{iec} ({b} bytes)')
+		self.source_details = LinUtils.diskdetails(self.source)
 		self.infos.update(self.source_details)
 		msg = '\n'.join(f'{key.upper()}:\t{value}' for key, value in self.source_details.items())
 		self.log.info(f'Source:\n{msg}', echo=True)
@@ -95,37 +97,41 @@ class EwfImager:
 			self.infos['compression_values'] = 'fast'
 		self.infos['description'] = description
 		if media_type:
-			self.infos['media_type'] = media_type
+			self.media_type = media_type
+			self.infos['media_type'] = f'{media_type} (set by user)'
 		else:
 			if self.infos['vendor'] == 'ATA':
-				self.infos['media_type'] = 'fixed'
+				self.media_type = 'fixed'
+				self.infos['media_type'] = 'fixed (detected/estimated)'
 			else:
-				self.infos['media_type'] = 'removable'
+				self.media_type = 'removable'
+				self.infos['media_type'] = 'removable (detected/estimated)'
 		if media_flags:
 			self.infos['media_flags'] = media_flags
 		else:
-			if LinUtils.isdisk(source):
-				self.infos['media_flags'] = 'physical'
+			if LinUtils.isdisk(self.source):
+				self.infos['media_flags'] = 'physical (detected/estimated)'
 			else:
-				self.infos['media_flags'] = 'logical'
+				self.infos['media_flags'] = 'logical (detected/estimated)'
 		if notes:
 			self.infos['notes'] = notes
 		else:
 			self.infos['notes'] = '-'
 		if size:
-			self.infos['size'] = size
+			self.segment_size = size
 		else:
-			self.infos['segment_size'] = max(int(self.infos['size_in_bytes']/85899345920) * 1073741824, 4294967296)
+			self.segment_size = max(int(self.source_size/85899345920) * 1073741824, 4294967296)
+		self.infos['segment_size'] = StringUtils.bytes(self.segment_size)
 		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
 		cmd.extend(['-C', self.infos['case_number']])
 		cmd.extend(['-D', self.infos['description']])
 		cmd.extend(['-e', self.infos['examiner_name']])
 		cmd.extend(['-E', self.infos['evidence_number']])
 		cmd.extend(['-c', self.infos['compression_values']])
-		cmd.extend(['-m', self.infos['media_type']])
+		cmd.extend(['-m', f'{self.media_type}'])
 		cmd.extend(['-M', self.infos['media_flags']])
 		cmd.extend(['-N', self.infos['notes']])
-		cmd.extend(['-S', f'{self.infos["segment_size"]}'])
+		cmd.extend(['-S', f'{self.segment_size}'])
 		for arg in args:
 			cmd.append(f'-{arg}')
 		for arg, par in kwargs.items():
@@ -134,11 +140,17 @@ class EwfImager:
 		proc = OpenProc(cmd, log=self.log)
 		if proc.echo_output(cnt=9) != 0:
 			self.log.error(f'ewfacquire terminated with:\n{proc.stderr.read()}')
+		self.infos.update(proc.grep_stack(
+				('MD5 hash calculated over data:', 'md5'),
+				('SHA256 hash calculated over data:', 'sha256'),
+				('ewfacquire:', 'ewfacquire')
+			)
+		)
 		for line in proc.stack:
-			if line.startswith('MD5 hash calculated over data:'):
-				self.infos['md5'] = line.split(':', 1)[1].strip()
-			elif line.startswith('SHA256 hash calculated over data:'):
-				self.infos['sha256'] = line.split(':', 1)[1].strip()
+			if line.startswith('acquired '):
+				acquired = line.rstrip('.').split(' ')
+				self.infos['size_stored'] = ' '.join(acquired[1:5])
+				self.infos['size_acquired'] = ' '.join(acquired[7:11])
 		try:
 			with self.image_path.with_suffix('.json').open('w') as fh:
 				dump(self.infos, fh)

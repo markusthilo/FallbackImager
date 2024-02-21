@@ -71,7 +71,7 @@ class LinUtils:
 			if value:
 				details[key] = value.strip()
 			else:
-				details[key] = '-'
+				details[key] = ''
 		return details
 
 	@staticmethod
@@ -161,3 +161,12 @@ class OpenProc(Popen):
 					echo(line.strip())
 		self.poll()
 		return self.returncode
+
+	def grep_stack(self, *searches, delimiter=':'):
+		'''Get values by given search strings and keys from self.stack'''
+		return {
+			key:line.split(delimiter, 1)[1].strip()
+				for line in self.stack
+					for pattern, key in searches
+						if line.startswith(pattern)
+		}

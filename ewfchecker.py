@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-13'
+__version__ = '0.4.0_2024-02-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -66,7 +66,7 @@ class EwfChecker:
 		else:
 			raw = Path(f'{raw}.raw')
 			info = Path(f'{raw}.info')
-			xxd = ExtPath.readable_bin(raw)
+			xxd = ExtPath.read_bin(raw)
 			self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
 			self.log.info('Probing for partition table')
 			proc = OpenProc([f'{self.disktype_path}', f'{raw}'], log=self.log)
