@@ -7,6 +7,7 @@ from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, T
 from time import sleep
 from pathlib import Path
 from lib.extpath import ExtPath, Progressor
+from lib.stringutils import StringUtils
 
 class WinUtils:
 	'Needed Windows functions'
@@ -65,12 +66,12 @@ class WinUtils:
 				info += f'{log_disk.VolumeName}, '
 			if log_disk.FileSystem:
 				info += f'{log_disk.FileSystem}, '
-			info += f'{ExtPath.readable_size(log_disk.Size)}'
+			info += f'{StringUtils.bytes(log_disk.Size)}'
 			log_disks[log_disk.DeviceID] = info
 		drives = dict()
 		for drive in conn.Win32_DiskDrive():
 			drive_info = f'{drive.Caption.strip()}, {drive.InterfaceType}, '
-			drive_info += f'{drive.MediaType}, {ExtPath.readable_size(drive.Size)}'
+			drive_info += f'{drive.MediaType}, {StringUtils.bytes(drive.Size)}'
 			drives[drive.DeviceID] = drive_info
 		for drive_id, drive_info in sorted(drives.items()):
 			for log_id, disk_id in disk2logical.items():

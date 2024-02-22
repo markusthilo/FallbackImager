@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-01-25'
+__version__ = '0.3.1_2024-02-22'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -59,7 +59,7 @@ if __name__ == '__main__':	# start here if called as application
 		exes.append(MkExe('sqlite.py').move())
 		exes.append(MkExe('wipew.py', admin=True).move())
 		exes.append(MkExe('zipimager.py').move())
-	if args.gui:
+	if args.gui or len(argv) == 1:
 		exes.append(MkExe('FallbackImager.py', admin=True, noconsole=True).move())
 	if args.wim or len(argv) == 1:
 		exes.append(MkExe('WimMount.py', admin=True, noconsole=True).move(tobin=True))
