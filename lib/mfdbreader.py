@@ -6,60 +6,35 @@ from .sqliteutils import SQLiteReader
 class MfdbReader(SQLiteReader):
 	'''Extend SqliteReader for AXIOM data base'''
 
-	def __init__(self, mfdb):
-		'''Read what you need from Case.mfdb'''
-		super().__init__(mfdb)
-		self.paths = {int(source_id): source_path
-			for source_id, source_path in self.fetch_table('source_path',
-				columns = ('source_id', 'source_path')
-			)
-		}
+	def read_paths(self):
+		'''Read table source_path and get source_type from table source'''
 		self.types = {int(source_id): source_type
-			for source_id, source_type in self.fetch_table('source',
-				columns = ('source_id', 'source_type')
-			)
+			for source_id, source_type
+			in self.fetch_table('source', columns=('source_id', 'source_type'))
 		}
-
-	def get_partition_ids(self):
-		'''Get partitions in case file'''
-		self.partition_ids = [source_id
-			for source_id, source_type in self.types.items()
-			if source_type == 'Partition'
-		]
-		return self.partition_ids
+		self.paths = dict()
+		self.file_ids = set()	# files to compare with hits
+		self.root_ids = set()	# potential root path to compare
+		for source_id, source_path in self.fetch_table('source_path',
+			columns=('source_id', 'source_path')):
+			source_id_int = int(source_id)
+			source_type = self.types[source_id]
+			self.paths[source_id_int] = (source_type, source_path)
+			if self.types[source_id_int] == 'File':
+				self.file_ids.add(source_id_int)
+			elif self.types[source_id_int] in ('Folder', 'Partition', 'Volume', 'Image'):
+				self.root_ids.add(source_id_int)
+			yield source_id_int, source_type, source_path
 
 	def get_hit_ids(self):
-		'''Get hits'''		
-		self.hit_ids = {source_id for source_id in self.fetch_table('hit_location', column='hit_location_id')}
+		'''Get hits'''
+		self.hit_ids = {source_id
+			for source_id
+			in self.fetch_table('hit_location', column='hit_location_id')}
 		return self.hit_ids
 
-	def get_root_ids(self):
-		'''Get root images ("Image" / source_id == root_source_id)'''
-		self.root_ids = {source_id for source_id in self.fetch_table('source', column='root_source_id')}
-		return self.root_ids
-
-	def get_file_ids(self):
-		'''Get files ("File" & "Image")'''
-		self.get_root_ids()
-		self.file_ids = {source_id
-			for source_id, source_type in self.types.items()
-			if source_type == 'File' or (
-				source_type == 'Image' and not source_id in self.root_ids
-			)
-		}
-		return self.file_ids
-
-	def get_partition_name(self, partition):
-		'''Get name of given partition'''
-		if isinstance(partition, int):
-			try:
-				return self.paths[self.partition_ids[partition-1]]
-			except IndexError:
-				return None
-		return partition
-
-	def grep_partition(self, partition_name):
-		'''Get files ("File" & "Image") for given partition'''
-		for path in self.paths.values():
-			if path.startswith(partition_name):
-				yield path
+	def read_roots(self, max_depth=2):
+		'''Read potential root paths to compare'''
+		for source_id, source_type, source_path in self.read_paths():
+			if source_id in self.root_ids and source_path.count('\\') < max_depth:
+				yield source_id, source_type, source_path
