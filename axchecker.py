@@ -44,70 +44,51 @@ class AxChecker:
 		for source_id, source_type, source_path in self.mfdb.read_roots(max_depth=max_depth):
 			self.echo(f'{source_id}: {source_path} ({source_type})')
 
-	def check(self,
-			filename = None,
-			outdir = None,
-			root = None,
-
-			log = None
-		):
-		'''Check AXIOM case file'''
+	def _set_output(self, filename, outdir, log):
+		'''Set output dir, filename and log'''
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
-		if partition:
-			try:
-				self.partition = int(partition)
-			except ValueError:
-				self.partition = partition
-		else:
-			self.partition = None
-		self.column = column
-		self.nohead = nohead
 		if log:
 			self.log = log
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='axchecker.AxChecker', echo=self.echo)
+
+	def check(self, filename=None, outdir=None, log=None):
+		'''
+			1.) Read table source from AXIOM case file and write to TSV
+			2.) Look for files not represented in hits and write to TSV
+		'''
+		self._set_output(filename, outdir, log)
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
-		partition_ids = self.mfdb.get_partition_ids()
-		file_ids = self.mfdb.get_file_ids()
-		hit_ids = self.mfdb.get_hit_ids()
-		self.log.info(
-			f'Case contains {len(partition_ids)} partitions, {len(file_ids)} file paths and {len(hit_ids)} hits',
-			echo = True
-		)
-		if self.partition:
-			partition_name = self.mfdb.get_partition_name(self.partition)
-			if not partition_name:
-				self.log.error('Unable to find given partition')
-			self.log.info(f'Grepping file paths of partition {partition_name}', echo=True)
-			paths = [path for path in self.mfdb.grep_partition(partition_name)]
-			if not paths:
-				self.log.error('Empty or not existing partition')
-			msg = f'of partition {partition_name} '
-		else:
-			paths = [self.mfdb.paths[source_id] for source_id in file_ids]
-			msg = ''
-		self.log.info(f'Writing {len(paths)} paths {msg}to file', echo=True)
-		with ExtPath.child(f'{self.filename}_files.txt', parent=self.outdir
-			).open(mode='w', encoding='utf-8') as fh:
-			for path in paths:
-				print(path, file=fh)
-		no_hit_ids = set(file_ids) - set(hit_ids)
+		with ExtPath.child(f'{self.filename}_paths.tsv', parent=self.outdir
+				).open(mode='w', encoding='utf-8') as fh:
+				print('source_id\tsource_type\tsource_path', file=fh)
+				for source_id, source_type, source_path in self.mfdb.read_paths():
+					print(f'{source_id}\t{source_type}\t"{source_path}"', file=fh)
+		self.log.info(f'AXIOM case contains {len(self.mfdb.paths)} paths, {len(self.mfdb.file_ids)} are files', echo=True)
+		no_hit_ids = self.mfdb.file_ids - self.mfdb.get_hit_ids()
 		if no_hit_ids:
 			self.log.info(f'{len(no_hit_ids)} file(s) is/are not represented in hits', echo=True)
-			with ExtPath.child(f'{self.filename}_not_in_hits.txt', parent=self.outdir
+			with ExtPath.child(f'{self.filename}_not_in_hits.tsv', parent=self.outdir
 			).open(mode='w', encoding='utf-8') as fh:
 				for source_id in no_hit_ids:
-					print(self.mfdb.paths[source_id], file=fh)
+					source_type, source_path = self.mfdb.paths[source_id]
+					print(f'{source_id}\t{source_type}\t"{source_path}"', file=fh)
 
- def compare(self, diff, column=None, nohead=False):
-	'''Compare to CSV/TSV path list or existing file structure'''
-		if not self.partition:
-			raise ValueError('Missing partition to compare')
-		self.log.info(f'Comparing AXIOM partition {partition_name} to {self.diff_path.name}', echo=True)
-		part_name_len = len(partition_name)
-		short_paths = {ExtPath.normalize_str(path[part_name_len:]) for path in paths}
+	def compare(self, root_id, diff,
+			column = None,
+			nohead = False,
+			filename = None,
+			outdir = None,
+			log = None
+		):
+		'''Compare to CSV/TSV path list or existing file structure'''
+		#self._set_output(filename, outdir, log)
+		#self.log.info(f'Comparing tree of {root_path} in AXIOM case to {self.diff_path.name}', echo=True)
+		axiom_file_paths = self.mfdb.file_paths(root_id)
+		print(axiom_file_paths)
+		exit()
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
 			progress = Progressor(self.diff_path, echo=self.echo)
@@ -169,7 +150,7 @@ class AxCheckerCli(ArgumentParser):
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
 		self.add_argument('-l', '--list', type=str,
-			help='List potential root paths by given max. path depth (!INTEGER = default)',
+			help='List potential root IDs and paths by given max. path depth (!INTEGER = default)',
 			metavar='INTEGER'
 		)
 		self.add_argument('-n', '--nohead', default=False, action='store_true',
@@ -204,9 +185,16 @@ class AxCheckerCli(ArgumentParser):
 		if self.list:
 			axchecker.list_roots(self.list)
 			return
-		axchecker.check(filename=self.filename, outdir=self.outdir, root=self.root)
 		if self.diff:
-			axchecker.compare(self.diff, column=self.column, nohead=self.nohead,)
+			axchecker.compare(self.root, self.diff,
+				column = self.column,
+				nohead = self.nohead,
+				filename = self.filename,
+				outdir = self.outdir
+			)
+		else:
+			axchecker.check(filename=self.filename, outdir=self.outdir)
+		axchecker.log.info('All done', echo= True)
 		axchecker.log.close()
 
 if __name__ == '__main__':	# start here if called as application
