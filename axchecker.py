@@ -84,11 +84,11 @@ class AxChecker:
 			log = None
 		):
 		'''Compare to CSV/TSV path list or existing file structure'''
-		#self._set_output(filename, outdir, log)
-		#self.log.info(f'Comparing tree of {root_path} in AXIOM case to {self.diff_path.name}', echo=True)
+		self._set_output(filename, outdir, log)
+		self.diff_path = Path(diff)
+		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
 		axiom_file_paths = self.mfdb.file_paths(root_id)
-		print(axiom_file_paths)
-		exit()
+		self.log.info(f'Comparing {self.mfdb.paths[root_id][1]} recursivly to {self.diff_path.name}', echo=True)
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
 			progress = Progressor(self.diff_path, echo=self.echo)
@@ -100,10 +100,18 @@ class AxChecker:
 				).open(mode='w', encoding='utf-8') as fh:
 				for absolut_path, relative_path, tp in ExtPath.walk(self.diff_path):
 					progress.inc()
-					if tp == 'f' and not normalize(relative_path) in short_paths:
+
+					print(absolut_path, relative_path, tp)
+
+					if tp == 'File' and not normalize(relative_path) in axiom_file_paths:
 						print(relative_path, file=fh)
 						missing_cnt += 1
 		elif self.diff_path.is_file:	# compare to file
+			if column:
+				self.column = column
+			else:
+				self.column = 1
+			self.nohead = nohead
 			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
 			if tsv.column < 0:
 				self.log.error('Column out of range/undetected')
@@ -117,7 +125,7 @@ class AxChecker:
 					echo = lambda msg: self.echo(msg, overwrite=True)
 				echo(1)
 				for tsv_cnt, (tsv_path, line) in enumerate(tsv.read_lines()):
-					if not ExtPath.normalize_str(tsv_path) in short_paths:
+					if not ExtPath.normalize_str(tsv_path) in axiom_file_paths:
 						print(line, file=fh)
 						missing_cnt += 1
 					if tsv_cnt % 10000 == 0:
