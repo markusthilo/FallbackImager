@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-21'
+__version__ = '0.4.0_2024-03-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -62,6 +62,8 @@ class Gui(GuiBase):
 	FILES_FIELD_WIDTH = 94
 	SMALL_FIELD_WIDTH = 24
 	BUTTON_WIDTH = 24
+	STD_PIXEL_WIDTH = 800
+	STD_PIXEL_HEIGHT = 800
 	DESCRIPTION = __description__.strip()
 	NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
@@ -150,7 +152,9 @@ class Gui(GuiBase):
 	SELECT_FILE_STRUCTURE = 'Select root of file structure'
 	SELECT_PARTITION = 'Select partition'
 	SELECT = 'Select'
+	ROOT = 'Root'
 	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
+	UNABLE_DETECT_PATHS = 'Unable to detect paths'
 	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
 	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
 	SELECT_COLUMN = 'Select column with path to compare'

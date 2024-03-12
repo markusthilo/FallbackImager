@@ -3,7 +3,7 @@
 
 from pathlib import Path
 from functools import partial
-from tkinter import Toplevel, StringVar
+from tkinter import Toplevel, StringVar, Canvas, Scrollbar
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
 from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu
 from tkinter.scrolledtext import ScrolledText
@@ -328,7 +328,7 @@ class ChildWindow(Toplevel):
 		super().destroy()
 
 class SelectTsvColumn(ChildWindow):
-	'''Window to select column aof a TSV file'''
+	'''Window to select column of a TSV file'''
 
 	def __init__(self, root, cmd):
 		'''Open child window'''
@@ -414,6 +414,25 @@ class SelectTsvColumn(ChildWindow):
 		self.root.settings.section = self.cmd
 		self.root.settings.raw(self.root.COLUMN).set(f'{column}')
 		self.destroy()
+
+class ScrollFrame:
+	'''Frame with scroll bars and buttons'''
+
+	def __init__(self, root, parent):
+		'''Build the frame'''
+		frame = ExpandedFrame(root, parent)
+		self.canvas = Canvas(frame)
+		self.scrolled_frame = Frame(self.canvas)
+		self.h_scrollbar = Scrollbar(frame)
+		self.v_scrollbar = Scrollbar(frame)
+		self.canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set, highlightthickness=0)
+		self.h_scrollbar.config(orient='horizontal', command=self.canvas.xview)
+		self.v_scrollbar.config(orient='vertical', command=self.canvas.yview)
+		self.h_scrollbar.pack(fill='x', side='bottom', expand=False)
+		self.v_scrollbar.pack(fill='y', side='right', expand=False)
+		self.canvas.pack(fill='both', side='left', expand=True)
+		self.canvas.create_window(0, 0, window=self.scrolled_frame, anchor='nw')
+		self.scrolled_frame.bind('<Configure>', lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
 class BasicTab:
 	'''Basic notebook tab'''

@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
+from functools import partial
 from tkinter.messagebox import showerror
-from tkinter import StringVar
-from tkinter.ttk import Radiobutton
+from tkinter import Button, Label
+from tkinter.ttk import Frame
 from lib.guielements import SourceDirSelector, Checker, LeftLabel
-from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank
+from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, ScrollFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
@@ -28,8 +29,8 @@ class AxCheckerGui:
 		FileSelector(root, frame, root.CASE_FILE, root.CASE_FILE,
 			f'{root.OPEN_CASE_FILE} ({root.AXIOM_CASE_FILE})',
 			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
-		StringSelector(root, frame, root.PARTITION, root.PARTITION,
-			command=self._select_partition)	
+		StringSelector(root, frame, root.ROOT, root.ROOT,
+			command=self._select_root)	
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION, columnspan=2)
 		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
@@ -53,7 +54,7 @@ class AxCheckerGui:
 		root.child_win_active = False
 		self.root = root
 
-	def _select_partition(self):
+	def _select_root(self):
 		'''Select partition in the AXIOM case'''
 		if self.root.child_win_active:
 			return
@@ -65,34 +66,44 @@ class AxCheckerGui:
 				message = self.root.FIRST_CHOOSE_CASE
 			)
 			return
-		mfdb = MfdbReader(Path(mfdb))
-		partition_ids = mfdb.get_partition_ids()
-		if not partition_ids:
+		mfdbreader = MfdbReader(mfdb)
+		self.source_ids = list()
+		self.source_paths = list()
+		self.source_types = list()
+		for source_id, source_type, source_path in mfdbreader.read_roots(max_depth=2):
+			self.source_ids.append(source_id)
+			self.source_paths.append(source_path)
+			self.source_types.append(source_type)
+		if not self.source_ids:
 			showerror(
 				title = self.root.CASE_FILE,
-				message = self.root.UNABLE_DETECT_PARTITIONS
+				message = self.root.UNABLE_DETECT_PATHS
 			)
 			return
-		if len(partition_ids) == 1:
-			self.root.settings.raw(self.root.PARTITION).set(mfdb.paths[partition_ids[0]])
-			return
-		self.partition_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
-		self._selected_part = StringVar()
-		for partition_id in partition_ids:
-			partition = mfdb.paths[partition_id]
-			frame = ExpandedFrame(self.root, self.partition_window)
-			Radiobutton(frame, variable=self._selected_part, value=partition).pack(
-				side='left', padx=self.root.PAD)
-			LeftLabel(self.root, frame, partition)
-		frame = ExpandedFrame(self.root, self.partition_window)
-		LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
-		RightButton(self.root, frame, self.root.QUIT, self.partition_window.destroy)
+		self.child_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
+		self.child_window.geometry(f'{self.root.STD_PIXEL_WIDTH}x{self.root.STD_PIXEL_HEIGHT}')
+		self.child_window.resizable(True, True) 
+		frame = ScrollFrame(self.root, self.child_window)
+		for row, path in enumerate(self.source_paths):
+			Button(frame.scrolled_frame, text=f'{path}', bd=0,
+					command=partial(self._get_root, row)).grid(sticky='w', row=row, column=0)
+			Label(frame.scrolled_frame, text=':').grid(row=row, column=1)
+			Button(frame.scrolled_frame, text=f'{self.source_types[row]}', bd=0,
+					command=partial(self._get_root, row)).grid(sticky='w', row=row, column=2)
+		
+		frame = Frame(self.child_window)
+		frame.pack(fill='x', padx=self.root.PAD, pady=self.root.PAD, expand=True)
 
-	def _get_partition(self):
-		'''Get the selected partition'''
+
+		#frame = ExpandedFrame(self.root, self.child_window)
+		#LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
+		RightButton(self.root, frame, self.root.QUIT, self.child_window.destroy)
+
+	def _get_root(self, row):
+		'''Get the selected root'''
 		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.PARTITION).set(self._selected_part.get())
-		self.partition_window.destroy()
+		self.root.settings.raw(self.root.ROOT).set(self.source_ids[row])
+		self.child_window.destroy()
 
 	def _select_file_structure(self):
 		'''Select file structure to compare'''
