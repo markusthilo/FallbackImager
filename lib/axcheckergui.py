@@ -5,7 +5,7 @@ from pathlib import Path
 from functools import partial
 from tkinter.messagebox import showerror
 from tkinter import Button, Label
-from tkinter.ttk import Frame
+from tkinter.ttk import Frame, Treeview
 from lib.guielements import SourceDirSelector, Checker, LeftLabel
 from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, ScrollFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
@@ -82,15 +82,16 @@ class AxCheckerGui:
 			return
 		self.child_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
 		self.child_window.geometry(f'{self.root.STD_PIXEL_WIDTH}x{self.root.STD_PIXEL_HEIGHT}')
-		self.child_window.resizable(True, True) 
+		self.child_window.resizable(True, True)
 		frame = ScrollFrame(self.root, self.child_window)
+		#Label(frame, bg='#ff0000').pack(fill='both', expand=True)
+		#treeview = Treeview(frame)
 		for row, path in enumerate(self.source_paths):
-			Button(frame.scrolled_frame, text=f'{path}', bd=0,
-					command=partial(self._get_root, row)).grid(sticky='w', row=row, column=0)
-			Label(frame.scrolled_frame, text=':').grid(row=row, column=1)
-			Button(frame.scrolled_frame, text=f'{self.source_types[row]}', bd=0,
-					command=partial(self._get_root, row)).grid(sticky='w', row=row, column=2)
-		
+		#	treeview.insert("", 'end', text=f'{path}')
+			Button(frame, text=f'{path}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=0)
+			Label(frame, text=':').grid(row=row, column=1)
+			Button(frame, text=f'{self.source_types[row]}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=2)
+		#treeview.pack(fill='both', expand=True)
 		frame = Frame(self.child_window)
 		frame.pack(fill='x', padx=self.root.PAD, pady=self.root.PAD, expand=True)
 

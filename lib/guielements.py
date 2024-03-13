@@ -415,24 +415,25 @@ class SelectTsvColumn(ChildWindow):
 		self.root.settings.raw(self.root.COLUMN).set(f'{column}')
 		self.destroy()
 
-class ScrollFrame:
+class ScrollFrame(Frame):
 	'''Frame with scroll bars and buttons'''
 
 	def __init__(self, root, parent):
 		'''Build the frame'''
 		frame = ExpandedFrame(root, parent)
-		self.canvas = Canvas(frame)
-		self.scrolled_frame = Frame(self.canvas)
-		self.h_scrollbar = Scrollbar(frame)
-		self.v_scrollbar = Scrollbar(frame)
-		self.canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set, highlightthickness=0)
-		self.h_scrollbar.config(orient='horizontal', command=self.canvas.xview)
-		self.v_scrollbar.config(orient='vertical', command=self.canvas.yview)
-		self.h_scrollbar.pack(fill='x', side='bottom', expand=False)
-		self.v_scrollbar.pack(fill='y', side='right', expand=False)
-		self.canvas.pack(fill='both', side='left', expand=True)
-		self.canvas.create_window(0, 0, window=self.scrolled_frame, anchor='nw')
-		self.scrolled_frame.bind('<Configure>', lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+		canvas = Canvas(frame)
+		super().__init__(canvas)
+		h_scrollbar = Scrollbar(frame)
+		v_scrollbar = Scrollbar(frame)
+		canvas.config(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set, highlightthickness=0)
+		h_scrollbar.config(orient='horizontal', command=canvas.xview)
+		v_scrollbar.config(orient='vertical', command=canvas.yview)
+		h_scrollbar.pack(fill='x', side='bottom', expand=False)
+		v_scrollbar.pack(fill='y', side='right', expand=False)
+		canvas.pack(fill='both', side='left', expand=True)
+		canvas.create_window(0, 0, window=self, anchor='nw')
+		self.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+		self.pack(fill='both', expand=True)
 
 class BasicTab:
 	'''Basic notebook tab'''

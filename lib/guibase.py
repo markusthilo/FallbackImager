@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter import Tk, PhotoImage
+from tkinter import Tk, PhotoImage, TclError
 from tkinter.messagebox import askyesno, showerror
 from .settings import Settings
 from .worker import Worker
@@ -23,6 +23,7 @@ class GuiBase(Tk):
 		self.version = version
 		self.debug = debug
 		self.settings = Settings(parent_path/'fisettings.json')
+		self.settings.init_section('Base')
 		self.worker = None
 		self.parent_path = parent_path
 		super().__init__()
@@ -39,6 +40,10 @@ class GuiBase(Tk):
 		RightButton(self, frame, self.HELP, self.show_help)	
 		self.notebook = ExpandedNotebook(self)
 		self.modules = [(Cli, Gui(self)) for Cli, Gui in modules]
+		try:
+			self.notebook.select(self.settings['Base']['ActiveTab'])
+		except (KeyError, TclError):
+			pass
 		frame = ExpandedFrame(self, self)
 		LeftLabel(self, frame, self.JOBS)
 		self.rm_last_job_button = RightButton(self,
@@ -126,6 +131,7 @@ class GuiBase(Tk):
 					title = f'{self.QUIT} {self.app_name}',
 					message = self.ARE_YOU_SURE
 		):
+			self.settings['Base']['ActiveTab'] = self.notebook.select()
 			if err := self.settings.write():
 				try:
 					self.after(5000, self.destroy)
