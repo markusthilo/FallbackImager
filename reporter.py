@@ -3,7 +3,7 @@
 
 __app_name__ = 'Reporter'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-21'
+__version__ = '0.4.0_2024-03-31'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -31,7 +31,7 @@ class Reporter:
 		self.template = Path(template)
 		with self.json_path.open() as fh:
 			inserts = load(fh)
-		reg = regcompile('\\\\jinsert\\{([^}]*)\\}\\{([^}]+)\\}')
+		reg = regcompile('[%\\\\]jinsert\\{([^}]*)\\}\\{([^}]+)\\}')
 		self.parsed_text = ''
 		self.errors = 0
 		for line in self.template.read_text().splitlines():

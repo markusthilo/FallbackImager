@@ -432,7 +432,7 @@ class ScrollFrame(Frame):
 		v_scrollbar.pack(fill='y', side='right', expand=False)
 		canvas.pack(fill='both', side='left', expand=True)
 		canvas.create_window(0, 0, window=self, anchor='nw')
-		self.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+		self.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
 		self.pack(fill='both', expand=True)
 
 class BasicTab:
