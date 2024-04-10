@@ -420,11 +420,11 @@ class ScrollFrame(Frame):
 
 	def __init__(self, root, parent):
 		'''Build the frame'''
-		frame = ExpandedFrame(root, parent)
-		canvas = Canvas(frame)
+		#frame = ExpandedFrame(root, parent)
+		canvas = Canvas(parent)
 		super().__init__(canvas)
-		h_scrollbar = Scrollbar(frame)
-		v_scrollbar = Scrollbar(frame)
+		h_scrollbar = Scrollbar(self)
+		v_scrollbar = Scrollbar(self)
 		canvas.config(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set, highlightthickness=0)
 		h_scrollbar.config(orient='horizontal', command=canvas.xview)
 		v_scrollbar.config(orient='vertical', command=canvas.yview)
