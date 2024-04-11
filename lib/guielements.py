@@ -9,6 +9,7 @@ from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
 from tkinter.messagebox import showerror
+from platform import system as operatingsystem
 from .timestamp import TimeStamp
 from .extpath import ExtPath
 
@@ -88,7 +89,7 @@ class GridIntMenu(OptionMenu):
 	def __init__(self, root, parent, key, text, values,
 		default=None, column=0, columnspan=1):
 		self.variable = root.settings.init_intvar(key, default=default)
-		Label(parent, text=f'{text}    ').grid(
+		Label(parent, text=f'{text}	').grid(
 			sticky='e', row=root.row, column=column, columnspan=columnspan)
 		super().__init__(parent, self.variable, self.variable.get(), *values)
 		self.grid(sticky='w', row=root.row, column=column+columnspan)
@@ -99,7 +100,7 @@ class GridStringMenu(OptionMenu):
 	def __init__(self, root, parent, key, text, values,
 		default=None, column=0, columnspan=1):
 		self.variable = root.settings.init_stringvar(key, default=default)
-		Label(parent, text=f'{text}    ').grid(
+		Label(parent, text=f'{text}	').grid(
 			sticky='e', row=root.row, column=column, columnspan=columnspan)
 		super().__init__(parent, self.variable, self.variable.get(), *values)
 		self.grid(sticky='w', row=root.row, column=column+columnspan)
@@ -115,7 +116,7 @@ class GridLabel:
 class GridBlank:
 	'''| |'''
 	def __init__(self, root, parent, column=0):
-		Label(parent, text='      ').grid(row=root.row, column=column, padx=root.PAD)
+		Label(parent, text='	  ').grid(row=root.row, column=column, padx=root.PAD)
 		root.row += 1
 
 class StringField(Button):
@@ -418,22 +419,59 @@ class SelectTsvColumn(ChildWindow):
 class ScrollFrame(Frame):
 	'''Frame with scroll bars and buttons'''
 
+	BACKGROUND = '#ffffff'
+
 	def __init__(self, root, parent):
 		'''Build the frame'''
-		#frame = ExpandedFrame(root, parent)
-		canvas = Canvas(parent)
-		super().__init__(canvas)
-		h_scrollbar = Scrollbar(self)
-		v_scrollbar = Scrollbar(self)
-		canvas.config(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set, highlightthickness=0)
-		h_scrollbar.config(orient='horizontal', command=canvas.xview)
-		v_scrollbar.config(orient='vertical', command=canvas.yview)
-		h_scrollbar.pack(fill='x', side='bottom', expand=False)
-		v_scrollbar.pack(fill='y', side='right', expand=False)
-		canvas.pack(fill='both', side='left', expand=True)
-		canvas.create_window(0, 0, window=self, anchor='nw')
-		self.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
-		self.pack(fill='both', expand=True)
+		frame = ExpandedFrame(root, parent)
+		self.canvas = Canvas(frame, borderwidth=0, background=self.BACKGROUND)
+		super().__init__(self.canvas)
+		hsb = Scrollbar(frame, orient='horizontal', command=self.canvas.xview)
+		vsb = Scrollbar(frame, orient='vertical', command=self.canvas.yview)
+		self.canvas.configure(xscrollcommand=hsb.set, yscrollcommand=vsb.set)
+		hsb.pack(side='bottom', fill='x')
+		vsb.pack(side='right', fill='y')
+		self.canvas.pack(side='left', fill='both', expand=True)
+		self.canvas_window = self.canvas.create_window(
+			(4,4), window=self, anchor='nw', tags='self')
+		self.bind('<Configure>', self._frame_conf)
+		self.canvas.bind('<Configure>', self._canvas_conf)			
+		self.bind('<Enter>', self._enter)
+		self.bind('<Leave>', self._leave)
+		self._frame_conf(None)
+
+	def _frame_conf(self, event):											  
+		'''Reset the scroll region'''
+		self.canvas.configure(scrollregion=self.canvas.bbox('all'))
+
+	def _canvas_conf(self, event):
+		'''Reset the canvas window'''
+		self.canvas.itemconfig(self.canvas_window, width = event.width)
+
+	def _mouse_wheel(self, event):
+		if operatingsystem() == 'Windows':
+			self.canvas.yview_scroll(int(-1 * (event.delta/120)), 'units')
+		elif operatingsystem() == 'Darwin':
+			self.canvas.yview_scroll(int(-1 * event.delta), 'units')
+		else:
+			if event.num == 4:
+				self.canvas.yview_scroll( -1, "units" )
+			elif event.num == 5:
+				self.canvas.yview_scroll( 1, "units" )
+	
+	def _enter(self, event):
+		if operatingsystem() == 'Linux':
+			self.canvas.bind_all("<Button-4>", self._mouse_wheel)
+			self.canvas.bind_all("<Button-5>", self._mouse_wheel)
+		else:
+			self.canvas.bind_all("<MouseWheel>", self._mouse_wheel)
+
+	def _leave(self, event):													   # unbind wheel events when the cursorl leaves the control
+		if operatingsystem() == 'Linux':
+			self.canvas.unbind_all("<Button-4>")
+			self.canvas.unbind_all("<Button-5>")
+		else:
+			self.canvas.unbind_all("<MouseWheel>")
 
 class BasicTab:
 	'''Basic notebook tab'''

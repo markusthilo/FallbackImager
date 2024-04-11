@@ -59,6 +59,7 @@ class AxCheckerGui:
 		if self.root.child_win_active:
 			return
 		self.root.settings.section = self.CMD
+		'''
 		mfdb = self.root.settings.get(self.root.CASE_FILE)
 		if not mfdb:
 			showerror(
@@ -80,23 +81,27 @@ class AxCheckerGui:
 				message = self.root.UNABLE_DETECT_PATHS
 			)
 			return
+		'''
 		self.child_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
 		self.child_window.geometry(f'{self.root.STD_PIXEL_WIDTH}x{self.root.STD_PIXEL_HEIGHT}')
 		self.child_window.resizable(True, True)
 		frame = ScrollFrame(self.root, self.child_window)
 		#Label(frame, bg='#ff0000').pack(fill='both', expand=True)
 		#treeview = Treeview(frame)
-		for row, path in enumerate(self.source_paths):
+		for row, path in enumerate(('aaa', 'bbb', 'ccc')):
 		#	treeview.insert("", 'end', text=f'{path}')
-			Button(frame, text=f'{path}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=0)
-			Label(frame, text=':').grid(row=row, column=1)
-			Button(frame, text=f'{self.source_types[row]}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=2)
+
 		#treeview.pack(fill='both', expand=True)
-		frame = Frame(self.child_window)
-		frame.pack(fill='x', padx=self.root.PAD, pady=self.root.PAD, expand=True)
+		#for row, path in enumerate(self.source_paths):
+		#	treeview.insert("", 'end', text=f'{path}')
+		#	Button(frame, text=f'{path}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=0)
+			Label(frame, text=path).grid(row=row, column=1)
+		#	Button(frame, text=f'{self.source_types[row]}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=2)
+		
+		#frame = Frame(self.child_window)
+		#frame.pack(fill='x', padx=self.root.PAD, pady=self.root.PAD, expand=True)
 
-
-		#frame = ExpandedFrame(self.root, self.child_window)
+		frame = ExpandedFrame(self.root, self.child_window)
 		#LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
 		RightButton(self.root, frame, self.root.QUIT, self.child_window.destroy)
 
