@@ -416,63 +416,6 @@ class SelectTsvColumn(ChildWindow):
 		self.root.settings.raw(self.root.COLUMN).set(f'{column}')
 		self.destroy()
 
-class ScrollFrame(Frame):
-	'''Frame with scroll bars and buttons'''
-
-	BACKGROUND = '#ffffff'
-
-	def __init__(self, root, parent):
-		'''Build the frame'''
-		frame = ExpandedFrame(root, parent)
-		self.canvas = Canvas(frame, borderwidth=0, background=self.BACKGROUND)
-		super().__init__(self.canvas)
-		hsb = Scrollbar(frame, orient='horizontal', command=self.canvas.xview)
-		vsb = Scrollbar(frame, orient='vertical', command=self.canvas.yview)
-		self.canvas.configure(xscrollcommand=hsb.set, yscrollcommand=vsb.set)
-		hsb.pack(side='bottom', fill='x')
-		vsb.pack(side='right', fill='y')
-		self.canvas.pack(side='left', fill='both', expand=True)
-		self.canvas_window = self.canvas.create_window(
-			(4,4), window=self, anchor='nw', tags='self')
-		self.bind('<Configure>', self._frame_conf)
-		self.canvas.bind('<Configure>', self._canvas_conf)			
-		self.bind('<Enter>', self._enter)
-		self.bind('<Leave>', self._leave)
-		self._frame_conf(None)
-
-	def _frame_conf(self, event):											  
-		'''Reset the scroll region'''
-		self.canvas.configure(scrollregion=self.canvas.bbox('all'))
-
-	def _canvas_conf(self, event):
-		'''Reset the canvas window'''
-		self.canvas.itemconfig(self.canvas_window, width = event.width)
-
-	def _mouse_wheel(self, event):
-		if operatingsystem() == 'Windows':
-			self.canvas.yview_scroll(int(-1 * (event.delta/120)), 'units')
-		elif operatingsystem() == 'Darwin':
-			self.canvas.yview_scroll(int(-1 * event.delta), 'units')
-		else:
-			if event.num == 4:
-				self.canvas.yview_scroll( -1, "units" )
-			elif event.num == 5:
-				self.canvas.yview_scroll( 1, "units" )
-	
-	def _enter(self, event):
-		if operatingsystem() == 'Linux':
-			self.canvas.bind_all("<Button-4>", self._mouse_wheel)
-			self.canvas.bind_all("<Button-5>", self._mouse_wheel)
-		else:
-			self.canvas.bind_all("<MouseWheel>", self._mouse_wheel)
-
-	def _leave(self, event):													   # unbind wheel events when the cursorl leaves the control
-		if operatingsystem() == 'Linux':
-			self.canvas.unbind_all("<Button-4>")
-			self.canvas.unbind_all("<Button-5>")
-		else:
-			self.canvas.unbind_all("<MouseWheel>")
-
 class BasicTab:
 	'''Basic notebook tab'''
 

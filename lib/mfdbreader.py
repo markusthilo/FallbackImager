@@ -6,7 +6,16 @@ from .sqliteutils import SQLiteReader
 class MfdbReader(SQLiteReader):
 	'''Extend SqliteReader for AXIOM data base'''
 
-	ROOTS = ('Folder', 'Partition', 'Volume', 'Image')
+	def _read_source(self):
+		'''Read table source'''
+		for source_id, parent_source_id, source_type, source_friendly_value in self.fetch_table('source',
+			columns=('source_id', 'parent_source_id', 'source_type', 'source_friendly_value')):
+			source_id = int(source_id)
+			try:
+				parent_source_id = int(parent_source_id)
+			except TypeError:
+				parent_source_id = None
+			yield source_id, parent_source_id, source_type, source_friendly_value
 
 	def _read_paths(self):
 		'''Read table source_path'''
@@ -26,7 +35,7 @@ class MfdbReader(SQLiteReader):
 		self.get_types()
 		for source_id, source_path in self._read_paths():
 			source_type = self.types[source_id]
-			if source_type in self.ROOTS and source_path.count('\\') < max_depth:
+			if source_type != 'File' and source_path.count('\\') < max_depth:
 				yield source_id, source_type, source_path
 
 	def read_paths(self):
@@ -67,3 +76,9 @@ class MfdbReader(SQLiteReader):
 	def file_paths(self, root_id):
 		'''Get relative paths of all files under given root'''
 		return {relative_path for uu, source_type, relative_path in self.walk(root_id) if source_type == 'File'}
+
+	def tree(self):
+		'''Read table source and give possible roots'''
+		for source_id, parent_source_id, source_type, source_friendly_value in self._read_source():
+			if source_type != 'File':
+				yield source_id, parent_source_id, source_type, source_friendly_value

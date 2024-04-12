@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-04-11'
+__version__ = '0.4.1_2024-04-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -62,8 +62,8 @@ class Gui(GuiBase):
 	FILES_FIELD_WIDTH = 94
 	SMALL_FIELD_WIDTH = 24
 	BUTTON_WIDTH = 24
-	STD_PIXEL_WIDTH = 800
-	STD_PIXEL_HEIGHT = 800
+	TREE_HEIGHT = 24
+	TREE_WIDTH = 640
 	DESCRIPTION = __description__.strip()
 	NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
@@ -159,7 +159,7 @@ class Gui(GuiBase):
 	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
 	SELECT_COLUMN = 'Select column with path to compare'
 	CASE_REQUIRED = 'AXIOM case file is required'
-	PARTITION_REQUIRED = 'Partition in the AXIOM case is required'
+	ID_REQUIRED = 'ID of AXIOM source as root to compare is required'
 	ROOT_DIR_REQUIRED = 'Root directory is required' 
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 	WIPE = 'Wipe'

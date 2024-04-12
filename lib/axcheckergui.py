@@ -5,9 +5,9 @@ from pathlib import Path
 from functools import partial
 from tkinter.messagebox import showerror
 from tkinter import Button, Label
-from tkinter.ttk import Frame, Treeview
+from tkinter.ttk import Treeview, Scrollbar
 from lib.guielements import SourceDirSelector, Checker, LeftLabel
-from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, ScrollFrame
+from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
@@ -55,11 +55,10 @@ class AxCheckerGui:
 		self.root = root
 
 	def _select_root(self):
-		'''Select partition in the AXIOM case'''
+		'''Select root to compare in the AXIOM case'''
 		if self.root.child_win_active:
 			return
 		self.root.settings.section = self.CMD
-		'''
 		mfdb = self.root.settings.get(self.root.CASE_FILE)
 		if not mfdb:
 			showerror(
@@ -67,48 +66,35 @@ class AxCheckerGui:
 				message = self.root.FIRST_CHOOSE_CASE
 			)
 			return
-		mfdbreader = MfdbReader(mfdb)
-		self.source_ids = list()
-		self.source_paths = list()
-		self.source_types = list()
-		for source_id, source_type, source_path in mfdbreader.read_roots(max_depth=2):
-			self.source_ids.append(source_id)
-			self.source_paths.append(source_path)
-			self.source_types.append(source_type)
-		if not self.source_ids:
-			showerror(
-				title = self.root.CASE_FILE,
-				message = self.root.UNABLE_DETECT_PATHS
-			)
-			return
-		'''
-		self.child_window = ChildWindow(self.root, self.root.SELECT_PARTITION)
-		self.child_window.geometry(f'{self.root.STD_PIXEL_WIDTH}x{self.root.STD_PIXEL_HEIGHT}')
-		self.child_window.resizable(True, True)
-		frame = ScrollFrame(self.root, self.child_window)
-		#Label(frame, bg='#ff0000').pack(fill='both', expand=True)
-		#treeview = Treeview(frame)
-		for row, path in enumerate(('aaa', 'bbb', 'ccc')):
-		#	treeview.insert("", 'end', text=f'{path}')
-
-		#treeview.pack(fill='both', expand=True)
-		#for row, path in enumerate(self.source_paths):
-		#	treeview.insert("", 'end', text=f'{path}')
-		#	Button(frame, text=f'{path}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=0)
-			Label(frame, text=path).grid(row=row, column=1)
-		#	Button(frame, text=f'{self.source_types[row]}', bd=0, command=partial(self._get_root, row)).grid(sticky='w', row=row, column=2)
-		
-		#frame = Frame(self.child_window)
-		#frame.pack(fill='x', padx=self.root.PAD, pady=self.root.PAD, expand=True)
-
+		self.child_window = ChildWindow(self.root, self.root.SELECT_ROOT)
+		self.child_window.resizable(0, 0)
 		frame = ExpandedFrame(self.root, self.child_window)
-		#LeftButton(self.root, frame, self.root.SELECT, self._get_partition)
+		self.tree = dict()
+		self.treeview = Treeview(frame, selectmode='browse', height=self.root.TREE_HEIGHT, show='tree')
+		self.treeview.column("#0", width=self.root.TREE_WIDTH)
+		self.treeview.pack(side='left', expand=True)
+		vsb = Scrollbar(frame, orient='vertical', command=self.treeview.yview)
+		vsb.pack(side='right', fill='y')
+		self.treeview.configure(yscrollcommand=vsb.set)
+		for source_id, parent_id, source_type, friendly_value in MfdbReader(mfdb).tree():
+			if parent_id:
+				try:
+					parent = self.tree[parent_id]
+				except KeyError:
+					continue
+				self.tree[source_id] = self.treeview.insert(parent, 'end', text=friendly_value, iid=source_id)
+			else:
+				self.tree[source_id] = self.treeview.insert('', 'end', text=friendly_value, iid=source_id)
+			if source_type == 'Partition':
+				self.treeview.see(source_id)
+		frame = ExpandedFrame(self.root, self.child_window)
+		LeftButton(self.root, frame, self.root.SELECT, self._get_root)
 		RightButton(self.root, frame, self.root.QUIT, self.child_window.destroy)
 
-	def _get_root(self, row):
+	def _get_root(self):
 		'''Get the selected root'''
 		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.ROOT).set(self.source_ids[row])
+		self.root.settings.raw(self.root.ROOT).set(self.treeview.focus())
 		self.child_window.destroy()
 
 	def _select_file_structure(self):
@@ -129,7 +115,7 @@ class AxCheckerGui:
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
 		mfdb = self.root.settings.get(self.root.CASE_FILE)
-		partition = self.root.settings.get(self.root.PARTITION)
+		root_id = self.root.settings.get(self.root.ROOT)
 		if not mfdb:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
@@ -151,17 +137,21 @@ class AxCheckerGui:
 			)
 			return
 		verify = self.root.settings.get(self.root.VERIFY_FILE)
-		if not partition and verify != self.root.DO_NOT_COMPARE:
+		try:
+			int(root_id)
+		except ValueError:
+			root_id = None
+		if verify != self.root.DO_NOT_COMPARE and not root_id:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
-				message = self.root.PARTITION_REQUIRED
+				message = self.root.ID_REQUIRED
 			)
 			return
 		file_structure = self.root.settings.get(self.root.FILE_STRUCTURE)
 		tsv = self.root.settings.get(self.root.TSV)
 		column = self.root.settings.get(self.root.COLUMN)
 		cmd = self.root.settings.section.lower()
-		cmd += f' --partition "{partition}"'
+		cmd += f' --root {root_id}'
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
 		if verify == self.root.FILE_STRUCTURE:
