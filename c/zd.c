@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.1.0_2024-02-20";
+const char *VERSION = "0.1.0_2024-04-14";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
 	switch (todo) {
 		case 0:	// normal/selective wipe
 			memset(conf.block, conf.value, conf.bs);
-			printf("Wiping\n");
+			printf("Wiping, pass 1 of 2\n");
 			if ( target.size >= conf.bs ) {
 				uint64_t *block = malloc(conf.bs);
 				clock_t now = print_progress(&target);
@@ -337,12 +337,12 @@ int main(int argc, char **argv) {
 			break;
 		case 1:	// wipe all blocks
 			memset(conf.block, conf.value, conf.bs);
-			printf("Wiping\n");
+			printf("Wiping, pass 1 of 2\n");
 			wipe_all(&target, &conf, &badblocks);
 			break;
 		case 2:	// 2pass wipe
 			for (int i=0; i<conf.bs; i++) conf.block[i] = (uint8_t)rand();
-			printf("Wiping, pass 1 of 2\n");
+			printf("Wiping, pass 1 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
 			print_time(start_time);
 			time(&start_time);
@@ -350,20 +350,23 @@ int main(int argc, char **argv) {
 			reset_pointer(&target);
 			badblocks.cnt = 0;
 			memset(conf.block, conf.value, conf.bs);
-			printf("Wiping, pass 2 of 2\n");
+			printf("Wiping, pass 2 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
 			break;
 		case 3:	// verify
 			memset(conf.block, conf.value, conf.bs);
 	}
-	if ( todo != 3 ) {
+	if ( todo == 3 ) printf("Verifying\n");
+	else {
 		print_time(start_time);
 		time(&start_time);
 		target.ptr = 0;
 		reset_pointer(&target);
+		printf("Verifying, pass ");
+		if ( todo == 2 ) printf("3 of 3\n");
+		else printf("2 of 2\n");
 	}
-	printf("Verifying\n");	// verification pass
-	badblocks.cnt = 0;
+	badblocks.cnt = 0;	// verification pass
 	if ( target.size >= conf.bs ) {
 		uint64_t *block = malloc(conf.bs);
 		clock_t now = print_progress(&target);
