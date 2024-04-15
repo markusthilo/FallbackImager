@@ -48,6 +48,9 @@ if __name__ == '__main__':	# start here if called as application
 	bins = list()
 	if args.cli:
 		bins.append(MkBin('axchecker.py').move())
+		bins.append(MkBin('ewfchecker.py').move())
+		bins.append(MkBin('ewfimager.py').move())
+		bins.append(MkBin('reporter.py').move())
 		bins.append(MkBin('sqlite.py').move())
 		bins.append(MkBin('wiper.py').move())
 		bins.append(MkBin('zipimager.py').move())

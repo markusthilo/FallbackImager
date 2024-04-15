@@ -254,7 +254,7 @@ class Gui(GuiBase):
 			candidates = (
 				(EwfImager, EwfImagerCli, EwfImagerGui),
 				(EwfChecker, EwfCheckerCli, EwfCheckerGui),
-				(EwfChecker, ReporterCli, ReporterGui),
+				(Reporter, ReporterCli, ReporterGui),
 				(ZipImager, ZipImagerCli, ZipImagerGui),
 				(SQLite, SQLiteCli, SQLiteGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
