@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.1_2024-04-15'
+__version__ = '0.5.0_2024-04-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -124,7 +124,8 @@ class WipeR:
 			fs = 'ntfs',
 			loghead = None,
 			mbr = False,
-			name = None
+			name = None,
+			mountpoint = None
 		):
 		'''Generate partition and file system'''
 		if loghead:
@@ -148,7 +149,10 @@ class WipeR:
 		stdout, stderr = LinUtils.mkfs(partition, fs=fs, label=name)
 		if stderr:
 			self.log.warning(stderr, echo=True)
-		mnt = ExtPath.mkdir(self.outdir/'mnt')
+		if mountpoint:
+			mnt = ExtPath.mkdir(mountpoint)
+		else:
+			mnt = ExtPath.mkdir(self.outdir/'mnt')
 		stdout, stderr = LinUtils.mount(partition, mnt)
 		if stderr:
 			self.log.warning(stderr, echo=True)
@@ -163,6 +167,8 @@ class WipeR:
 			head = ''
 		with log_path.open('w') as fh:
 			fh.write(head + self.log.path.read_text())
+		if mountpoint:
+			return
 		stdout, stderr = LinUtils.umount(mnt)
 		if stderr:
 			raise RuntimeError(f'{stdout}\n{stderr}')
@@ -203,6 +209,10 @@ class WipeRCli(ArgumentParser):
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log', metavar='DIRECTORY'
 		)
+		self.add_argument('-p', '--mount', type=Path,
+			help='Mountpoint to the new partition (when target is a physical drive)',
+			metavar='DIRECTORY'
+		)
 		self.add_argument('-q', '--maxbadblocks', type=int,
 			help='Abort after given number of bad blocks (default is 200)', metavar='INTEGER'
 		)
@@ -231,6 +241,7 @@ class WipeRCli(ArgumentParser):
 		self.maxbadblocks = args.maxbadblocks
 		self.maxretries = args.maxretries
 		self.mbr = args.mbr
+		self.mountpoint = args.mount
 		self.name = args.name
 		self.outdir = args.outdir
 		self.value = args.value
@@ -239,7 +250,14 @@ class WipeRCli(ArgumentParser):
 
 	def run(self, echo=print):
 		'''Run zd'''
-		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
+		if self.verify and (
+			self.create or
+			self.extra or
+			self.mbr or
+			self.mountpoint or
+			self.driveletter or
+			self.name
+		):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
 		wiper = WipeR()
 		wiper.wipe(self.targets,
@@ -258,7 +276,8 @@ class WipeRCli(ArgumentParser):
 				fs = self.create,
 				loghead = self.loghead,
 				mbr = self.mbr,
-				name = self.name
+				name = self.name,
+				mountpoint = self.mountpoint
 			)
 		wiper.log.close()
 

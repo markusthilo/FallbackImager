@@ -44,6 +44,10 @@ class WipeRGui:
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=8)
 		GridSeparator(root, frame)
+		GridLabel(root, frame, root.MOUNTPOINT)
+		DirSelector(root, frame, root.MOUNTPOINT,
+			root.DIRECTORY, root.SELECT_MOUNTPOINT, columnspan=8)
+		GridSeparator(root, frame)
 		GridLabel(root, frame, root.TO_DO)
 		StringRadiobuttons(root, frame, root.TO_DO,
 			(root.NORMAL_WIPE, root.ALL_BYTES, root.EXTRA_PASS, root.VERIFY), root.NORMAL_WIPE)
