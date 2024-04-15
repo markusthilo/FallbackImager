@@ -36,6 +36,7 @@ class MkExe:
 		dir_path = Path.cwd()
 		if tobin:
 			dir_path = dir_path/'bin'
+			dir_path.mkdir()
 		self.exe_path = self.exe_path.replace(dir_path/self.exe_path.name)
 		rmtree('build')
 		rmtree('dist')
