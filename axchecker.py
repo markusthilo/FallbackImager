@@ -3,14 +3,16 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.1_2024-04-12'
+__version__ = '0.4.1_2024-04-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-As Magnet's AXIOM has proven to be unreliable in the past, this module compares the files in an AXIOM Case.mfdb to a file list (CSV/TSV e.g. created with X-Ways) or a local file structure. Only one partition of the case file can be compared at a time.
-
-Hits are files, that are represented in the artifacts. Obviously this tool can only support to find missing files. You will (nearly) never have the identical file lists. In detail AxChecker takes the file paths of the AXIOM case and tries to subtract normalized paths from the list or file system.
+As Magnet's AXIOM has proven to be unreliable in the past, this module compares the files in
+an AXIOM Case.mfdb to a file list (CSV/TSV e.g. created with X-Ways) or a local file structure.
+Only one partition or subtree of the case file can be compared at a time.
+Hits are files, that are represented in the artifacts.
+This tool might help to find missing files. Be aware that you will (nearly) never have full accordance.
 '''
 
 from pathlib import Path

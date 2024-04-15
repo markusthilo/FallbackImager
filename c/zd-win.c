@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.1.0_2024-04-14";
+const char *VERSION = "0.1.0_2024-04-15";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -470,6 +470,6 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Error: %d bad blocks in %s\n", badblocks.cnt, target.path);
 		exit(1);
 	}
-	printf("Verification was succesfull, all done\n\n");
+	printf("Verification was succesful, all done\n\n");
 	exit(0);
 }

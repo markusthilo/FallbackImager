@@ -44,7 +44,7 @@ class AxCheckerGui:
 		DirSelector(root, frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE,
 			command=self._select_file_structure)
 		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
-			filetype=('CSV', '*.csv'), command=self._select_tsv_file)
+			filetype=('Text/TSV', '*.txt'), command=self._select_tsv_file)
 		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
 		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
 		GridSeparator(root, frame)

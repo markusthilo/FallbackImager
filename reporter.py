@@ -3,12 +3,13 @@
 
 __app_name__ = 'Reporter'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-03-31'
+__version__ = '0.4.1_2024-04-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Parse JSON file throught template to generate report.
+The tool parses a template and replaces %jinsert{}{} or \\jinsert{}{} (one backslash) by values from a JSON file.
+Example: reporter-example-template.txt
 '''
 
 from json import load
