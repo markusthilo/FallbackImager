@@ -1,34 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'ZipImager'
+__app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
 __version__ = '0.5.0_2024-04-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Using the Python library zipfile this module generates an ZIP archive from a source file structure.
+Safe opy with log and hashes.
 '''
 
 from pathlib import Path
-from zipfile import ZipFile, ZIP_DEFLATED
 from argparse import ArgumentParser
 from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
 
-class ZipImager:
-	'''Imager using ZipFile'''
+class HashedCopy:
+	'''Tool to copy files and verify the outcome using hashes'''
 
 	def __init__(self):
 		'''Create object'''
 		self.available = True
 
-	def create(self, root, filename=None, outdir=None, echo=print, log=None):
-		'''Build zip file'''
-		self.root_path = Path(root)
+    def file(self, src, dest):
+        '''Copy one file'''
+
+        return 
+
+	def multiple(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
+		'''Copy multiple sources'''
+		self.destination_path = Path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
@@ -36,15 +40,18 @@ class ZipImager:
 			self.log = log
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir,
-				head='zipimager.ZipImager', echo=echo)
-		self.echo('Creating Zip file')
-		self.image_path = ExtPath.child(f'{self.filename}.zip', parent=self.outdir)
+				head='hashedcopy.HashedCopy', echo=echo)
+		self.echo('Running copy process')
 		self.tsv_path = ExtPath.child(f'{self.filename}.tsv', parent=self.outdir)
-		file_cnt = 0
-		dir_cnt = 0
-		other_cnt = 0
-		file_error_cnt = 0
-		dir_error_cnt = 0
+        self.tsv_fh = self.tsv_path.open('w')
+		self.error_cnt = 0
+        for source in sources:
+            source_path = ExtPath.path(source)
+            if source_path.is_dir():
+
+            else:
+
+
 		progress = Progressor(self.root_path, echo=self.echo)
 		with (
 			ZipFile(self.image_path, 'w', ZIP_DEFLATED) as zf,
@@ -87,40 +94,44 @@ class ZipImager:
 		self.log.info('Calculating hashes', echo=True)
 		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}', echo=True)
 
-class ZipImagerCli(ArgumentParser):
-	'''CLI for the imager'''
+class HashedCopyCli(ArgumentParser):
+	'''CLI for the copy tool'''
 
 	def __init__(self):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
-		self.add_argument('-f', '--filename', type=str,
+		self.add_argument('-d', '--destination', type=ExtPath.path, required=True,
+			help='Destination root', metavar='DIRECTORY'
+		)
+		self.add_argument('-f', '--filename', type=str, required=True,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
 		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('root', nargs=1, type=ExtPath.path,
-			help='Source root', metavar='DIRECTORY'
+		self.add_argument('sources', nargs='+', type=ExtPath.path,
+			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
 		)
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.root = args.root[0]
+		self.sources = args.sources
+        self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir
 
 	def run(self, echo=print):
-		'''Run the imager'''
-		imager = ZipImager()
-		imager.create(self.root,
+		'''Run the tool'''
+		copy = HashedCopy()
+		copy.multiple(self.sources, self.destination,
 			filename = self.filename,
 			outdir = self.outdir,
 			echo = echo
 		)
-		imager.log.close()
+		copy.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = ZipImagerCli()
+	app = HashedCopyCli()
 	app.parse()
 	app.run()
