@@ -3,16 +3,17 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-16'
+__version__ = '0.5.0_2024-04-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Safe opy with log and hashes.
+Safe copy with log and hashes.
 '''
 
 from pathlib import Path
 from argparse import ArgumentParser
+from hashlib import md5, sha256
 from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -25,16 +26,38 @@ class HashedCopy:
 		'''Create object'''
 		self.available = True
 
-    def file(self, src, dest):
+    def _file(self, src, dst):
         '''Copy one file'''
+		md5 = md5()
+		sha256 = sha256()
+		with src.open('rb') as sfh, dst.open('wb') as dfh:
+			while True:
+				block = fh.read(self.block_size)
+				if not block:
+					break
+				dfh.write(block)
+				self.md5.update(block)
+				self.sha256.update(block)
+		return md5.hexdigest(), sha256.hexdigest()
 
-        return 
+	def _dir(self, src, dst):
+		'''Copy one directory'''
+		dst.mkdir()
+		for src_path, rel_path, tp in ExtPath.walk(src)
+			if tp == 'Dir':
+				pass
+			else:
+				pass
 
-	def multiple(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
+
+
+
+	def copy(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
 		'''Copy multiple sources'''
 		self.destination_path = Path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
+		self.block_size = max(self.md5.block_size, self.sha256.block_size)
 		self.echo = echo
 		if log:
 			self.log = log
