@@ -57,7 +57,7 @@ class HashedCopy:
 		self.destination_path = Path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
-		self.block_size = max(self.md5.block_size, self.sha256.block_size)
+		self.block_size = max(md5(), sha256())
 		self.echo = echo
 		if log:
 			self.log = log
@@ -71,7 +71,7 @@ class HashedCopy:
         for source in sources:
             source_path = ExtPath.path(source)
             if source_path.is_dir():
-
+				
             else:
 
 
