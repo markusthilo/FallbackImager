@@ -14,108 +14,86 @@ Safe copy with log and hashes.
 from pathlib import Path
 from argparse import ArgumentParser
 from hashlib import md5, sha256
+from time import time, sleep
 from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.hashes import FileHashes
+from lib.hashes import FileHashes, CopyFile
+try:
+	from os import sync as os_sync
+	def sync(): os_sync()
+except ImportError:
+	def sync(): pass
 
 class HashedCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
+
+	MIN_COPY_SEC = 10
 
 	def __init__(self):
 		'''Create object'''
 		self.available = True
 
-    def _file(self, src, dst):
-        '''Copy one file'''
-		md5 = md5()
-		sha256 = sha256()
-		with src.open('rb') as sfh, dst.open('wb') as dfh:
-			while True:
-				block = fh.read(self.block_size)
-				if not block:
-					break
-				dfh.write(block)
-				self.md5.update(block)
-				self.sha256.update(block)
-		return md5.hexdigest(), sha256.hexdigest()
-
-	def _dir(self, src, dst):
-		'''Copy one directory'''
-		dst.mkdir()
-		for src_path, rel_path, tp in ExtPath.walk(src)
-			if tp == 'Dir':
-				pass
-			else:
-				pass
-
-
-
-
-	def copy(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
+	def cp(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
 		'''Copy multiple sources'''
-		self.destination_path = Path(destination)
+		self.dst_root_path = Path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
-		self.block_size = max(md5(), sha256())
 		self.echo = echo
+		self.tsv_path = ExtPath.child(f'{self.filename}_files.tsv', parent=self.outdir)
 		if log:
 			self.log = log
 		else:
 			self.log = Logger(filename=self.filename, outdir=self.outdir,
 				head='hashedcopy.HashedCopy', echo=echo)
-		self.echo('Running copy process')
-		self.tsv_path = ExtPath.child(f'{self.filename}.tsv', parent=self.outdir)
-        self.tsv_fh = self.tsv_path.open('w')
-		self.error_cnt = 0
-        for source in sources:
-            source_path = ExtPath.path(source)
-            if source_path.is_dir():
-				
-            else:
-
-
-		progress = Progressor(self.root_path, echo=self.echo)
-		with (
-			ZipFile(self.image_path, 'w', ZIP_DEFLATED) as zf,
-			self.tsv_path.open('w', encoding='utf-8') as tsv_fh
-		):
-			print('Path\tType\tCopied', file=tsv_fh)
-			for path, relative, tp in ExtPath.walk(self.root_path):
-				if tp == 'File':
-					try:
-						zf.write(path, relative)
-						print(f'"{relative}"\tFile\tyes', file=tsv_fh)
-						file_cnt += 1
-					except:
-						print(f'"{relative}"\tFile\tno', file=tsv_fh)
-						file_error_cnt += 1
-				elif tp == 'Dir':
-					try:
-						zf.mkdir(f'{relative}')
-						print(f'"{relative}"\tDir\tyes', file=tsv_fh)
-						dir_cnt += 1
-					except:
-						print(f'"{relative}"\tDir\tno', file=tsv_fh)
-						dir_error_cnt += 1
+		if self.dst_root_path.exists():
+			if not self.dst_root_path.is_dir():
+				self.log.error('Destination is not a directory')
+			elif any(self.dst_root_path.iterdir()):
+				self.log.error('Destination directory is not empty')
+		else:
+			self.dst_root_path.mkdir()
+		files = list()
+		self.echo('Reading source and creating destination directories')
+		for source in sources:
+			source_path = ExtPath.path(source)
+			if source_path.is_dir():
+				source_path.mkdir(parents=True, exist_ok=True)
+				for abs_path, rel_path, tp in ExtPath.walk(source_path):
+					if tp == 'Dir':
+						(self.dst_root_path/rel_path).mkdir(parents=True, exist_ok=True)
+					else:
+						files.append((abs_path, self.dst_root_path/rel_path))
+			else:
+				files.append((abs_path, self.dst_root_path/rel_path))
+		self.echo('Copying files')
+		hashed_files = list()
+		progress = Progressor(len(files), echo=self.echo)
+		start_time = time()
+		for src_path, dst_path in files: 
+			src_hashes = CopyFile(src_path, dst_path)
+			hashed_files.append((src_path, dst_path, src_hashes))
+			progress.inc()
+		sync()
+		sleep_time = start_time + self.MIN_COPY_SEC - time()
+		if sleep_time > 0:
+			echo(f'Waiting...')
+			sleep(sleep_time)
+		error_cnt = 0
+		with self.tsv_path.open('w', encoding='utf-8') as fh:
+			print('Source_File\tDestination_File\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tCopied', file=fh)
+			for src_path, dst_path, src_hashes in hashed_files:
+				dst_hashes = FileHashes(dst_path)
+				line = f'{src_path}\t{dst_path}\t{src_hashes.md5}\t{dst_hashes.md5}\t{src_hashes.sha256}\t{dst_hashes.sha256}\t'
+				if src_hashes.md5 == dst_hashes.md5 and src_hashes.sha256 == dst_hashes.sha256:
+					line += 'yes'
 				else:
-					print(f'"{relative}"\tOther\tno', file=tsv_fh)
-					other_cnt += 1
-				progress.inc()
-		msg = f'Created {self.image_path.name} '
-		msg += f'(Files: {file_cnt} / Directories: {dir_cnt} / Other: {other_cnt})'
-		self.log.info(msg, echo=True)
-		msg = ''
-		if file_error_cnt > 0:
-			msg += f'{file_error_cnt} missing file(s)'
-		if dir_error_cnt > 0:
-			if msg:
-				msg += ' and '
-			msg += f'{dir_error_cnt} missing dir(s)'
-		if msg:
-			self.log.warning(msg)
-		self.log.info('Calculating hashes', echo=True)
-		self.log.info(f'\n--- Image hashes ---\n{FileHashes(self.image_path)}', echo=True)
+					line += 'no'
+					error_cnt += 1
+				print(line, file=fh)
+		self.log.info(f'Copied {len(hashed_files)-error_cnt} file(s)', echo=True)
+		if error_cnt > 0:
+			self.log.error(f'{error_cnt} missing file(s)')
 
 class HashedCopyCli(ArgumentParser):
 	'''CLI for the copy tool'''
@@ -126,11 +104,11 @@ class HashedCopyCli(ArgumentParser):
 		self.add_argument('-d', '--destination', type=ExtPath.path, required=True,
 			help='Destination root', metavar='DIRECTORY'
 		)
-		self.add_argument('-f', '--filename', type=str, required=True,
+		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
 		self.add_argument('-o', '--outdir', type=ExtPath.path,
-			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
+			help='Directory to write log and file list (default: current)', metavar='DIRECTORY'
 		)
 		self.add_argument('sources', nargs='+', type=ExtPath.path,
 			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
@@ -140,14 +118,14 @@ class HashedCopyCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.sources = args.sources
-        self.destination = args.destination
+		self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir
 
 	def run(self, echo=print):
 		'''Run the tool'''
 		copy = HashedCopy()
-		copy.multiple(self.sources, self.destination,
+		copy.cp(self.sources, self.destination,
 			filename = self.filename,
 			outdir = self.outdir,
 			echo = echo

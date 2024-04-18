@@ -131,10 +131,13 @@ class ExtPath:
 class Progressor:
 	'''Show progress when going through file structure'''
 
-	def __init__(self, root, echo=print):
-		'''Get quantitiy of files under root'''
+	def __init__(self, root_or_qut, echo=print):
+		'''Get quantitiy of files under root or give quantitiy as int'''
 		self.echo = echo
-		self.quantitiy = ExtPath.quantitiy(root)
+		if isinstance(root_or_qut, int):
+			self.quantitiy = root_or_qut
+		else:
+			self.quantitiy = ExtPath.quantitiy(root_or_qut)
 		self.counter = 0
 		self.percent = 0
 		self.factor = 100/self.quantitiy
