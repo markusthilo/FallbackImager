@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from lib.guielements import SourceDirSelector, Checker, VerticalButtons
+from lib.guielements import ExpandedLabel, ExpandedScrolledText, Checker, VerticalButtons
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, GridBlank
@@ -18,20 +18,23 @@ class HashedCopyGui:
 		root.settings.init_section(self.CMD)
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
+		self.sources = ExpandedScrolledText(root, frame, root.JOB_HEIGHT)
+		frame = ExpandedFrame(root, frame)
 		root.row = 0
-		self.source_dir = SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+
+		GridButton(root, parent, text, command, column=1, columnspan=1)
+		GridButton(root, parent, text, command, column=1, columnspan=1)
+
+		GridLabel(root, frame, root.DESTINATION)
+		DirSelector(root, frame, root.DESTINATION,
+			root.DIRECTORY, root.SELECT_DEST_DIR)
+		GridLabel(root, frame, root.LOGGING)
 		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
-		self.name_str = StringSelector(root, frame, root.IMAGE_NAME, root.IMAGE_NAME,
-			command=self._gen_name)
-		self.descr_str = StringSelector(root, frame, root.IMAGE_DESCRIPTION, root.IMAGE_DESCRIPTION,
-			command=self._gen_description)
-		VerticalButtons(root, frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
-		GridSeparator(root, frame)
 
-		Checker(root, frame, root.COPY_EXE, root.COPY_EXE, columnspan=2)
+		#VerticalButtons(root, frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
+
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,

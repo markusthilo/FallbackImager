@@ -38,7 +38,7 @@ class ExtPath:
 		if not path:
 			return Path.cwd()
 		path = Path(path)
-		path.mkdir(exist_ok=True)
+		path.mkdir(parents=True, exist_ok=True)
 		return path
 
 	@staticmethod

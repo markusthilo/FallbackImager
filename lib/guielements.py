@@ -121,12 +121,12 @@ class GridBlank:
 
 class StringField(Button):
 	'''Button + Entry to enter string'''
-	def __init__(self, root, parent, key, text, command, column=1):
+	def __init__(self, root, parent, key, text, command, column=1, columnspan=1):
 		self.string = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='e', padx=root.PAD)
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, sticky='w', padx=root.PAD)
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 
 class StringRadiobuttons:

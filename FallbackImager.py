@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-16'
+__version__ = '0.5.0_2024-04-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -27,6 +27,8 @@ from sqlite import SQLite, SQLiteCli
 from lib.sqlitegui import SQLiteGui
 from reporter import Reporter, ReporterCli
 from lib.reportergui import ReporterGui
+from hashedcopy import HashedCopy, HashedCopyCli
+from lib.hashedcopygui import HashedCopyGui
 if __os_name__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
 	from oscdimager import OscdImager, OscdImagerCli
@@ -241,23 +243,25 @@ class Gui(GuiBase):
 		'''Build GUI'''
 		not_admin = False
 		if __os_name__ == 'nt':
+			if not IsUserAnAdmin():
+				not_admin = True
 			candidates = (
 				(OscdImager, OscdImagerCli, OscdImagerGui),
 				(DismImager, DismImagerCli, DismImagerGui),
 				(ZipImager, ZipImagerCli, ZipImagerGui),
+				(HashedCopy, HashedCopyCli, HashedCopyGui),
 				(SQLite, SQLiteCli, SQLiteGui),
 				(Reporter, ReporterCli, ReporterGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
 				(WipeW, WipeWCli, WipeWGui)
 			)
-			if not IsUserAnAdmin():
-				not_admin = True
 		else:
 			candidates = (
 				(EwfImager, EwfImagerCli, EwfImagerGui),
 				(EwfChecker, EwfCheckerCli, EwfCheckerGui),
 				(Reporter, ReporterCli, ReporterGui),
 				(ZipImager, ZipImagerCli, ZipImagerGui),
+				(HashedCopy, HashedCopyCli, HashedCopyGui),
 				(SQLite, SQLiteCli, SQLiteGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
 				(WipeR, WipeRCli, WipeRGui)
