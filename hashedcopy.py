@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-21'
+__version__ = '0.5.0_2024-04-23'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -53,7 +53,7 @@ class HashedCopy:
 				self.log.error('Destination directory is not empty')
 		else:
 			self.dst_root_path.mkdir()
-		files = list()
+		files = set()
 		self.echo('Reading source and creating destination directories')
 		for source in sources:
 			source_path = ExtPath.path(source)
@@ -61,11 +61,11 @@ class HashedCopy:
 				source_path.mkdir(parents=True, exist_ok=True)
 				for abs_path, rel_path, tp in ExtPath.walk(source_path):
 					if tp == 'Dir':
-						(self.dst_root_path/rel_path).mkdir(parents=True, exist_ok=True)
+						(self.dst_root_path/source_path.name/rel_path).mkdir(parents=True, exist_ok=True)
 					else:
-						files.append((abs_path, self.dst_root_path/rel_path))
+						files.add((abs_path, self.dst_root_path/source_path.name/rel_path))
 			else:
-				files.append((abs_path, self.dst_root_path/rel_path))
+				files.add((source_path, self.dst_root_path/source_path.name))
 		self.echo('Copying files')
 		hashed_files = list()
 		progress = Progressor(len(files), echo=self.echo)
@@ -91,7 +91,7 @@ class HashedCopy:
 					line += 'no'
 					error_cnt += 1
 				print(line, file=fh)
-		self.log.info(f'Copied {len(hashed_files)-error_cnt} file(s)', echo=True)
+		self.log.info(f'Copied {len(hashed_files)-error_cnt} file(s), check {self.tsv_path}', echo=True)
 		if error_cnt > 0:
 			self.log.error(f'{error_cnt} missing file(s)')
 
@@ -102,7 +102,7 @@ class HashedCopyCli(ArgumentParser):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
 		self.add_argument('-d', '--destination', type=ExtPath.path, required=True,
-			help='Destination root', metavar='DIRECTORY'
+			help='Destination root (required)', metavar='DIRECTORY'
 		)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'

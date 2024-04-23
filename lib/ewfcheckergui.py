@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from tkinter.messagebox import showerror
 from lib.guielements import ExpandedFrame, SourceDirSelector, GridSeparator, GridLabel
 from lib.guielements import FilenameSelector, DirSelector, FileSelector
 from lib.guielements import StringRadiobuttons, GridButton, GridBlank

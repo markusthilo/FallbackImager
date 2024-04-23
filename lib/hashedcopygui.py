@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
+from tkinter.messagebox import showerror
 from tkinter.filedialog import askopenfilenames, askdirectory
 from lib.guielements import ExpandedLabel, ExpandedScrolledText, Checker, VerticalButtons
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
@@ -29,7 +30,7 @@ class HashedCopyGui:
 		DirSelector(root, frame, root.DESTINATION,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridLabel(root, frame, root.LOGGING)
-		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
+		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridSeparator(root, frame)
@@ -55,12 +56,11 @@ class HashedCopyGui:
 	def _add_job(self):
 		'''Generate command line'''
 		self.root.settings.section = self.CMD
-		source = self.root.settings.get(self.root.SOURCE)
 		outdir = self.root.settings.get(self.root.OUTDIR)
 		filename = self.root.settings.get(self.root.FILENAME)
-		compression = self.root.settings.get(self.root.COMPRESSION)
+		destination = self.root.settings.get(self.root.DESTINATION)
 		cmd = self.root.settings.section.lower()
-		if not outdir:
+		if not outdir or not destination:
 			showerror(
 				title = self.root.MISSING_ENTRIES,
 				message = self.root.DEST_DIR_REQUIRED
@@ -74,18 +74,13 @@ class HashedCopyGui:
 			return
 		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
 		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		name = self.root.settings.get(self.root.IMAGE_NAME)
-		if name:
-			cmd += f' --name "{name}"'
-		description = self.root.settings.get(self.root.IMAGE_DESCRIPTION)
-		if description:
-			cmd += f' --description "{description}"'
-		if compression:
-			cmd += f' --compress "{compression.lower()}"'
-		if self.root.settings.get(self.root.COPY_EXE) == '1':
-			cmd += ' --exe'
-		cmd += f' "{source}"'
-
+		cmd += f' --{self.root.DESTINATION.lower()} "{destination}"'
+		while True:
+			line = self.sources.get('1.0', '2.0').strip()
+			if not line:
+				break
+			self.sources.delete('1.0', '2.0')
+			cmd += f' "{line}"'
 
 		'''
 		last = self.jobs_text.get('end-2l', 'end').strip(';\n')
