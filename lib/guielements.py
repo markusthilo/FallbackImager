@@ -79,7 +79,7 @@ class GridButton(Button):
 
 class GridSeparator:
 	'''|-------|'''
-	def __init__(self, root, parent, column=0, columnspan=3):
+	def __init__(self, root, parent, column=0, columnspan=255):
 		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD, pady=root.PAD)
 		root.row += 1
@@ -98,7 +98,7 @@ class GridIntMenu(OptionMenu):
 class GridStringMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
 	def __init__(self, root, parent, key, text, values,
-		default=None, column=0, columnspan=1):
+		default=None, column=0, columnspan=255):
 		self.variable = root.settings.init_stringvar(key, default=default)
 		Label(parent, text=f'{text}	').grid(
 			sticky='e', row=root.row, column=column, columnspan=columnspan)

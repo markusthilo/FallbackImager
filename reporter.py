@@ -14,7 +14,6 @@ Example: reporter-example-template.txt
 
 from json import load
 from re import compile as regcompile
-from pathlib import Path
 from argparse import ArgumentParser
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
@@ -28,8 +27,8 @@ class Reporter:
 
 	def parse(self, json, template):
 		'''Parse json through template'''
-		self.json_path = Path(json)
-		self.template = Path(template)
+		self.json_path = ExtPath.path(json)
+		self.template = ExtPath.path(template)
 		with self.json_path.open() as fh:
 			inserts = load(fh)
 		reg = regcompile('[%\\\\]jinsert\\{([^}]*)\\}\\{([^}]+)\\}')

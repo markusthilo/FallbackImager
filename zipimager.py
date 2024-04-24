@@ -11,7 +11,6 @@ __description__ = '''
 Using the Python library zipfile this module generates an ZIP archive from a source file structure.
 '''
 
-from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 from argparse import ArgumentParser
 from lib.extpath import ExtPath, Progressor
@@ -28,7 +27,7 @@ class ZipImager:
 
 	def create(self, root, filename=None, outdir=None, echo=print, log=None):
 		'''Build zip file'''
-		self.root_path = Path(root)
+		self.root_path = ExtPath.path(root)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo

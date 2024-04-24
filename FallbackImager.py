@@ -8,8 +8,11 @@ __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
-
+This is a modular utility for forensic work as a complement
+or fallback to the commercial and/or established tools.
+The modules write log files into given output directories,
+calculate hashes and/or lists of copied files etc.
+Multiple jobs can be generated and executed sequentially.
 This is work in progress.
 '''
 
@@ -17,7 +20,6 @@ from pathlib import Path
 from sys import executable as __executable__
 from os import name as __os_name__
 from argparse import ArgumentParser
-from tkinter.messagebox import showerror
 from lib.guibase import GuiBase
 from zipimager import ZipImager, ZipImagerCli
 from lib.zipimagergui import ZipImagerGui
@@ -50,7 +52,7 @@ else:
 	__parent_path__ = Path(__file__).parent
 
 class Gui(GuiBase):
-	'''GUI, not that I need one but there is Windows and Mac folks...'''
+	'''Definitions for the GUI'''
 
 	PAD = 4
 	JOB_HEIGHT = 4
@@ -261,10 +263,10 @@ class Gui(GuiBase):
 			candidates = (
 				(EwfImager, EwfImagerCli, EwfImagerGui),
 				(EwfChecker, EwfCheckerCli, EwfCheckerGui),
-				(Reporter, ReporterCli, ReporterGui),
 				(ZipImager, ZipImagerCli, ZipImagerGui),
 				(HashedCopy, HashedCopyCli, HashedCopyGui),
 				(SQLite, SQLiteCli, SQLiteGui),
+				(Reporter, ReporterCli, ReporterGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
 				(WipeR, WipeRCli, WipeRGui)
 			)

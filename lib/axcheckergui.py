@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-from functools import partial
 from tkinter.messagebox import showerror
-from tkinter import Button, Label
 from tkinter.ttk import Treeview, Scrollbar
 from lib.guielements import SourceDirSelector, Checker, LeftLabel
 from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank

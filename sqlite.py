@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.1_2024-04-15'
+__version__ = '0.5.0_2024-04-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,7 +11,6 @@ __description__ = '''
 The Sqlite module uses the Python library sqlite3. It can show the structure of a .db file or dump the content as CSV/TSV. In addition SQL code can be executed by the library. An alternative method is implemented that is designed to generate a .db file from a MySQL dump file in case sqlite3 fails.
 '''
 
-from pathlib import Path
 from argparse import ArgumentParser
 from tkinter.messagebox import showerror
 from tkinter.scrolledtext import ScrolledText
@@ -35,7 +34,7 @@ class SQLite:
 	):
 		'''Prepare to create zip file'''
 		self.echo = echo
-		self.db_path = Path(db)
+		self.db_path = ExtPath.path(db)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		self.log = log
@@ -191,10 +190,10 @@ class SQLiteCli(ArgumentParser):
 		self.add_argument('-l', '--list', default=False, action='store_true',
 			help='List tables/schema, ignore other tasks', dest='echo_schema'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('-r', '--read', type=Path,
+		self.add_argument('-r', '--read', type=ExtPath.path,
 			help='Read dump file and fill SQLite DB (alternative method to -x)', metavar='FILE'
 		)
 		self.add_argument('-s', '--schema', default=False, action='store_true',
@@ -203,10 +202,10 @@ class SQLiteCli(ArgumentParser):
 		self.add_argument('-t', '--table', type=str,
 			help='Dump table'
 		)
-		self.add_argument('-x', '--execute', type=Path,
+		self.add_argument('-x', '--execute', type=ExtPath.path,
 			help='Execute SQL statements from file an apply to database', metavar='FILE'
 		)
-		self.add_argument('db', nargs=1, type=Path,
+		self.add_argument('db', nargs=1, type=ExtPath.path,
 			help='Database file', metavar='FILE'
 		)
 

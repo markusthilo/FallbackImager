@@ -84,7 +84,7 @@ class WipeR:
 				head = 'wiper.WipeR',
 				echo = self.echo
 			)
-		if Path(targets[0]).is_block_device():
+		if ExtPath.path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
 		cmd = [f'{self.zd_path}']
@@ -129,7 +129,7 @@ class WipeR:
 		):
 		'''Generate partition and file system'''
 		if loghead:
-			loghead = Path(loghead)
+			loghead = ExtPath.path(loghead)
 		else:
 			loghead = __parent_path__/'wipe-log-head.txt'
 		if not name:
@@ -195,7 +195,7 @@ class WipeRCli(ArgumentParser):
 			help='Byte to overwrite with as hex (00 - ff)',
 			metavar='HEX_BYTE'
 		)
-		self.add_argument('-g', '--loghead', type=Path,
+		self.add_argument('-g', '--loghead', type=ExtPath.path,
 			help='Use the given file as head when writing log to new drive',
 			metavar='FILE'
 		)
@@ -206,10 +206,10 @@ class WipeRCli(ArgumentParser):
 			help='Name/label of the new partition (when target is a physical drive)',
 			metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=Path,
+		self.add_argument('-o', '--outdir', type=ExtPath.path,
 			help='Directory to write log', metavar='DIRECTORY'
 		)
-		self.add_argument('-p', '--mount', type=Path,
+		self.add_argument('-p', '--mount', type=ExtPath.path,
 			help='Mountpoint to the new partition (when target is a physical drive)',
 			metavar='DIRECTORY'
 		)
@@ -226,7 +226,7 @@ class WipeRCli(ArgumentParser):
 		self.add_argument('-x', '--extra', action='store_true',
 			help='Overwrite all bytes/blocks twice, write random bytes at 1st pass'
 		)
-		self.add_argument('targets', nargs='*', type=str,
+		self.add_argument('targets', nargs='*', type=ExtPath.path,
 			help='Target blockdevice or file(s) (/dev/sdc)', metavar='BLOCKDEVICE/FILE'
 		)
 

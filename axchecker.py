@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.1_2024-04-15'
+__version__ = '0.5.0.1_2024-04-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,7 +15,6 @@ Hits are files, that are represented in the artifacts.
 This tool might help to find missing files. Be aware that you will (nearly) never have full accordance.
 '''
 
-from pathlib import Path
 from argparse import ArgumentParser
 from os import name as __os_name__
 from lib.extpath import ExtPath, Progressor
@@ -34,7 +33,7 @@ class AxChecker:
 	def open(self, mfdb, echo=print):
 		'''Open database'''
 		self.mfdb = MfdbReader(mfdb)
-		self.mfdb_path = Path(mfdb)
+		self.mfdb_path = ExtPath.path(mfdb)
 		self.echo = echo
 
 	def list_roots(self, max_depth):
@@ -87,7 +86,9 @@ class AxChecker:
 		):
 		'''Compare to CSV/TSV path list or existing file structure'''
 		self._set_output(filename, outdir, log)
-		self.diff_path = Path(diff)
+		if not root_id:
+			self.log.error('Missing root ID to compare')
+		self.diff_path = ExtPath.path(diff)
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
 		axiom_file_paths = self.mfdb.file_paths(root_id)
 		self.log.info(f'Comparing {self.mfdb.paths[root_id][1]} recursivly to {self.diff_path.name}', echo=True)
@@ -102,9 +103,6 @@ class AxChecker:
 				).open(mode='w', encoding='utf-8') as fh:
 				for absolut_path, relative_path, tp in ExtPath.walk(self.diff_path):
 					progress.inc()
-
-					print(absolut_path, relative_path, tp)
-
 					if tp == 'File' and not normalize(relative_path) in axiom_file_paths:
 						print(relative_path, file=fh)
 						missing_cnt += 1

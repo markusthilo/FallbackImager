@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.1_2024-04-15'
+__version__ = '0.5.0_2024-04-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -40,7 +40,7 @@ class EwfChecker:
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None):
 		'''Verify image'''
-		self.image_path = Path(image)
+		self.image_path = ExtPath.path(image)
 		if not self.image_path.suffix:
 			self.image_path = self.image_path.with_suffix('.E01')
 		self.echo = echo

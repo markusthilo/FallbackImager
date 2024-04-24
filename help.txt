@@ -26,10 +26,6 @@ This is a conveniant interface for ewfacquire from libewf. This module is not av
 EwfChecker
 The module simply uses ewfinfo. ewfexport and ewfewfverify to check an EWF/E01 image file. It is used by EwfImager. This is not available on Windows.
 
-Reporter
-The tool parses a template and replaces %jinsert{}{} or \jinsert{}{} by values from a JSON file.
-Example: reporter-example-template.txt
-
 OscdImager
 The module uses oscdimg.exe (from the Windows ADK Package) to generate an ISO file (UDF file system). Obviously this module is only available on Windows.
 
@@ -39,8 +35,15 @@ This module is only availible on Windows with Admin privileges. It generates an 
 ZipImager
 Using the Python library zipfile this module generates an ZIP archive from a source file structure. The process is robust to unreadable paths and a TSV path list is generated.
 
+HashedCopy
+Copies files and verifies by md5 and sha256. Filenames and hashes are stored as TSV.
+
 Sqlite
 The Sqlite module uses the Python library sqlite3. It can show the structure of a .db file (“Dump schema”) or dump the content as CSV/TSV (“Dump content”). In addition SQL code can be executed (“Execute SQL”) by the library. An alternative method is implemented (“Alternative”) that is designed to generate a .db file from a MySQL dump file in case sqlite3 fails.
+
+Reporter
+The tool parses a template and replaces %jinsert{}{} or \jinsert{}{} by values from a JSON file.
+Example: reporter-example-template.txt
 
 AxChecker
 As Magnet’s AXIOM has proven to be unreliable in the past, this module compares the files in an AXIOM Case.mfdb to a file list (CSV/TSV e.g. created with X-Ways) or a local file structure. Only one partition or subtree of the case file can be compared at a time.

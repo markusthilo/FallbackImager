@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.4.1_2024-04-15'
+__version__ = '0.5.0_2024-04-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -54,7 +54,7 @@ class EwfImager:
 			**kwargs
 		):
 		'''Run ewfacquire'''
-		self.source = Path(source)
+		self.source = ExtPath.path(source)
 		self.filename = Path(ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}'))
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
@@ -209,7 +209,7 @@ class EwfImagerCli(ArgumentParser):
 		self.add_argument('--setro', action='store_true',
 			help='Set target block device to read only'
 		)
-		self.add_argument('source', nargs=1, type=Path,
+		self.add_argument('source', nargs=1, type=ExtPath.path,
 			help='The source device, partition or anything else that works with ewfacquire',
 			metavar='BLOCKDEVICE/PARTITON/FILE'
 		)

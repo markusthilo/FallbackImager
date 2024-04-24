@@ -128,6 +128,9 @@ This module is only availible on Windows with Admin privileges. It generates an 
 ### ZipImager
 Using the Python library *zipfile* this module generates an ZIP archive from a source file structure. The process is robust to unreadable paths and a TSV path list is generated.
 
+### HashedCopy
+Copies files and verifies by md5 and sha256. Filenames and hashes are stored as TSV.
+
 ### Sqlite
 The Sqlite module uses the Python library *sqlite3*. It can show the structure of a *.db* file ("Dump schema") or dump the content as CSV/TSV ("Dump content"). In addition SQL code can be executed ("Execute SQL") by the library. An alternative method is implemented ("Alternative") that is designed to generate a *.db* file from a MySQL dump file in case *sqlite3* fails.
 

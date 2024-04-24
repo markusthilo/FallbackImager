@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-23'
+__version__ = '0.5.0_2024-04-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,7 +11,6 @@ __description__ = '''
 Safe copy with log and hashes.
 '''
 
-from pathlib import Path
 from argparse import ArgumentParser
 from hashlib import md5, sha256
 from time import time, sleep
@@ -36,7 +35,7 @@ class HashedCopy:
 
 	def cp(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
 		'''Copy multiple sources'''
-		self.dst_root_path = Path(destination)
+		self.dst_root_path = ExtPath.path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
