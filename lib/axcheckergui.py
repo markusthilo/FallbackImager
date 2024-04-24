@@ -3,8 +3,7 @@
 
 from tkinter.messagebox import showerror
 from tkinter.ttk import Treeview, Scrollbar
-from lib.guielements import SourceDirSelector, Checker, LeftLabel
-from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank
+from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, Checker
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton

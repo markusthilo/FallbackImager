@@ -5,8 +5,7 @@ from pathlib import Path
 from tkinter.messagebox import showerror
 from lib.guielements import SourceDirSelector, Checker, VerticalButtons
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, GridBlank
+from lib.guielements import FilenameSelector, StringSelector, GridButton, GridBlank
 from lib.timestamp import TimeStamp
 
 class DismImagerGui:
@@ -31,7 +30,6 @@ class DismImagerGui:
 			command=self._gen_description)
 		VerticalButtons(root, frame, root.COMPRESSION, (root.MAX, root.FAST, root.NONE), root.NONE)
 		GridSeparator(root, frame)
-
 		Checker(root, frame, root.COPY_EXE, root.COPY_EXE, columnspan=2)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
