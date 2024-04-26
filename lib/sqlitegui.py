@@ -4,13 +4,13 @@
 from pathlib import Path
 from tkinter.scrolledtext import ScrolledText
 from tkinter.messagebox import showerror
-from lib.guielements import SourceDirSelector, Checker, LeftLabel
-from lib.guielements import ChildWindow, SelectTsvColumn
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
-from lib.guielements import GridBlank, StringRadiobuttonsFrame
-from sqlite import SQLite
+from .guielements import SourceDirSelector, Checker, LeftLabel
+from .guielements import ChildWindow, SelectTsvColumn, Tree
+from .guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
+from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
+from .guielements import FileSelector, GridButton, LeftButton, RightButton
+from .guielements import GridBlank, StringRadiobuttonsFrame
+from .sqliteutils import SQLiteReader
 
 class SQLiteGui:
 	'''Notebook page for SQLite'''
@@ -55,24 +55,55 @@ class SQLiteGui:
 		if self.root.child_win_active:
 			return
 		self.root.settings.section = self.CMD
-		db = self.root.settings.get(self.root.SQLITE_DB)
-		if not db:
+		sqlite_db = self.root.settings.get(self.root.SQLITE_DB)
+		if not sqlite_db:
 			showerror(
 				title = self.root.SQLITE_DB,
 				message = self.root.FIRST_CHOOSE_DB
 			)
 			return
 		try:
-			schema = SQLite(Path(db)).get_schema()
+			reader = SQLiteReader(Path(sqlite_db))
 		except Exception as e:
 			showerror(title=self.root.ERROR, message=repr(e))
 			return
 		window = ChildWindow(self.root, self.root.SCHEMA)
+		frame = ExpandedFrame(self.root, window)
+		self.tree = Tree(self.root, frame)
+		entries = dict()
+
+
+		for table, columns in reader.list_tables():
+			line = f'{table} ({reader.count(table)}):'
+			for column in columns:
+				if col_type := reader.get_type(table, column):
+					line += f'\t{column} ({col_type})'
+				else:
+					line += f'\t{column}'
+			print(line)
+
+
+		'''
+		for source_id, parent_id, source_type, friendly_value in MfdbReader(mfdb).tree():
+			if parent_id:
+				try:
+					parent = entries[parent_id]
+				except KeyError:
+					continue
+				entries[source_id] = self.tree.insert(parent, 'end', text=friendly_value, iid=source_id)
+			else:
+				entries[source_id] = self.tree.insert('', 'end', text=friendly_value, iid=source_id)
+			if source_type == 'Partition':
+				self.tree.see(source_id)
+		'''
+		'''
 		text = ScrolledText(window, width=self.root.ENTRY_WIDTH, height=4*self.root.INFO_HEIGHT)
 		text.pack(fill='both', expand=True)
 		text.bind('<Key>', lambda dummy: 'break')
 		text.insert('end', schema)
 		text.configure(state='disabled')
+		'''
+
 		frame = ExpandedFrame(self.root, window)
 		RightButton(self.root, frame, self.root.QUIT, window.destroy)
 

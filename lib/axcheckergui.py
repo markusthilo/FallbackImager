@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from tkinter.messagebox import showerror
-from tkinter.ttk import Treeview, Scrollbar
-from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, Checker
+from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, Checker, Tree
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
@@ -21,28 +20,28 @@ class AxCheckerGui:
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.AXIOM, columnspan=3)
+		GridLabel(root, frame, root.AXIOM)
 		FileSelector(root, frame, root.CASE_FILE, root.CASE_FILE,
 			f'{root.OPEN_CASE_FILE} ({root.AXIOM_CASE_FILE})',
 			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
 		StringSelector(root, frame, root.ROOT, root.ROOT,
 			command=self._select_root)	
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
+		GridLabel(root, frame, root.DESTINATION)
 		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.VERIFY_FILE, columnspan=2)
+		GridLabel(root, frame, root.VERIFY_FILE)
 		StringRadiobuttons(root, frame, root.VERIFY_FILE,
 			(root.DO_NOT_COMPARE, root.FILE_STRUCTURE, root.TSV), root.DO_NOT_COMPARE)
-		GridLabel(root, frame, root.DO_NOT_COMPARE, column=1, columnspan=2)
+		GridLabel(root, frame, root.DO_NOT_COMPARE, column=1)
 		DirSelector(root, frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE,
 			command=self._select_file_structure)
 		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
 			filetype=('Text/TSV', '*.txt'), command=self._select_tsv_file)
 		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
-		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, column=1)
+		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, columnspan=3)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
@@ -65,24 +64,19 @@ class AxCheckerGui:
 		self.child_window = ChildWindow(self.root, self.root.SELECT_ROOT)
 		self.child_window.resizable(0, 0)
 		frame = ExpandedFrame(self.root, self.child_window)
-		self.tree = dict()
-		self.treeview = Treeview(frame, selectmode='browse', height=self.root.TREE_HEIGHT, show='tree')
-		self.treeview.column("#0", width=self.root.TREE_WIDTH)
-		self.treeview.pack(side='left', expand=True)
-		vsb = Scrollbar(frame, orient='vertical', command=self.treeview.yview)
-		vsb.pack(side='right', fill='y')
-		self.treeview.configure(yscrollcommand=vsb.set)
+		self.tree = Tree(self.root, frame)
+		entries = dict()
 		for source_id, parent_id, source_type, friendly_value in MfdbReader(mfdb).tree():
 			if parent_id:
 				try:
-					parent = self.tree[parent_id]
+					parent = entries[parent_id]
 				except KeyError:
 					continue
-				self.tree[source_id] = self.treeview.insert(parent, 'end', text=friendly_value, iid=source_id)
+				entries[source_id] = self.tree.insert(parent, 'end', text=friendly_value, iid=source_id)
 			else:
-				self.tree[source_id] = self.treeview.insert('', 'end', text=friendly_value, iid=source_id)
+				entries[source_id] = self.tree.insert('', 'end', text=friendly_value, iid=source_id)
 			if source_type == 'Partition':
-				self.treeview.see(source_id)
+				self.tree.see(source_id)
 		frame = ExpandedFrame(self.root, self.child_window)
 		LeftButton(self.root, frame, self.root.SELECT, self._get_root)
 		RightButton(self.root, frame, self.root.QUIT, self.child_window.destroy)
@@ -90,7 +84,7 @@ class AxCheckerGui:
 	def _get_root(self):
 		'''Get the selected root'''
 		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.ROOT).set(self.treeview.focus())
+		self.root.settings.raw(self.root.ROOT).set(self.tree.focus())
 		self.child_window.destroy()
 
 	def _select_file_structure(self):

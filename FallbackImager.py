@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-21'
+__version__ = '0.5.0_2024-04-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -242,6 +242,8 @@ class Gui(GuiBase):
 	ERRORS = 'error(s)'
 	ADD_SRC_FILES = 'Add file(s) to source'
 	ADD_SRC_DIR = 'Add directory to source'
+	UNABLE_ACCESS = 'Unable to access'
+	ROOT_HELP = 'Root permission might help'
 
 	def __init__(self, debug=False):
 		'''Build GUI'''

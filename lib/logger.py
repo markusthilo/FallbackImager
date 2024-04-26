@@ -11,7 +11,7 @@ class Logger:
 		'''Open/create directory to write logs'''
 		self.outdir = ExtPath.mkdir(outdir)
 		self.path = ExtPath.child(f'{filename}_log.txt', parent=self.outdir)
-		self._fh = self.path.open(mode='w')
+		self._fh = self.path.open(mode='w', buffering=1)
 		self.info(head)
 		self.echo = echo
 

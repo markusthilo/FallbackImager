@@ -18,6 +18,7 @@ class ReporterGui:
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
+		GridSeparator(root, frame)
 		GridLabel(root, frame, root.SOURCE)
 		FileSelector(root, frame,
 			root.TEMPLATE, root.TEMPLATE, root.SELECT_TEMPLATE, filetype=('TXT', '*.txt'))

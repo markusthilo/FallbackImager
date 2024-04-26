@@ -3,13 +3,12 @@
 
 from pathlib import Path
 from functools import partial
-from tkinter import Toplevel, StringVar, Canvas, Scrollbar
-from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button
-from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu
+from tkinter import Toplevel, StringVar
+from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button, Treeview
+from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu, Scrollbar
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
 from tkinter.messagebox import showerror
-from platform import system as operatingsystem
 from .timestamp import TimeStamp
 from .extpath import ExtPath
 
@@ -72,74 +71,87 @@ class RightButton(Button):
 
 class GridButton(Button):
 	'''| | Button | | |'''
-	def __init__(self, root, parent, text, command, column=1, columnspan=1):
+	def __init__(self, root, parent, text, command, column=1, columnspan=1, incrow=True):
 		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
-		root.row += 1
+		if incrow:
+			root.row += 1
 
 class GridSeparator:
 	'''|-------|'''
-	def __init__(self, root, parent, column=0, columnspan=255):
+	def __init__(self, root, parent, column=0, columnspan=255, incrow=True):
 		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD, pady=root.PAD)
-		root.row += 1
+		if incrow:
+			root.row += 1
 
 class GridIntMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
 	def __init__(self, root, parent, key, text, values,
-		default=None, column=0, columnspan=1):
+		default=None, column=1, columnspan=2, incrow=True):
 		self.variable = root.settings.init_intvar(key, default=default)
-		Label(parent, text=f'{text}	').grid(
-			sticky='e', row=root.row, column=column, columnspan=columnspan)
+		Label(parent, text=f'{text}	').grid(sticky='e', row=root.row, column=column)
 		super().__init__(parent, self.variable, self.variable.get(), *values)
-		self.grid(sticky='w', row=root.row, column=column+columnspan)
-		root.row += 1
+		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1)
+		if incrow:
+			root.row += 1
 
 class GridStringMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
 	def __init__(self, root, parent, key, text, values,
-		default=None, column=0, columnspan=255):
+		default=None, column=1, columnspan=2, incrow=True):
 		self.variable = root.settings.init_stringvar(key, default=default)
-		Label(parent, text=f'{text}	').grid(
-			sticky='e', row=root.row, column=column, columnspan=columnspan)
+		Label(parent, text=text, width=len(text)+1).grid(sticky='e', row=root.row, column=column, padx=(root.PAD, 0))
 		super().__init__(parent, self.variable, self.variable.get(), *values)
-		self.grid(sticky='w', row=root.row, column=column+columnspan)
-		root.row += 1
+		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1, padx=(0,root.PAD))
+		if incrow:
+			root.row += 1
+
+class Checker(Checkbutton):
+	'''Checkbox'''
+	def __init__(self, root, parent, key, text, column=0, columnspan=2):
+		self.bool_var = root.settings.init_boolvar(key)
+		super().__init__(parent, variable=self.bool_var)
+		self.grid(row=root.row, column=column)
+		GridLabel(root, parent, text, column=column+1, columnspan=columnspan-1)
 
 class GridLabel:
 	'''| Label |'''
-	def __init__(self, root, parent, text, column=0, columnspan=3):
+	def __init__(self, root, parent, text, column=0, columnspan=255, incrow=True):
 		Label(parent, text=text).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD)
-		root.row += 1
+		if incrow:
+			root.row += 1
 
 class GridBlank:
 	'''| |'''
-	def __init__(self, root, parent, column=0):
-		Label(parent, text='	  ').grid(row=root.row, column=column, padx=root.PAD)
-		root.row += 1
+	def __init__(self, root, parent, width=2, column=0, incrow=True):
+		Label(parent, width=width).grid(row=root.row, column=column, padx=root.PAD)
+		if incrow:
+			root.row += 1
 
 class StringField(Button):
 	'''Button + Entry to enter string'''
-	def __init__(self, root, parent, key, text, command, column=1, columnspan=1):
+	def __init__(self, root, parent, key, text, command, column=1, columnspan=255, incrow=True):
 		self.string = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='e', padx=root.PAD)
 		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
-		root.row += 1
+			row=root.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=root.PAD)
+		if incrow:
+			root.row += 1
 
 class StringRadiobuttons:
 	'''| Rabiobutton | | | |'''
 	def __init__(self, root, parent, key, buttons, default, column=0):
 		self.variable = root.settings.init_stringvar(key, default=default)
-		for row, value in enumerate(buttons):
+		for row, value in enumerate(buttons, root.row):
 			Radiobutton(parent, variable=self.variable, value=value).grid(
-				row=root.row+row, column=column, sticky='w', padx=root.PAD)
+				row=row, column=column, sticky='w', padx=root.PAD)
 
 class StringRadiobuttonsFrame:
 	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
-	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=2):
+	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=255, incrow=True):
 		frame = Frame(parent)
 		frame.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
 		self.variable = root.settings.init_stringvar(key, default=default)
@@ -147,23 +159,25 @@ class StringRadiobuttonsFrame:
 			Radiobutton(frame, variable=self.variable, value=value).pack(
 				side='left', padx=(root.PAD, 0))
 			Label(frame, text=value).pack(side='left', padx=(0, 4*root.PAD))
-		root.row += 1
+		if incrow:
+			root.row += 1
 
 class VerticalButtons:
 	'''---|Radiobutton|Radiobutton|Radiobutton|---'''
-	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=1):
+	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=255, incrow=True):
 		Label(parent, text=key).grid(row=root.row, column=column, columnspan=columnspan)
 		frame = Frame(parent)
-		frame.grid(row=root.row, column=column+columnspan, sticky='w', padx=root.PAD)
+		frame.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
 		self.variable = root.settings.init_stringvar(key, default=default)
 		for button in buttons:
 			Radiobutton(frame, variable=self.variable, value=button, text=button).pack(
 				side='right', padx=root.PAD)
-		root.row += 1
+		if incrow:
+			root.row += 1
 
 class SourceDirSelector(Button):
 	'''Select source'''
-	def __init__(self, root, parent, column=0, columnspan=1):
+	def __init__(self, root, parent, column=0, columnspan=255):
 		self.source_str = root.settings.init_stringvar(root.SOURCE)
 		GridSeparator(root, parent)
 		GridLabel(root, parent, root.SOURCE, columnspan=columnspan+2)
@@ -182,7 +196,7 @@ class SourceDirSelector(Button):
 class StringSelector(Button):
 	'''String for names, descriptions etc.'''
 	def __init__(self, root, parent, key, text, command=None,
-		column=1, columnspan=1, width=None, default=None):
+		column=1, columnspan=255, width=None, default=None, incrow=True):
 		self.string = root.settings.init_stringvar(key, default=default)
 		if not command:
 			command = self._command
@@ -191,8 +205,9 @@ class StringSelector(Button):
 		if not width:
 			width = root.ENTRY_WIDTH
 		Entry(parent, textvariable=self.string, width=width).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
-		root.row += 1
+			row=root.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=root.PAD)
+		if incrow:
+			root.row += 1
 		self.default = default
 	def _command(self):
 		if self.string.get():
@@ -200,26 +215,18 @@ class StringSelector(Button):
 		if self.default:
 			self.string.set(self.default)
 
-class Checker(Checkbutton):
-	'''Checkbox'''
-	def __init__(self, root, parent, key, text, column=1, columnspan=1):
-		self.int_var = root.settings.init_stringvar(key)
-		super().__init__(parent, variable=self.int_var)
-		self.grid(row=root.row, column=column, sticky='e')
-		GridLabel(root, parent, text, column=column+1, columnspan=columnspan)
-
 class FileSelector(Button):
 	'''Button to select file to read'''
 	def __init__(self, root, parent, key, text, ask, command=None,
 		filetype=('Text files', '*.txt'), default=None, initialdir=None,
-		column=1, columnspan=1):
+		column=1, columnspan=255):
 		self.file_str = root.settings.init_stringvar(key)
 		if default:
 			self.file_str.set(default)
 		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
 		Entry(parent, textvariable=self.file_str, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+			row=root.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=root.PAD)
 		root.row += 1
 		self.root = root
 		self.ask = ask
@@ -240,7 +247,7 @@ class FileSelector(Button):
 class FilesSelector(ScrolledText):
 	'''ScrolledText to select files'''
 	def __init__(self, root, parent, key, text, ask, command=None, width=None, height=None,
-		filetypes=(('All files', '*.*'),), column=1, columnspan=1):
+		filetypes=(('All files', '*.*'),), column=1, columnspan=255):
 		if not width:
 			width = root.FILES_FIELD_WIDTH
 		if not height:
@@ -270,7 +277,7 @@ class FilesSelector(ScrolledText):
 
 class FilenameSelector(Button):
 	'''Button + Entry to enter string'''	
-	def __init__(self, root, parent, key, text, default=None, command=None, column=1, columnspan=1):
+	def __init__(self, root, parent, key, text, default=None, command=None, column=1, columnspan=255):
 		self.string = root.settings.init_stringvar(key)
 		self.default = default
 		if not command:
@@ -293,7 +300,7 @@ class FilenameSelector(Button):
 
 class DirSelector(Button):
 	'''Button + Entry to select directory'''
-	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=1):
+	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=255):
 		self.dir_str = root.settings.init_stringvar(key)
 		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
@@ -309,6 +316,20 @@ class DirSelector(Button):
 			self.dir_str.set(new_dir)
 		if self.command:
 			self.command()
+
+class Tree(Treeview):
+	'''Treeview with vertical scroll bar'''
+	def __init__(self, root, parent, selectmode='browse', width=None, height=None):
+		if not width:
+			width = root.TREE_WIDTH
+		if not height:
+			height = root.TREE_HEIGHT
+		super().__init__(parent, selectmode=selectmode, height=height, show='tree')
+		self.column("#0", width=width)
+		self.pack(side='left', expand=True)
+		vsb = Scrollbar(parent, orient='vertical', command=self.yview)
+		vsb.pack(side='right', fill='y')
+		self.configure(yscrollcommand=vsb.set)
 
 class ChildWindow(Toplevel):
 	'''Child window to main application window'''

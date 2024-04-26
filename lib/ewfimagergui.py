@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 
 from tkinter.messagebox import showerror
-from tkinter.ttk import Button
+from tkinter.ttk import Label, Button
 from tkinter import Text
 from functools import partial
-from os import getlogin
+from os import getlogin, access, R_OK
 from lib.timestamp import TimeStamp
-from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu, GridStringMenu
-from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector, ExpandedLabelFrame
+from lib.guielements import Checker, GridStringMenu, ChildWindow
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
+from lib.guielements import StringSelector, StringRadiobuttons
+from lib.guielements import GridButton, LeftButton, RightButton, GridBlank
 from lib.linutils import LinUtils
 from lib.stringutils import StringUtils
 
@@ -32,35 +31,35 @@ class EwfImagerGui:
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.SOURCE)
 		StringSelector(root, frame, root.SOURCE, root.SOURCE,
-			command=self._select_source, columnspan=7)
+			command=self._select_source)
 		root.settings.raw(root.SOURCE).set('')
-		Checker(root, frame, root.SETRO, root.SETRO, column=2)
+		Checker(root, frame, root.SETRO, root.SETRO)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION)
-		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=7)
+		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR)
 		StringSelector(root, frame, root.CASE_NO, root.CASE_NO,
-			command=self._set_ts_case_no, columnspan=7)
+			command=self._set_ts_case_no)
 		StringSelector(root, frame, root.EVIDENCE_NO, root.EVIDENCE_NO,
-			command=self._set_def_evidence_no, columnspan=7)
+			command=self._set_def_evidence_no)
 		StringSelector(root, frame, root.DESCRIPTION, root.DESCRIPTION,
-			command=self._set_def_description, columnspan=7)
+			command=self._set_def_description)
 		StringSelector(root, frame, root.EXAMINER_NAME, root.EXAMINER_NAME,
-			command=self._set_def_examiner_name, columnspan=7)
+			command=self._set_def_examiner_name)
 		notes = [f'Notes {index}' for index in ('A', 'B', 'C')]
 		StringRadiobuttons(root, frame, root.NOTES, notes, notes[0])
 		for choice in notes:
-			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice), columnspan=7)
+			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice))
 		StringSelector(root, frame, root.SEGMENT_SIZE, root.SEGMENT_SIZE, default=root.AUTO, command=self._set_auto,
-			width=root.SMALL_FIELD_WIDTH, columnspan=2)
-		root.row -= 1
+			width=root.SMALL_FIELD_WIDTH, columnspan=2, incrow=False)
+		Label(frame, width=4).grid(row=root.row, column=3)
 		GridStringMenu(root, frame, root.COMPRESSION, root.COMPRESSION,
-			self.COMPRESSIONS, default=self.COMPRESSIONS[0], column=3)
-		root.row -= 1
+			self.COMPRESSIONS, default=self.COMPRESSIONS[0], column=4, incrow=False)
+		Label(frame, width=4).grid(row=root.row, column=6)
 		GridStringMenu(root, frame, root.MEDIA_TYPE, root.MEDIA_TYPE,
-			self.MEDIA_TYPES, default=self.MEDIA_TYPES[0], column=5)
-		root.row -= 1
+			self.MEDIA_TYPES, default=self.MEDIA_TYPES[0], column=7, incrow=False)
+		Label(frame, width=4).grid(row=root.row, column=9)
 		GridStringMenu(root, frame, root.MEDIA_FLAG, root.MEDIA_FLAG,
-			self.MEDIA_FLAGS, default=self.MEDIA_FLAGS[0], column=7)
+			self.MEDIA_FLAGS, default=self.MEDIA_FLAGS[0], column=10)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
@@ -109,8 +108,14 @@ class EwfImagerGui:
 	def _put_source(self, dev):
 		'''Put drive id to sourcestring'''
 		self.source_window.destroy()
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.SOURCE).set(dev)
+		if access(dev, R_OK):
+			self.root.settings.section = self.CMD
+			self.root.settings.raw(self.root.SOURCE).set(dev)
+		else:
+			showerror(
+				title = self.root.UNABLE_ACCESS,
+				message = self.root.ROOT_HELP
+			)
 
 	def _set_ts_case_no(self):
 		self.root.settings.section = self.CMD

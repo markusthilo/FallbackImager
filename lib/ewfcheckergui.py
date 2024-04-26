@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from tkinter.messagebox import showerror
-from lib.guielements import ExpandedFrame, SourceDirSelector, GridSeparator, GridLabel
+from lib.guielements import ExpandedFrame, GridSeparator, GridLabel
 from lib.guielements import FilenameSelector, DirSelector, FileSelector
-from lib.guielements import StringRadiobuttons, GridButton, GridBlank
+from lib.guielements import GridButton, GridBlank
 from ewfchecker import EwfChecker
 
 class EwfCheckerGui:
@@ -18,6 +18,7 @@ class EwfCheckerGui:
 		frame = ExpandedFrame(root, root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
+		GridSeparator(root, frame)
 		GridLabel(root, frame, root.EWF_IMAGE)
 		FileSelector(root, frame,
 			root.IMAGE, root.IMAGE, root.SELECT_IMAGE, filetype=('E01', '*.E01'))

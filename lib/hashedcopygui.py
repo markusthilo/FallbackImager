@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
 from tkinter.messagebox import showerror
 from tkinter.filedialog import askopenfilenames, askdirectory
-from lib.guielements import ExpandedLabel, ExpandedScrolledText, Checker, VerticalButtons
+from lib.guielements import ExpandedScrolledText, FilenameSelector
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, GridBlank
-from lib.timestamp import TimeStamp
+from lib.guielements import GridButton, GridBlank
 
 class HashedCopyGui:
 	'''Notebook page'''
@@ -23,8 +20,8 @@ class HashedCopyGui:
 		self.sources = ExpandedScrolledText(root, frame, root.JOB_HEIGHT)
 		frame = ExpandedFrame(root, frame)
 		root.row = 0
-		GridButton(root, frame, root.ADD_SRC_FILES, self._add_files, column=0, columnspan=2)
-		root.row -= 1
+		GridButton(root, frame, root.ADD_SRC_FILES, self._add_files,
+			column=0, columnspan=2, incrow=False)
 		GridButton(root, frame, root.ADD_SRC_DIR, self._add_dir, column=2)
 		GridLabel(root, frame, root.DESTINATION)
 		DirSelector(root, frame, root.DESTINATION,
@@ -81,15 +78,4 @@ class HashedCopyGui:
 				break
 			self.sources.delete('1.0', '2.0')
 			cmd += f' "{line}"'
-
-		'''
-		last = self.jobs_text.get('end-2l', 'end').strip(';\n')
-		if not last or cmd != last:
-			self.jobs_text.insert('end', f'{cmd};\n')
-			self.jobs_text.yview('end')
-
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.TO_DO).set(self.root.VERIFY_FILE)
-		'''
-
 		self.root.append_job(cmd)

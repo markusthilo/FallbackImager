@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from json import load, dump
-from tkinter import StringVar, IntVar
+from tkinter import StringVar, IntVar, BooleanVar
 from pathlib import Path
 
 class Settings(dict):
@@ -53,6 +53,15 @@ class Settings(dict):
 			self[self.section][key] = IntVar(value=default)
 		else:
 			self[self.section][key] = IntVar(value=value)
+		return self[self.section][key]
+
+	def init_boolvar(self, key, default=False, section=None):
+		'''Generate BooleanVar for one setting'''
+		value = self.get(key, section=section)
+		if not value:
+				self[self.section][key] = BooleanVar(value=default)
+		else:
+			self[self.section][key] = BooleanVar(value=value)
 		return self[self.section][key]
 
 	def raw(self, key, section=None):
