@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from tkinter.scrolledtext import ScrolledText
 from tkinter.messagebox import showerror
-from .guielements import SourceDirSelector, Checker, LeftLabel
-from .guielements import ChildWindow, SelectTsvColumn, Tree
-from .guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from .guielements import FileSelector, GridButton, LeftButton, RightButton
+from .guielements import ChildWindow, Tree, DirSelector
+from .guielements import ExpandedFrame, GridSeparator, GridLabel
+from .guielements import FilenameSelector, StringSelector, GridButton
+from .guielements import FileSelector, LeftButton, RightButton
 from .guielements import GridBlank, StringRadiobuttonsFrame
 from .sqliteutils import SQLiteReader
 
@@ -67,45 +65,29 @@ class SQLiteGui:
 		except Exception as e:
 			showerror(title=self.root.ERROR, message=repr(e))
 			return
-		window = ChildWindow(self.root, self.root.SCHEMA)
-		frame = ExpandedFrame(self.root, window)
+		self.child_window = ChildWindow(self.root, self.root.SCHEMA)
+		frame = ExpandedFrame(self.root, self.child_window)
 		self.tree = Tree(self.root, frame)
-		entries = dict()
+		for table_name, column_names in reader.list_tables():
+			table = self.tree.insert('', 'end', text=table_name, iid=f'{table_name}\t')
+			for column_name in column_names:
+				self.tree.insert(table, 'end', text=column_name, iid=f'{table_name}\t{column_name}')
 
+		frame = ExpandedFrame(self.root, self.child_window)
+		LeftButton(self.root, frame, self.root.SELECT, self._get_selected)
+		RightButton(self.root, frame, self.root.QUIT, self.child_window.destroy)
 
-		for table, columns in reader.list_tables():
-			line = f'{table} ({reader.count(table)}):'
-			for column in columns:
-				if col_type := reader.get_type(table, column):
-					line += f'\t{column} ({col_type})'
-				else:
-					line += f'\t{column}'
-			print(line)
-
-
-		'''
-		for source_id, parent_id, source_type, friendly_value in MfdbReader(mfdb).tree():
-			if parent_id:
-				try:
-					parent = entries[parent_id]
-				except KeyError:
-					continue
-				entries[source_id] = self.tree.insert(parent, 'end', text=friendly_value, iid=source_id)
-			else:
-				entries[source_id] = self.tree.insert('', 'end', text=friendly_value, iid=source_id)
-			if source_type == 'Partition':
-				self.tree.see(source_id)
-		'''
-		'''
-		text = ScrolledText(window, width=self.root.ENTRY_WIDTH, height=4*self.root.INFO_HEIGHT)
-		text.pack(fill='both', expand=True)
-		text.bind('<Key>', lambda dummy: 'break')
-		text.insert('end', schema)
-		text.configure(state='disabled')
-		'''
-
-		frame = ExpandedFrame(self.root, window)
-		RightButton(self.root, frame, self.root.QUIT, window.destroy)
+	def _get_selected(self):
+		'''Get the selected root'''
+		self.root.settings.section = self.CMD
+		try:
+			table_name, column_name = self.tree.focus().split('\t')
+		except ValueError:
+			pass
+		else:
+			self.root.settings.raw(self.root.TABLE).set(table_name)
+			self.root.settings.raw(self.root.COLUMN).set(column_name)
+		self.child_window.destroy()
 
 	def _add_job(self):
 		'''Generate command line'''
