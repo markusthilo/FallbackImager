@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from tkinter.messagebox import showerror
-from lib.guielements import ChildWindow, SelectTsvColumn, GridBlank, Checker, Tree
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, LeftButton, RightButton
-from lib.mfdbreader import MfdbReader
+from .guilabeling import AxCheckerLabels
+from .guielements import ChildWindow, SelectTsvColumn, GridBlank, Checker, Tree
+from .guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
+from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
+from .guielements import FileSelector, GridButton, LeftButton, RightButton
+from .mfdbreader import MfdbReader
 
-class AxCheckerGui:
+class AxCheckerGui(AxCheckerLabels):
 	'''Notebook page for AxChecker'''
 
 	CMD = 'AxChecker'
@@ -21,9 +22,15 @@ class AxCheckerGui:
 		root.row = 0
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.AXIOM)
-		FileSelector(root, frame, root.CASE_FILE, root.CASE_FILE,
+		FileSelector(
+			root,
+			frame,
+			root.CASE_FILE,
+			root.CASE_FILE,
 			f'{root.OPEN_CASE_FILE} ({root.AXIOM_CASE_FILE})',
-			filetype=(root.CASE_FILE, root.AXIOM_CASE_FILE))
+			filetype = (root.CASE_FILE, root.AXIOM_CASE_FILE),
+			tip = self.TIP_CASE_FILE
+		)
 		StringSelector(root, frame, root.ROOT, root.ROOT,
 			command=self._select_root)	
 		GridSeparator(root, frame)

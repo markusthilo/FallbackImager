@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-24'
+__version__ = '0.5.1_2024-04-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -44,6 +44,7 @@ class EwfImager:
 			outdir = None,
 			compression_values = None,
 			examiner_name = None,
+			filename = None,
 			media_type = None,
 			media_flags = None,
 			notes = None,
@@ -55,7 +56,10 @@ class EwfImager:
 		):
 		'''Run ewfacquire'''
 		self.source = ExtPath.path(source)
-		self.filename = Path(ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}'))
+		if filename:
+			self.filename = filename
+		else:
+			self.filename = ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}')
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
 		if log:
@@ -209,6 +213,10 @@ class EwfImagerCli(ArgumentParser):
 		self.add_argument('--setro', action='store_true',
 			help='Set target block device to read only'
 		)
+		self.add_argument('-t', '--filename', type=ExtPath.path,
+			help='Target filename (without extension) to write to',
+			metavar='DIRECTORY'
+		)
 		self.add_argument('source', nargs=1, type=ExtPath.path,
 			help='The source device, partition or anything else that works with ewfacquire',
 			metavar='BLOCKDEVICE/PARTITON/FILE'
@@ -223,6 +231,7 @@ class EwfImagerCli(ArgumentParser):
 		self.description = args.description
 		self.examiner_name = args.examiner_name
 		self.evidence_number = args.evidence_number
+		self.filename = args.filename
 		self.media_type = args.media_type
 		self.notes = args.notes
 		self.outdir = args.outdir
@@ -235,6 +244,7 @@ class EwfImagerCli(ArgumentParser):
 		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
 			compression_values = self.compression_values,
 			examiner_name = self.examiner_name,
+			filename = self.filename,
 			media_type = self.media_type,
 			notes = self.notes,
 			size = self.size,

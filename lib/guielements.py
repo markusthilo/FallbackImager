@@ -3,6 +3,7 @@
 
 from pathlib import Path
 from functools import partial
+from idlelib.tooltip import Hovertip
 from tkinter import Toplevel, StringVar
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button, Treeview
 from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu, Scrollbar
@@ -219,7 +220,7 @@ class FileSelector(Button):
 	'''Button to select file to read'''
 	def __init__(self, root, parent, key, text, ask, command=None,
 		filetype=('Text files', '*.txt'), default=None, initialdir=None,
-		column=1, columnspan=255):
+		column=1, columnspan=255, tip=None):
 		self.file_str = root.settings.init_stringvar(key)
 		if default:
 			self.file_str.set(default)
@@ -233,6 +234,8 @@ class FileSelector(Button):
 		self.filetype = filetype
 		self.initialdir = initialdir
 		self.command = command
+		if tip:
+			Hovertip(self, tip)
 	def _select(self):
 		new_filename = askopenfilename(
 			title = self.ask,
