@@ -1,12 +1,59 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-class AxCheckerLabels:
+class BasicLabels:
 
-    TIP_CASE_FILE = 'Select Case.mfdb in the AXIOM case directory'
+	DIRECTORY = 'Directory'
+	SELECT_DEST_DIR = 'Select destination directory'
+	TIP_DIRECTORY = '''Select destination directory to write
+logs and resulting file(s)'''
+	FILENAME = 'Filename'
+	SELECT_FILE = 'Select file'
+	TIP_FILENAME = '''Base of filename for generated files,
+klick to auto generate from actual time
+(when empty)'''
+	TASK = 'Task'
+	TSV_FILE = 'TSV file'
+	COLUMN = 'Column'
+	TSV_NO_HEAD = 'TSV file has no head line'
+	TIP_TSV_NO_HEAD = '''Select if given TSV file
+has no head line'''
+	TIP_RADIO_BUTTONS = 'Select one option'
+	ADD_JOB = 'Add job'
+	TIP_ADD_JOB = 'Add job as configured above to job queue'
+
+class AxCheckerLabels(BasicLabels):
+
+	CASE_FILE = 'Case File'
+	OPEN_CASE_FILE = 'Open case file'
+	TIP_CASE_FILE = 'Select Case.mfdb in the AXIOM case directory'
+	ROOT = 'Root ID '
+	TIP_ROOT = '''Select Source ID of the root structure,
+required when task is to compare to a
+file structure or a TSV list of file paths'''
+	CHECK = 'List files that are not represented in hits/artifacts'
+	SELECT_COMP_DIR = 'Select directory to compare content'
+	TIP_COMP_DIR = '''Compare filepaths under given directory to
+files under given root (by ID) in AXIOM case'''
+	TIP_COMP_TSV = '''Compate filepaths in given TSV file to
+files under given root (by ID) in AXIOM case'''
+	TIP_TSV_COLUMN = '''Select column in TSV file containing
+the relative file paths to compare'''
+	
+	SELECT = 'Select'
+	
+	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
+	UNABLE_DETECT_PATHS = 'Unable to detect paths'
+	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
+	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
+	SELECT_COLUMN = 'Select column with path to compare'
+	CASE_REQUIRED = 'AXIOM case file is required'
+	ID_REQUIRED = 'ID of AXIOM source as root to compare is required'
+	ROOT_DIR_REQUIRED = 'Root directory is required' 
+	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 
 
-    '''
+'''
     NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
 	MODULE_ERROR = 'Unable to load any module'
@@ -78,32 +125,8 @@ class AxCheckerLabels:
 	MAX = 'Max'
 	FAST = 'Fast'
 	NONE = 'None'
-	AXIOM = 'AXIOM'
-	CASE_FILE = 'Case File'
-	AXIOM_CASE_FILE = 'Case.mfdb'
-	OPEN_CASE_FILE = 'Open case file'
-	PARTITION = 'Partition'
-	DO_NOT_COMPARE = 'Do not compare'
-	COMPARE_TO = 'Compare to'
-	FILE_STRUCTURE = 'File structure'
-	TSV = 'Text/TSV file'
-	TSV_REQUIRED = 'Text/TSV file is required'
-	SELECT_TSV = 'Select Text/TSV file'
-	COLUMN = 'Column'
-	TSV_NO_HEAD = 'Text/TSV file does not have a head line'
-	SELECT_FILE_STRUCTURE = 'Select root of file structure'
-	SELECT_PARTITION = 'Select partition'
-	SELECT = 'Select'
-	ROOT = 'Root'
-	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
-	UNABLE_DETECT_PATHS = 'Unable to detect paths'
-	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
-	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
-	SELECT_COLUMN = 'Select column with path to compare'
-	CASE_REQUIRED = 'AXIOM case file is required'
-	ID_REQUIRED = 'ID of AXIOM source as root to compare is required'
-	ROOT_DIR_REQUIRED = 'Root directory is required' 
-	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
+
+	
 	WIPE = 'Wipe'
 	TARGET = 'Target'
 	SELECT_DRIVE = 'Select drive'
@@ -182,4 +205,4 @@ class AxCheckerLabels:
 	ADD_SRC_DIR = 'Add directory to source'
 	UNABLE_ACCESS = 'Unable to access'
 	ROOT_HELP = 'Root permission might help'
-    '''
+'''

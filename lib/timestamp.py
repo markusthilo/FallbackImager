@@ -17,8 +17,10 @@ class TimeStamp:
 		return string
 
 	@staticmethod
-	def now_or(*args):
+	def now_or(string, base=None):
 		'''Return filename compatible TimeStamp.now() or just return argument if None'''
-		if len(args) > 0 and args[0]:
-			return args[0]
-		return TimeStamp.now(path_comp=True)
+		if not string:
+			string = TimeStamp.now(path_comp=True)
+			if base:
+				string += f'_{base}'
+		return string

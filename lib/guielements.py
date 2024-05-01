@@ -10,6 +10,7 @@ from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu, Scro
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
 from tkinter.messagebox import showerror
+from .guilabeling import BasicLabels
 from .timestamp import TimeStamp
 from .extpath import ExtPath
 
@@ -78,22 +79,18 @@ class GridButton(Button):
 		if incrow:
 			root.row += 1
 
+class AddJobButton(GridButton):
+	'''| [Add job] | | |'''
+	def __init__(self, root, parent, name, command, column=0, columnspan=255):
+		super().__init__(root, parent, f'{BasicLabels.ADD_JOB} {name}', command,
+			column=column, columnspan=columnspan)
+		Hovertip(self, BasicLabels.TIP_ADD_JOB)
+
 class GridSeparator:
 	'''|-------|'''
 	def __init__(self, root, parent, column=0, columnspan=255, incrow=True):
 		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
 			sticky='w', padx=root.PAD, pady=root.PAD)
-		if incrow:
-			root.row += 1
-
-class GridIntMenu(OptionMenu):
-	'''| | OptionMenu | | |'''
-	def __init__(self, root, parent, key, text, values,
-		default=None, column=1, columnspan=2, incrow=True):
-		self.variable = root.settings.init_intvar(key, default=default)
-		Label(parent, text=f'{text}	').grid(sticky='e', row=root.row, column=column)
-		super().__init__(parent, self.variable, self.variable.get(), *values)
-		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1)
 		if incrow:
 			root.row += 1
 
@@ -108,13 +105,26 @@ class GridStringMenu(OptionMenu):
 		if incrow:
 			root.row += 1
 
+class GridIntMenu(OptionMenu):
+	'''| | OptionMenu | | |'''
+	def __init__(self, root, parent, key, text, values,
+		default=None, column=1, columnspan=2, incrow=True):
+		self.variable = root.settings.init_intvar(key, default=default)
+		Label(parent, text=f'{text}	').grid(sticky='e', row=root.row, column=column)
+		super().__init__(parent, self.variable, self.variable.get(), *values)
+		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1)
+		if incrow:
+			root.row += 1
+
 class Checker(Checkbutton):
 	'''Checkbox'''
-	def __init__(self, root, parent, key, text, column=0, columnspan=2):
+	def __init__(self, root, parent, key, text, column=0, columnspan=2, tip=None):
 		self.bool_var = root.settings.init_boolvar(key)
 		super().__init__(parent, variable=self.bool_var)
 		self.grid(row=root.row, column=column)
 		GridLabel(root, parent, text, column=column+1, columnspan=columnspan-1)
+		if tip:
+			Hovertip(self, tip)
 
 class GridLabel:
 	'''| Label |'''
@@ -147,8 +157,9 @@ class StringRadiobuttons:
 	def __init__(self, root, parent, key, buttons, default, column=0):
 		self.variable = root.settings.init_stringvar(key, default=default)
 		for row, value in enumerate(buttons, root.row):
-			Radiobutton(parent, variable=self.variable, value=value).grid(
-				row=row, column=column, sticky='w', padx=root.PAD)
+			button = Radiobutton(parent, variable=self.variable, value=value)
+			button.grid(row=row, column=column, sticky='w', padx=root.PAD)
+			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
 
 class StringRadiobuttonsFrame:
 	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
@@ -176,6 +187,28 @@ class VerticalButtons:
 		if incrow:
 			root.row += 1
 
+class DirSelector(Button):
+	'''Button + Entry to select directory'''
+	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=255,
+		tip=None):
+		self.dir_str = root.settings.init_stringvar(key)
+		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+		root.row += 1
+		self.root = root
+		self.ask = ask
+		self.command = command
+		if tip:
+			Hovertip(self, tip)
+	def _select(self):
+		new_dir = askdirectory(title=self.ask, mustexist=False)
+		if new_dir:
+			self.dir_str.set(new_dir)
+		if self.command:
+			self.command()
+
 class SourceDirSelector(Button):
 	'''Select source'''
 	def __init__(self, root, parent, column=0, columnspan=255):
@@ -197,7 +230,7 @@ class SourceDirSelector(Button):
 class StringSelector(Button):
 	'''String for names, descriptions etc.'''
 	def __init__(self, root, parent, key, text, command=None,
-		column=1, columnspan=255, width=None, default=None, incrow=True):
+		column=1, columnspan=255, width=None, default=None,incrow=True, tip=None):
 		self.string = root.settings.init_stringvar(key, default=default)
 		if not command:
 			command = self._command
@@ -210,6 +243,8 @@ class StringSelector(Button):
 		if incrow:
 			root.row += 1
 		self.default = default
+		if tip:
+			Hovertip(self, tip)
 	def _command(self):
 		if self.string.get():
 			return
@@ -247,7 +282,7 @@ class FileSelector(Button):
 		if self.command:
 			self.command()
 
-class FilesSelector(ScrolledText):
+class FilesSelector(ScrolledText):	### UNUSED??? ###
 	'''ScrolledText to select files'''
 	def __init__(self, root, parent, key, text, ask, command=None, width=None, height=None,
 		filetypes=(('All files', '*.*'),), column=1, columnspan=255):
@@ -280,7 +315,8 @@ class FilesSelector(ScrolledText):
 
 class FilenameSelector(Button):
 	'''Button + Entry to enter string'''	
-	def __init__(self, root, parent, key, text, default=None, command=None, column=1, columnspan=255):
+	def __init__(self, root, parent, key, text, default=None, command=None,
+		column=1, columnspan=255, tip=None):
 		self.string = root.settings.init_stringvar(key)
 		self.default = default
 		if not command:
@@ -291,6 +327,8 @@ class FilenameSelector(Button):
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
 		root.row += 1
 		self.command = command
+		if tip:
+			Hovertip(self, tip)
 	def _command(self):
 		if self.string.get():
 			return
@@ -298,25 +336,6 @@ class FilenameSelector(Button):
 			self.string.set(self.default)
 		else:
 			self.string.set(TimeStamp.now(path_comp=True))
-		if self.command:
-			self.command()
-
-class DirSelector(Button):
-	'''Button + Entry to select directory'''
-	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=255):
-		self.dir_str = root.settings.init_stringvar(key)
-		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
-		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
-		root.row += 1
-		self.root = root
-		self.ask = ask
-		self.command = command
-	def _select(self):
-		new_dir = askdirectory(title=self.ask, mustexist=False)
-		if new_dir:
-			self.dir_str.set(new_dir)
 		if self.command:
 			self.command()
 

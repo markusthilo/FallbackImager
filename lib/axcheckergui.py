@@ -6,7 +6,7 @@ from .guilabeling import AxCheckerLabels
 from .guielements import ChildWindow, SelectTsvColumn, GridBlank, Checker, Tree
 from .guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from .guielements import FileSelector, GridButton, LeftButton, RightButton
+from .guielements import FileSelector, GridButton, LeftButton, RightButton, AddJobButton
 from .mfdbreader import MfdbReader
 
 class AxCheckerGui(AxCheckerLabels):
@@ -21,38 +21,38 @@ class AxCheckerGui(AxCheckerLabels):
 		root.notebook.add(frame, text=f' {self.CMD} ')
 		root.row = 0
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.AXIOM)
+		GridLabel(root, frame, 'AXIOM')
 		FileSelector(
 			root,
 			frame,
-			root.CASE_FILE,
-			root.CASE_FILE,
-			f'{root.OPEN_CASE_FILE} ({root.AXIOM_CASE_FILE})',
-			filetype = (root.CASE_FILE, root.AXIOM_CASE_FILE),
+			'case_file',
+			self.CASE_FILE,
+			f'{self.OPEN_CASE_FILE} (Case.mfdb)',
+			filetype = ('Case.mfdb', 'Case.mfdb'),
 			tip = self.TIP_CASE_FILE
 		)
-		StringSelector(root, frame, root.ROOT, root.ROOT,
-			command=self._select_root)	
+		StringSelector(root, frame, 'root_id', self.ROOT,
+			command=self._select_root, tip=self.TIP_ROOT)	
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.DESTINATION)
-		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
+		DirSelector(root, frame, 'outdir', self.DIRECTORY,
+			root.SELECT_DEST_DIR, tip=self.TIP_DIRECTORY)
+		self.filename_str = FilenameSelector(root, frame, 'filename',
+			self.FILENAME, tip=self.TIP_FILENAME)
 		GridSeparator(root, frame)
-		GridLabel(root, frame, root.VERIFY_FILE)
-		StringRadiobuttons(root, frame, root.VERIFY_FILE,
-			(root.DO_NOT_COMPARE, root.FILE_STRUCTURE, root.TSV), root.DO_NOT_COMPARE)
-		GridLabel(root, frame, root.DO_NOT_COMPARE, column=1)
-		DirSelector(root, frame, root.FILE_STRUCTURE, root.FILE_STRUCTURE, root.SELECT_FILE_STRUCTURE,
-			command=self._select_file_structure)
-		FileSelector(root, frame, root.TSV, root.TSV, root.SELECT_TSV,
-			filetype=('Text/TSV', '*.txt'), command=self._select_tsv_file)
-		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._select_column)
-		Checker(root, frame, root.TSV_NO_HEAD, root.TSV_NO_HEAD, columnspan=3)
+		GridLabel(root, frame, self.TASK)
+		StringRadiobuttons(root, frame, 'task', ('check', 'compare_dir', 'compare_tsv'), 'check')
+		GridLabel(root, frame, self.CHECK, column=1)
+		DirSelector(root, frame, 'comp_dir', self.DIRECTORY, self.SELECT_COMP_DIR,
+			command=self._select_file_structure, tip=self.TIP_COMP_DIR)
+		FileSelector(root, frame, 'tsv_file', self.TSV_FILE, self.SELECT_FILE,
+			filetype=('Text/TSV', '*.txt'), command=self._select_tsv_file, tip=self.TIP_COMP_TSV)
+		StringSelector(root, frame, 'tsv_column', self.COLUMN, command=self._select_column,
+			tip=self.TIP_TSV_COLUMN)
+		Checker(root, frame, 'tsv_no_head', self.TSV_NO_HEAD, columnspan=3, tip=self.TIP_TSV_NO_HEAD)
 		GridSeparator(root, frame)
 		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
-			self._add_job, column=0, columnspan=3)
+		AddJobButton(root, frame, self.CMD, self._add_job)
 		root.child_win_active = False
 		self.root = root
 

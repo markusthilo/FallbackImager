@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0.1_2024-04-24'
+__version__ = '0.5.1_2024-05-01'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -47,7 +47,7 @@ class AxChecker:
 
 	def _set_output(self, filename, outdir, log):
 		'''Set output dir, filename and log'''
-		self.filename = TimeStamp.now_or(filename)
+		self.filename = TimeStamp.now_or(filename, base='axchecker')
 		self.outdir = ExtPath.mkdir(outdir)
 		if log:
 			self.log = log
@@ -149,7 +149,7 @@ class AxCheckerCli(ArgumentParser):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-c', '--column', type=str,
-			help='Column with path to compare', metavar='INTEGER|STRING'
+			help='Column with path to compare (name or number)', metavar='STRING|INTEGER'
 		)
 		self.add_argument('-d', '--diff', type=ExtPath.path,
 			help='Path to file or directory to compare with', metavar='FILE|DIRECTORY'
