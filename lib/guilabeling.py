@@ -4,23 +4,30 @@
 class BasicLabels:
 
 	DIRECTORY = 'Directory'
-	SELECT_DEST_DIR = 'Select destination directory'
-	TIP_DIRECTORY = '''Select destination directory to write
+	SELECT_OUTDIR = 'Select destination directory'
+	TIP_OUTDIR = '''Select destination directory to write
 logs and resulting file(s)'''
+	OUTDIR_REQUIRED = 'Destination directory is required'
 	FILENAME = 'Filename'
-	SELECT_FILE = 'Select file'
 	TIP_FILENAME = '''Base of filename for generated files,
 klick to auto generate from actual time
 (when empty)'''
+	SELECT_FILE = 'Select file'
 	TASK = 'Task'
+	TIP_RADIO_BUTTONS = 'Select one option'
+	ADD_JOB = 'Add job'
+	TIP_ADD_JOB = 'Add job as configured above to job queue'
+	SELECT = 'Select'
+	QUIT = 'Quit'
+	MISSING_ENTRY = 'Missing entry'
 	TSV_FILE = 'TSV file'
 	COLUMN = 'Column'
 	TSV_NO_HEAD = 'TSV file has no head line'
 	TIP_TSV_NO_HEAD = '''Select if given TSV file
 has no head line'''
-	TIP_RADIO_BUTTONS = 'Select one option'
-	ADD_JOB = 'Add job'
-	TIP_ADD_JOB = 'Add job as configured above to job queue'
+	SELECT_COLUMN = 'Select column'
+	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
+
 
 class AxCheckerLabels(BasicLabels):
 
@@ -39,21 +46,21 @@ files under given root (by ID) in AXIOM case'''
 files under given root (by ID) in AXIOM case'''
 	TIP_TSV_COLUMN = '''Select column in TSV file containing
 the relative file paths to compare'''
-	
-	SELECT = 'Select'
-	
 	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
+	SELECT_ROOT = 'Select source root (e.g. partition or directory)'
+	CASE_REQUIRED = 'AXIOM case file is required'
+
 	UNABLE_DETECT_PATHS = 'Unable to detect paths'
 	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
-	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
-	SELECT_COLUMN = 'Select column with path to compare'
-	CASE_REQUIRED = 'AXIOM case file is required'
+	
+	
 	ID_REQUIRED = 'ID of AXIOM source as root to compare is required'
 	ROOT_DIR_REQUIRED = 'Root directory is required' 
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 
 
 '''
+	
     NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
 	MODULE_ERROR = 'Unable to load any module'
@@ -66,13 +73,12 @@ the relative file paths to compare'''
 	CLEAR_INFOS = 'Clear infos'
 	START_JOBS = 'Start jobs'
 	RUNNING = 'Running...'
-	QUIT = 'Quit'
+	
 	ARE_YOU_SURE = 'Are you sure?'
 	SOURCE = 'Source'
 	ASK_SOURCE = 'Select source'
 	PATH = 'Path'
 	DIRECTORY = 'Directory'
-	SELECT_ROOT = 'Select source root directory'
 	DESTINATION = 'Destination'
 	FILENAME = 'Filename'
 	OUTDIR = 'Outdir'
@@ -126,7 +132,6 @@ the relative file paths to compare'''
 	FAST = 'Fast'
 	NONE = 'None'
 
-	
 	WIPE = 'Wipe'
 	TARGET = 'Target'
 	SELECT_DRIVE = 'Select drive'

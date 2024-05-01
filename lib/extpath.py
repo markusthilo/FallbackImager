@@ -94,21 +94,23 @@ class ExtPath:
 		return len(list(root.rglob('*')))
 
 	@staticmethod
-	def read_utf_head(path, after=0):
+	def read_utf_head(path, lines_in=10, lines_out=1):
 		'''Read first lines of TSV/text file while checking UTF encoding'''
 		lines = list()
+		last = max(lines_in, lines_out) - 1
 		for codec in __utf__:
 			try:
 				with path.open('r', encoding=codec) as fh:
 					for cnt, line in enumerate(fh):
 						lines.append(line.strip())
-						if cnt == after:
+						if cnt == last:
 							break
-					if after == 0:
+					if lines_out == 1:
 						return codec, lines[0]
-					return codec, lines
+					return codec, lines[:lines_out]
 			except UnicodeError:
 				continue
+		raise RuntimeError('Unable to detect UTF codec')
 
 	@staticmethod
 	def read_bin(path, offset=0, lines=64, bytes_per_line=16):

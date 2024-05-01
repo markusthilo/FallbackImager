@@ -9,7 +9,7 @@ class TsvReader:
 	def __init__(self, path, column=None, nohead=False):
 		'''Read first line and detetct dencoding'''
 		self.path = path
-		self.encoding, self.head = ExtPath.read_utf_head(self.path, after=0)
+		self.encoding, self.head = ExtPath.read_utf_head(self.path)
 		self.head = self.head.strip()
 		self.nohead = nohead
 		self.columns = self.head.split('\t')

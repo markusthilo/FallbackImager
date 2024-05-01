@@ -188,11 +188,16 @@ class VerticalButtons:
 			root.row += 1
 
 class DirSelector(Button):
-	'''Button + Entry to select directory'''
-	def __init__(self, root, parent, key, text, ask, command=None, column=1, columnspan=255,
-		tip=None):
-		self.dir_str = root.settings.init_stringvar(key)
-		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
+	'''Button + Entry to select a directory'''
+	def __init__(self, root, parent, key, ask, command=None, column=1, columnspan=255,
+		tip=None, missing=None, section=None):
+		if section:
+			self.section = section
+		else:
+			self.section = root.settings.section
+		self.key = key
+		self.dir_str = root.settings.init_stringvar(self.key, section=self.section)
+		super().__init__(parent, text=BasicLabels.DIRECTORY, command=self._select, width=root.BUTTON_WIDTH)
 		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
 		Entry(parent, textvariable=self.dir_str, width=root.ENTRY_WIDTH).grid(
 			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
@@ -200,6 +205,7 @@ class DirSelector(Button):
 		self.root = root
 		self.ask = ask
 		self.command = command
+		self.missing = missing
 		if tip:
 			Hovertip(self, tip)
 	def _select(self):
@@ -208,8 +214,21 @@ class DirSelector(Button):
 			self.dir_str.set(new_dir)
 		if self.command:
 			self.command()
+	def get():
+		directory = self.root.settings.get(self.key, section=self.section)
+		if directory:
+			return directory
+		if self.missing:
+			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
 
-class SourceDirSelector(Button):
+class OutDirSelector(DirSelector):
+	'''Select destination/output directory'''
+	def __init__(self, root, parent):
+		self.outdir = root.settings.init_stringvar('outdir')
+		super().__init__(root, parent, 'outdir', BasicLabels.SELECT_OUTDIR,
+			tip=BasicLabels.TIP_OUTDIR, missing=BasicLabels.OUTDIR_REQUIRED)
+
+class SourceDirSelector(Button):	### USED? ###
 	'''Select source'''
 	def __init__(self, root, parent, column=0, columnspan=255):
 		self.source_str = root.settings.init_stringvar(root.SOURCE)
@@ -228,10 +247,15 @@ class SourceDirSelector(Button):
 			self.source_str.set(new_dir)
 
 class StringSelector(Button):
-	'''String for names, descriptions etc.'''
-	def __init__(self, root, parent, key, text, command=None,
-		column=1, columnspan=255, width=None, default=None,incrow=True, tip=None):
-		self.string = root.settings.init_stringvar(key, default=default)
+	'''Button + Entry to select/write a string'''
+	def __init__(self, root, parent, key, text, command=None, default=None, width=None,
+		column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
+		if section:
+			self.section = section
+		else:
+			self.section = root.settings.section
+		self.key = key
+		self.string = root.settings.init_stringvar(self.key, section=self.section, default=default)
 		if not command:
 			command = self._command
 		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
@@ -250,13 +274,68 @@ class StringSelector(Button):
 			return
 		if self.default:
 			self.string.set(self.default)
+	def get():
+		string = self.root.settings.get(self.key, section=self.section)
+		if string:
+			return string
+		if self.missing:
+			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
+
+class FilenameSelector(StringSelector):
+	'''Button + Entry to select filename/base for output filenames'''	
+	def __init__(self, root, parent, default):
+		super().__init__(root, parent, 'filename', BasicLabels.FILENAME, command=self._command,
+			tip=BasicLabels.TIP_FILENAME)
+		self.default = default
+	def _command(self):
+		if self.string.get():
+			return
+		self.string.set(self.default.replace('{now}', TimeStamp.now(path_comp=True)))
+
+
+		'''
+	def __init__(self, root, parent, key, text, default=None, command=None,
+		column=1, columnspan=255, tip=None, missing=None, section=None):
+		self.string = root.settings.init_stringvar(key)
+		self.default = default
+		if not command:
+			command = self._command
+		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH) 
+		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
+			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+		root.row += 1
+		self.root = root
+		self.command = command
+		if tip:
+			Hovertip(self, tip)
+	def _command(self):
+		if self.string.get():
+			return
+		if self.default:
+			self.string.set(self.default.replace('{now}', TimeStamp.now(path_comp=True)))
+		if self.command:
+			self.command()
+	def get():
+		filename = self.root.settings.get(self.key, section=self.section)
+		if filename:
+			return filename
+		if self.missing:
+			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
+		'''
+
 
 class FileSelector(Button):
-	'''Button to select file to read'''
+	'''Select a file'''
 	def __init__(self, root, parent, key, text, ask, command=None,
 		filetype=('Text files', '*.txt'), default=None, initialdir=None,
-		column=1, columnspan=255, tip=None):
-		self.file_str = root.settings.init_stringvar(key)
+		column=1, columnspan=255, tip=None, missing=None, section=None):
+		if section:
+			self.section = section
+		else:
+			self.section = root.settings.section
+		self.key = key
+		self.file_str = root.settings.init_stringvar(self.key, section=self.section)
 		if default:
 			self.file_str.set(default)
 		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
@@ -281,6 +360,12 @@ class FileSelector(Button):
 			self.file_str.set(new_filename)
 		if self.command:
 			self.command()
+	def get():
+		filename = self.root.settings.get(self.key, section=self.section)
+		if filename:
+			return filename
+		if self.missing:
+			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
 
 class FilesSelector(ScrolledText):	### UNUSED??? ###
 	'''ScrolledText to select files'''
@@ -310,32 +395,6 @@ class FilesSelector(ScrolledText):	### UNUSED??? ###
 		if new_filenames:
 			self.delete('1.0', 'end')
 			self.insert('end', '\n'.join(new_filenames))
-		if self.command:
-			self.command()
-
-class FilenameSelector(Button):
-	'''Button + Entry to enter string'''	
-	def __init__(self, root, parent, key, text, default=None, command=None,
-		column=1, columnspan=255, tip=None):
-		self.string = root.settings.init_stringvar(key)
-		self.default = default
-		if not command:
-			command = self._command
-		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH) 
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
-		Entry(parent, textvariable=self.string, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
-		root.row += 1
-		self.command = command
-		if tip:
-			Hovertip(self, tip)
-	def _command(self):
-		if self.string.get():
-			return
-		if self.default:
-			self.string.set(self.default)
-		else:
-			self.string.set(TimeStamp.now(path_comp=True))
 		if self.command:
 			self.command()
 
@@ -374,32 +433,35 @@ class ChildWindow(Toplevel):
 class SelectTsvColumn(ChildWindow):
 	'''Window to select column of a TSV file'''
 
-	def __init__(self, root, cmd):
-		'''Open child window'''
+	def __init__(self, root, cmd, file='tsv_file', column='tsv_column', no_head = 'tsv_no_head'):
+		'''Open child window for module=cmd'''
 		if root.child_win_active:
 			return
 		self.root = root
 		self.cmd = cmd
+		self.file_key = file
+		self.column_key = column
+		self.no_head_key = no_head
 		self.root.settings.section = self.cmd
-		tsv = self.root.settings.get(self.root.TSV)
+		tsv = self.root.settings.get(self.file_key)
 		if tsv:
-			encoding, head = ExtPath.read_utf_head(Path(tsv), after=self.root.MAX_ROW_QUANT)
+			encoding, head = ExtPath.read_utf_head(Path(tsv), lines_out=self.root.MAX_ROW_QUANT)
 			try:
 				columns = len(head[0].split('\t'))
 			except IndexError:
 				columns = 1
 			if columns == 1:
-				self.root.settings.raw(self.root.COLUMN).set('1')
+				self.root.settings.raw(self.column_key).set('1')
 				return
 			if len(head) < 2:
 				tsv = None
 		if not tsv:
 			showerror(
-				title = self.root.TSV,
-				message = self.root.FIRST_CHOOSE_TSV
+				title = BasicLabels.MISSING_ENTRY,
+				message = BasicLabels.FIRST_CHOOSE_TSV
 			)
 			return
-		super().__init__(self.root, self.root.SELECT_COLUMN)
+		super().__init__(self.root, BasicLabels.SELECT_COLUMN)
 		self._selected_column = StringVar()
 		frame = ExpandedFrame(self.root, self)
 		preview = {(row, column): entry
@@ -449,14 +511,14 @@ class SelectTsvColumn(ChildWindow):
 		frame = ExpandedFrame(self.root, self)
 		Checkbutton(frame,
 			text = self.root.TSV_NO_HEAD,
-			variable = self.root.settings.raw(self.root.TSV_NO_HEAD)
+			variable = self.root.settings.raw(self.no_head_key)
 		).pack(side='left', padx=self.root.PAD)
-		RightButton(self.root, frame, self.root.QUIT, self.destroy)
+		RightButton(self.root, frame, BasicLabels.QUIT, self.destroy)
 
 	def _get_column(self, column):
 		'''Get the selected column'''
 		self.root.settings.section = self.cmd
-		self.root.settings.raw(self.root.COLUMN).set(f'{column}')
+		self.root.settings.raw(self.column_key).set(f'{column}')
 		self.destroy()
 
 class BasicTab:
