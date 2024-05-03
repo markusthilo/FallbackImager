@@ -7,7 +7,7 @@ from .guielements import ChildWindow, Tree, DirSelector
 from .guielements import ExpandedFrame, GridSeparator, GridLabel
 from .guielements import FilenameSelector, StringSelector, GridButton
 from .guielements import FileSelector, LeftButton, RightButton
-from .guielements import GridBlank, StringRadiobuttonsFrame
+from .guielements import GridBlank, VerticalRadiobuttons
 from .sqliteutils import SQLiteReader
 
 class SQLiteGui:
@@ -33,7 +33,7 @@ class SQLiteGui:
 			root.DIRECTORY, root.SELECT_DEST_DIR)
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.TO_DO)
-		StringRadiobuttonsFrame(root, frame, root.TO_DO,
+		VerticalRadiobuttons(root, frame, root.TO_DO,
 			(root.EXECUTE_SQL, root.ALTERNATIVE, root.DUMP_SCHEMA, root.DUMP_CONTENT),
 			root.EXECUTE_SQL)
 		FileSelector(root, frame, root.SQL_FILE, root.SQL_FILE,

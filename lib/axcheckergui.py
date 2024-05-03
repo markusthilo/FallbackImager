@@ -43,11 +43,11 @@ class AxCheckerGui(AxCheckerLabels):
 		GridLabel(root, frame, self.TASK)
 		StringRadiobuttons(root, frame, 'task', ('check', 'compare_dir', 'compare_tsv'), 'check')
 		GridLabel(root, frame, self.CHECK, column=1)
-		DirSelector(root, frame, 'root_dir', self.SELECT_COMP_DIR,
+		self.root_dir = DirSelector(root, frame, 'root_dir', self.SELECT_COMP_DIR,
 			command=self._select_file_structure, tip=self.TIP_COMP_DIR)
 		FileSelector(root, frame, 'tsv_file', self.TSV_FILE, self.SELECT_FILE,
 			filetype=('Text/TSV', '*.txt'), command=self._select_tsv_file, tip=self.TIP_COMP_TSV)
-		StringSelector(root, frame, 'tsv_column', self.COLUMN, command=self._select_column,
+		self.tsv_column = StringSelector(root, frame, 'tsv_column', self.COLUMN, command=self._select_column,
 			tip=self.TIP_TSV_COLUMN)
 		Checker(root, frame, 'tsv_no_head', self.TSV_NO_HEAD, columnspan=3, tip=self.TIP_TSV_NO_HEAD)
 		GridSeparator(root, frame)

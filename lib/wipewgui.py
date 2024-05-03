@@ -6,7 +6,7 @@ from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
 from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu, GridStringMenu
-from lib.guielements import ChildWindow, SelectTsvColumn, FilesSelector, ExpandedLabelFrame
+from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank

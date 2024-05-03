@@ -29,46 +29,44 @@ class Settings(dict):
 		if not section:
 			section = self.section
 		try:
-			value = self[section][key]
-		except KeyError:
-			return ''
-		try:
-			return value.get()
-		except AttributeError:
-			return value
+			return self[section][key].get()
+		except (KeyError, AttributeError):
+			return None
 
 	def init_stringvar(self, key, default=None, section=None):
 		'''Generate StringVar for one setting'''
+		if not section:
+			section = self.section
 		value = self.get(key, section=section)
-		if not value and default:
-			self[self.section][key] = StringVar(value=default)
+		if value:
+			self[section][key] = StringVar(value=value)
+		elif default:
+			self[section][key] = StringVar(value=default)
 		else:
-			self[self.section][key] = StringVar(value=value)
-		return self[self.section][key]
+			self[section][key] = StringVar(value='')
+		return self[section][key]
 
 	def init_intvar(self, key, default=None, section=None):
 		'''Generate IntVar for one setting'''
+		if not section:
+			section = self.section
 		value = self.get(key, section=section)
-		if not value and default:
-			self[self.section][key] = IntVar(value=default)
+		if value:
+			self[section][key] = IntVar(value=value)
 		else:
-			self[self.section][key] = IntVar(value=value)
-		return self[self.section][key]
+			self[section][key] = IntVar(value=default)
+		return self[section][key]
 
 	def init_boolvar(self, key, default=False, section=None):
 		'''Generate BooleanVar for one setting'''
-		value = self.get(key, section=section)
-		if not value:
-				self[self.section][key] = BooleanVar(value=default)
-		else:
-			self[self.section][key] = BooleanVar(value=value)
-		return self[self.section][key]
-
-	def raw(self, key, section=None):
-		'''Get value as it is'''
 		if not section:
 			section = self.section
-		return self[self.section][key]
+		value = self.get(key, section=section)
+		if value:
+			self[section][key] = BooleanVar(value=value)
+		else:
+			self[section][key] = BooleanVar(value=default)
+		return self[section][key]
 
 	def decoded(self):
 		'''Decode settings using get method'''

@@ -15,6 +15,10 @@ klick to auto generate from actual time
 	SELECT_FILE = 'Select file'
 	TASK = 'Task'
 	TIP_RADIO_BUTTONS = 'Select one option'
+	SELECT_SOURCE = 'Select Source'
+	TIP_SOURCE = 'Select source = root directory'
+	SOURCE_REQUIRED = 'Source is required'
+
 	ADD_JOB = 'Add job'
 	TIP_ADD_JOB = 'Add job as configured above to job queue'
 	SELECT = 'Select'
