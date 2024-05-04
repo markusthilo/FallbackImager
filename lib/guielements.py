@@ -11,134 +11,120 @@ from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
 from tkinter.messagebox import showerror
 from .guilabeling import BasicLabels
+from .guiconfig import GuiConfig
 from .timestamp import TimeStamp
 from .extpath import ExtPath
 
 class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
-	def __init__(self, root, parent):
+	def __init__(self, parent):
 		super().__init__(parent)
-		self.pack(fill='both', padx=root.PAD, pady=root.PAD, expand=True)
+		self.pack(fill='both', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
 
 class ExpandedNotebook(Notebook):
 	'''|<- Notebook ->|'''
-	def __init__(self, root):
-		super().__init__(root)
-		self.pack(fill='both', padx=root.PAD, pady=root.PAD, expand=True)
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.pack(fill='both', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
 
 class ExpandedLabelFrame(LabelFrame):
 	'''|<- LabelFrame ->|'''
-	def __init__(self, root, parent, text):
+	def __init__(self, parent, text):
 		super().__init__(parent, text=text)
-		self.pack(fill='both', padx=root.PAD, expand=True)
+		self.pack(fill='both', padx=GuiConfig.PAD, expand=True)
 
 class ExpandedSeparator:
 	'''|<--------->|'''
-	def __init__(self, root, parent):
-		Separator(parent).pack(fill='both', padx=root.PAD, expand=True)
+	def __init__(self, parent):
+		Separator(parent).pack(fill='both', padx=GuiConfig.PAD, expand=True)
 
 class ExpandedLabel:
 	'''|<- Label ->|'''
-	def __init__(self, root, parent, text):
+	def __init__(self, parent, text):
 		Label(parent, text=text).pack(
-			fill='both', padx=root.PAD, expand=True)
+			fill='both', padx=GuiConfig.PAD, expand=True)
 
 class LeftLabel:
 	'''| Label --->|'''
-	def __init__(self, root, parent, text):
-		Label(parent, text=text).pack(padx=root.PAD, side='left')
+	def __init__(self, parent, text):
+		Label(parent, text=text).pack(padx=GuiConfig.PAD, side='left')
 
 class ExpandedScrolledText(ScrolledText):
 	'''|<- ScrolledText ->|'''
-	def __init__(self, root, parent, height):
+	def __init__(self, parent, height):
 		super().__init__(parent,
-			padx = root.PAD,
-			pady = root.PAD,
+			padx = GuiConfig.PAD,
+			pady = GuiConfig.PAD,
 			width = -1,
 			height = height
 		)
-		self.pack(fill='both', padx=root.PAD, expand=True)
+		self.pack(fill='both', padx=GuiConfig.PAD, expand=True)
 
 class LeftButton(Button):
 	'''| Button ---|'''
-	def __init__(self, root, parent, text, command, tip=None):
-		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
-		self.pack(padx=root.PAD, side='left')
+	def __init__(self, parent, text, command, tip=None):
+		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
+		self.pack(padx=GuiConfig.PAD, side='left')
 		if tip:
 			Hovertip(self, tip)
 
 class RightButton(Button):
 	'''|--- Button |'''
-	def __init__(self, root, parent, text, command, tip=None):
-		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
-		self.pack(padx=root.PAD, side='right')
+	def __init__(self, parent, text, command, tip=None):
+		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
+		self.pack(padx=GuiConfig.PAD, side='right')
 		if tip:
 			Hovertip(self, tip)
 
 class GridButton(Button):
 	'''| | Button | | |'''
-	def __init__(self, root, parent, text, command, column=1, columnspan=1, incrow=True, tip=None):
-		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
-		self.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
+	def __init__(self, parent, text, command, column=1, columnspan=1, incrow=True, tip=None):
+		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
+		self.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
 		if incrow:
-			root.row += 1
+			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
 
 class AddJobButton(GridButton):
 	'''| [Add job] | | |'''
-	def __init__(self, root, parent, name, command, column=0, columnspan=255):
-		super().__init__(root, parent, f'{BasicLabels.ADD_JOB} {name}', command,
+	def __init__(self, parent, module, command, column=0, columnspan=255):
+		super().__init__(parent, f'{BasicLabels.ADD_JOB} {module}', command,
 			column=column, columnspan=columnspan, tip=BasicLabels.TIP_ADD_JOB)
 
 class GridSeparator:
 	'''|-------|'''
-	def __init__(self, root, parent, column=0, columnspan=255, incrow=True):
-		Separator(parent).grid(row=root.row, column=column, columnspan=columnspan,
-			sticky='w', padx=root.PAD, pady=root.PAD)
+	def __init__(self, parent, column=0, columnspan=255, incrow=True):
+		Separator(parent).grid(row=parent.row, column=column, columnspan=columnspan,
+			sticky='w', padx=GuiConfig.PAD, pady=GuiConfig.PAD)
 		if incrow:
-			root.row += 1
+			parent.row += 1
 
 class GridLabel:
 	'''| Label |'''
-	def __init__(self, root, parent, text, column=0, columnspan=255, incrow=True):
-		Label(parent, text=text).grid(row=root.row, column=column, columnspan=columnspan,
-			sticky='w', padx=root.PAD)
+	def __init__(self, parent, text, column=0, columnspan=255, incrow=True):
+		Label(parent, text=text).grid(row=parent.row, column=column, columnspan=columnspan,
+			sticky='w', padx=GuiConfig.PAD)
 		if incrow:
-			root.row += 1
+			parent.row += 1
 
 class GridBlank:
 	'''| |'''
-	def __init__(self, root, parent, width=2, column=0, incrow=True):
-		Label(parent, width=width).grid(row=root.row, column=column, padx=root.PAD)
+	def __init__(self, parent, width=2, column=0, incrow=True):
+		Label(parent, width=width).grid(row=parent.row, column=column, padx=GuiConfig.PAD)
 		if incrow:
-			root.row += 1
+			parent.row += 1
 
-class GridStringMenu(OptionMenu):
+class GridMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
-	def __init__(self, root, parent, key, text, values,
+	def __init__(self, parent, variable, text, values,
 		default=None, column=1, columnspan=2, incrow=True, tip=None, section=None):
-		self._variable = root.settings.init_stringvar(key, section=section, default=default)
-		Label(parent, text=text, width=len(text)+1).grid(sticky='e', row=root.row, column=column, padx=(root.PAD, 0))
+		self._variable = variable
+		Label(parent, text=text, width=len(text)+1).grid(sticky='e', row=parent.row, column=column, padx=(GuiConfig.PAD, 0))
 		super().__init__(parent, self._variable, self._variable.get(), *values)
-		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1, padx=(0,root.PAD))
+		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1, padx=(0,GuiConfig.PAD))
 		if incrow:
-			root.row += 1
-		if tip:
-			Hovertip(self, tip)
-	def get(self):
-		return self._variable.get()
-
-class GridIntMenu(OptionMenu):
-	'''| | OptionMenu | | |'''
-	def __init__(self, root, parent, key, text, values,
-		default=None, column=1, columnspan=2, incrow=True, tip=None, section=None):
-		self._variable = root.settings.init_intvar(key, section=section, default=default)
-		Label(parent, text=f'{text}	').grid(sticky='e', row=root.row, column=column)
-		super().__init__(parent, self._variable, self._variable.get(), *values)
-		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1)
-		if incrow:
-			root.row += 1
+			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
 	def get(self):
@@ -146,11 +132,11 @@ class GridIntMenu(OptionMenu):
 
 class Checker(Checkbutton):
 	'''Checkbox'''
-	def __init__(self, root, parent, key, text, default=False, column=0, columnspan=2, tip=None, section=None):
-		self._variable = root.settings.init_boolvar(key, section=section, default=default)
+	def __init__(self, parent, variable, text, default=False, column=0, columnspan=2, tip=None, section=None):
+		self._variable = variable
 		super().__init__(parent, variable=self._variable)
-		self.grid(row=root.row, column=column)
-		GridLabel(root, parent, text, column=column+1, columnspan=columnspan-1)
+		self.grid(row=parent.row, column=column)
+		GridLabel(parent, text, column=column+1, columnspan=columnspan-1)
 		if tip:
 			Hovertip(self, tip)
 	def get(self):
@@ -158,46 +144,46 @@ class Checker(Checkbutton):
 
 class StringRadiobuttons:
 	'''| Rabiobutton | | | |'''
-	def __init__(self, root, parent, key, buttons, default, column=0, section=None):
-		self._variable = root.settings.init_stringvar(key, section=section, default=default)
-		for row, value in enumerate(buttons, root.row):
+	def __init__(self, parent, variable, buttons, default, column=0, section=None):
+		self._variable = variable
+		for row, value in enumerate(buttons, parent.row):
 			button = Radiobutton(parent, variable=self._variable, value=value)
-			button.grid(row=row, column=column, sticky='w', padx=root.PAD)
+			button.grid(row=row, column=column, sticky='w', padx=GuiConfig.PAD)
 			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
-	def get():
+	def get(self):
 		return self._variable.get()
 
 class VerticalRadiobuttons:
 	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
-	def __init__(self, root, parent, key, buttons, default, column=1, columnspan=255, incrow=True, section=None):
+	def __init__(self, parent, variable, buttons, default, column=1, columnspan=255, incrow=True, section=None):
 		frame = Frame(parent)
-		frame.grid(row=root.row, column=column, columnspan=columnspan, sticky='w', padx=root.PAD)
-		self._variable = root.settings.init_stringvar(key, section=section, default=default)
+		frame.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
+		self._variable = variable
 		for value in buttons:
 			button = Radiobutton(frame, variable=self._variable, value=value, text=value)
-			button.pack(side='left', padx=(root.PAD, 0))
+			button.pack(side='left', padx=(GuiConfig.PAD, 0))
 			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
 		if incrow:
-			root.row += 1
-	def get():
+			parent.row += 1
+	def get(self):
 		return self._variable.get()
 
 class StringSelector(Button):
 	'''Button + Entry to select/write a string'''
-	def __init__(self, root, parent, key, text, command=None, default=None, width=None,
+	def __init__(self, parent, variable, text, command=None, default=None, width=None,
 		column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
-		self._variable = root.settings.init_stringvar(key, section=section, default=default)
+		self._variable = variable
 		if not command:
 			command = self._command
 			self.default = default
-		super().__init__(parent, text=text, command=command, width=root.BUTTON_WIDTH)
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
+		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
+		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD)
 		if not width:
-			width = root.ENTRY_WIDTH
+			width = GuiConfig.ENTRY_WIDTH
 		Entry(parent, textvariable=self._variable, width=width).grid(
-			row=root.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=root.PAD)
+			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=GuiConfig.PAD)
 		if incrow:
-			root.row += 1
+			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
 	def _command(self):
@@ -205,7 +191,9 @@ class StringSelector(Button):
 			return
 		if self.default:
 			self._variable.set(self.default)
-	def get():
+	def set(self, value):
+		self._variable.set(value=value)
+	def get(self):
 		string = self._variable.get()
 		if string:
 			return string
@@ -214,8 +202,8 @@ class StringSelector(Button):
 
 class FilenameSelector(StringSelector):
 	'''Button + Entry to select filename/base for output filenames'''	
-	def __init__(self, root, parent, default):
-		super().__init__(root, parent, 'filename', BasicLabels.FILENAME, command=self._command,
+	def __init__(self, parent, default, variable):
+		super().__init__(parent, variable, BasicLabels.FILENAME, command=self._command,
 			tip=BasicLabels.TIP_FILENAME)
 		self.default = default
 	def _command(self):
@@ -225,18 +213,18 @@ class FilenameSelector(StringSelector):
 
 class DirSelector(Button):
 	'''Button + Entry to select a directory'''
-	def __init__(self, root, parent, key, ask,
+	def __init__(self, parent, variable, ask,
 		default=None, command=None, column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
-		self._variable = root.settings.init_stringvar(key, section=section, default=default)
-		super().__init__(parent, text=BasicLabels.DIRECTORY, command=self._select, width=root.BUTTON_WIDTH)
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD)
-		Entry(parent, textvariable=self._variable, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan, sticky='w', padx=root.PAD)
+		self._variable = variable
+		super().__init__(parent, text=BasicLabels.DIRECTORY, command=self._select, width=GuiConfig.BUTTON_WIDTH)
+		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD)
+		Entry(parent, textvariable=self._variable, width=GuiConfig.ENTRY_WIDTH).grid(
+			row=parent.row, column=column+1, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
 		self.ask = ask
 		self.command = command
 		self.missing = missing
 		if incrow:
-			root.row += 1
+			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
 	def _select(self):
@@ -245,7 +233,7 @@ class DirSelector(Button):
 			self._variable.set(new_dir)
 		if self.command:
 			self.command()
-	def get():
+	def get(self):
 		directory = self._variable.get()
 		if directory:
 			return directory
@@ -254,15 +242,15 @@ class DirSelector(Button):
 
 class OutDirSelector(DirSelector):
 	'''Select destination/output directory'''
-	def __init__(self, root, parent, tip=None):
+	def __init__(self, parent, variable, tip=None):
 		if not tip:
 			tip = BasicLabels.TIP_OUTDIR
-		super().__init__(root, parent, 'outdir', BasicLabels.SELECT_OUTDIR,
+		super().__init__(parent, variable, BasicLabels.SELECT_OUTDIR,
 			tip=tip, missing=BasicLabels.OUTDIR_REQUIRED)
 
 class SourceDirSelector(DirSelector):
 	'''Select source directory'''
-	def __init__(self, root, parent, tip=None):
+	def __init__(self, parent, variable, tip=None):
 		if not tip:
 			tip = BasicLabels.TIP_SOURCE
 		super().__init__(root, parent, 'source', BasicLabels.SELECT_SOURCE,
@@ -270,20 +258,20 @@ class SourceDirSelector(DirSelector):
 
 class FileSelector(Button):
 	'''Select a file'''
-	def __init__(self, root, parent, key, text, ask, command=None,
+	def __init__(self, parent, variable, text, ask, command=None,
 		filetype=('Text files', '*.txt'), default=None, initialdir=None,
 		column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
-		self._variable = root.settings.init_stringvar(key, section=section, default=default)
-		super().__init__(parent, text=text, command=self._select, width=root.BUTTON_WIDTH)
-		self.grid(row=root.row, column=column, sticky='w', padx=root.PAD, pady=(root.PAD, 0))
-		Entry(parent, textvariable=self._variable, width=root.ENTRY_WIDTH).grid(
-			row=root.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=root.PAD)
+		self._variable = variable
+		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
+		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD, pady=(GuiConfig.PAD, 0))
+		Entry(parent, textvariable=self._variable, width=GuiConfig.ENTRY_WIDTH).grid(
+			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=GuiConfig.PAD)
 		self.ask = ask
 		self.filetype = filetype
 		self.initialdir = initialdir
 		self.command = command
 		if incrow:
-			root.row += 1
+			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
 	def _select(self):
@@ -296,7 +284,7 @@ class FileSelector(Button):
 			self._variable.set(new_filename)
 		if self.command:
 			self.command()
-	def get():
+	def get(self):
 		filename = self._variable.get()
 		if filename:
 			return filename
@@ -305,11 +293,11 @@ class FileSelector(Button):
 
 class Tree(Treeview):
 	'''Treeview with vertical scroll bar'''
-	def __init__(self, root, parent, selectmode='browse', width=None, height=None):
+	def __init__(self, parent, selectmode='browse', width=None, height=None):
 		if not width:
-			width = root.TREE_WIDTH
+			width = GuiConfig.TREE_WIDTH
 		if not height:
-			height = root.TREE_HEIGHT
+			height = GuiConfig.TREE_HEIGHT
 		super().__init__(parent, selectmode=selectmode, height=height, show='tree')
 		self.column("#0", width=width)
 		self.pack(side='left', expand=True)
@@ -412,12 +400,12 @@ class SelectTsvColumn(ChildWindow):
 			Button(frame,
 				text = f'{column+1}',
 				command = partial(self._get_column, column+1)
-			).grid(row=row, column=column, padx=self.root.PAD, pady=self.root.PAD)
+			).grid(row=row, column=column, padx=self.GuiConfig.PAD, pady=self.GuiConfig.PAD)
 		frame = ExpandedFrame(self.root, self)
 		Checkbutton(frame,
 			text = self.root.TSV_NO_HEAD,
 			variable = self.root.settings.raw(self.no_head_key)
-		).pack(side='left', padx=self.root.PAD)
+		).pack(side='left', padx=self.GuiConfig.PAD)
 		RightButton(self.root, frame, BasicLabels.QUIT, self.destroy)
 
 	def _get_column(self, column):

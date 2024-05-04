@@ -3,53 +3,64 @@
 
 from json import load, dump
 from tkinter import StringVar, IntVar, BooleanVar
-from pathlib import Path
 
 class Settings(dict):
 	'''Handle settings'''
 
 	def __init__(self, path):
-		'''Set path to JSON config file, default is app or script name with .json'''
+		'''Set path to JSON config file'''
 		self.path = path
 		try:
 			with self.path.open() as fh:
-				loaded = load(fh)
-		except FileNotFoundError:
-			loaded = dict()
-		self.update(loaded)
+				self.update(load(fh))
+		except:
+			pass
+		self.this_section = 'Base'
 
-	def init_section(self, section):
-		'''Open a section in settings'''
-		self.section = section
+	def _init_section(self, section=None):
+		'''Open a section in settings if necessary'''
+		if not section:
+			section = self.this_section
 		if not section in self:
 			self[section] = dict()
 
-	def get(self, key, section=None):
-		'Get value'
+	def set(self, key, value, section=None):
+		'''Set value directly into settings dict'''
 		if not section:
-			section = self.section
+			section = self.this_section
+		self._init_section(section=section)
+		self[section][key] = value
+
+	def get(self, key, section=None):
+		'''Get value from settings dict'''
+		if not section:
+			section = self.this_section
+		if not section in self or not key in self[section]:
+			return None
 		try:
 			return self[section][key].get()
-		except (KeyError, AttributeError):
-			return None
+		except AttributeError:
+			return self[section][key]
 
-	def init_stringvar(self, key, default=None, section=None):
-		'''Generate StringVar for one setting'''
+	def init_stringvar(self, key, section=None, default=None):
+		'''Get or generate StringVar for one setting'''
 		if not section:
-			section = self.section
+			section = self.this_section
+		self._init_section(section)
 		value = self.get(key, section=section)
 		if value:
 			self[section][key] = StringVar(value=value)
 		elif default:
-			self[section][key] = StringVar(value=default)
+			self[section][key]= StringVar(value=default)
 		else:
 			self[section][key] = StringVar(value='')
 		return self[section][key]
 
-	def init_intvar(self, key, default=None, section=None):
-		'''Generate IntVar for one setting'''
+	def init_intvar(self, key, section=None, default=None):
+		'''Get or generate IntVar for one setting'''
 		if not section:
-			section = self.section
+			section = self.this_section
+		self._init_section(section)
 		value = self.get(key, section=section)
 		if value:
 			self[section][key] = IntVar(value=value)
@@ -57,19 +68,20 @@ class Settings(dict):
 			self[section][key] = IntVar(value=default)
 		return self[section][key]
 
-	def init_boolvar(self, key, default=False, section=None):
-		'''Generate BooleanVar for one setting'''
+	def init_boolvar(self, key, section=None, default=None):
+		'''Get or generate BooleanVar for one setting'''
 		if not section:
-			section = self.section
+			section = self.this_section
+		self._init_section(section)
 		value = self.get(key, section=section)
-		if value:
+		if value != None:
 			self[section][key] = BooleanVar(value=value)
 		else:
 			self[section][key] = BooleanVar(value=default)
 		return self[section][key]
 
 	def decoded(self):
-		'''Decode settings using get method'''
+		'''Decode settings by fetching values from tk variables'''
 		dec_settings = dict()
 		for section in self:
 			dec_section = dict()
@@ -77,15 +89,14 @@ class Settings(dict):
 				value = self.get(key, section=section)
 				if value:
 					dec_section[key] = value
-			if dec_section != dict():
+			if dec_section:
 				dec_settings[section] = dec_section
 		return dec_settings
 
 	def write(self):
-		'''Write config file'''
+		'''Write settings to JSON file'''
 		try:
 			with self.path.open('w') as fh:
 				dump(self.decoded(), fh)
-		except PermissionError as err:
+		except OSError as err:
 			return err
-

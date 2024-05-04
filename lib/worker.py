@@ -3,6 +3,7 @@
 
 from threading import Thread
 from shlex import split as ssplit
+from .guilabeling import BasicLabels
 
 class Worker(Thread):
 	'''Work job after job'''
@@ -24,16 +25,17 @@ class Worker(Thread):
 			if not cmd_line:
 				break
 			self.gui.disable_jobs()
-			echo(f'{self.gui.RUNNING}: {cmd_line}')
+			echo(f'{BasicLabels.RUNNING}: {cmd_line}')
 			args = ssplit(cmd_line)
 			if len(args) == 0 or not args[0]:
 				continue
 			cmd = args[0]
 			for Cli, Gui  in self.gui.modules:
-				if args[0].lower() == Gui.CMD.lower():
+				if args[0].lower() == Gui.MODULE.lower():
 					break
 			else:
-				echo(self.gui.UNDETECTED)
+				echo(BasicLabels.UNDETECTED)
+				echo()
 				continue
 			if self.gui.debug:
 				module = Cli()
@@ -48,9 +50,12 @@ class Worker(Thread):
 					echo(ex)
 					ex_cnt += 1
 		if cmd:
-			echo(self.gui.FINISHED_ALL_JOBS)
+			echo(BasicLabels.FINISHED_ALL_JOBS)
+			echo()
 			if ex_cnt > 0:
-				echo(self.gui.EXCEPTIONS)
+				echo(BasicLabels.EXCEPTIONS)
+				echo()
 		else:
-			echo(self.gui.NOTHING2DO)
+			echo(BasicLabels.NOTHING2DO)
+			echo()
 		self.gui.enable_start()

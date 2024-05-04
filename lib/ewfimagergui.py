@@ -7,7 +7,7 @@ from tkinter import Text
 from functools import partial
 from os import getlogin, access, R_OK
 from lib.timestamp import TimeStamp
-from lib.guielements import Checker, GridStringMenu, ChildWindow
+from lib.guielements import Checker, GridMenu, ChildWindow
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import StringSelector, StringRadiobuttons
 from lib.guielements import GridButton, LeftButton, RightButton, GridBlank

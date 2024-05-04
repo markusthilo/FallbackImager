@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+class GuiConfig:
+	'''Configurations for the GUI'''
+
+	PAD = 4
+	JOB_HEIGHT = 4
+	INFO_HEIGHT = 8
+	ENTRY_WIDTH = 144
+	MIN_ENTRY_WIDTH = 8
+	MAX_ENTRY_WIDTH = 32
+	MAX_ENTRY_HEIGHT = 8
+	MAX_ROW_QUANT = 5
+	MAX_COLUMN_QUANT = 10
+	FILES_FIELD_WIDTH = 94
+	SMALL_FIELD_WIDTH = 24
+	BUTTON_WIDTH = 24
+	TREE_HEIGHT = 24
+	TREE_WIDTH = 640
