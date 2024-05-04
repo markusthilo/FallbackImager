@@ -28,7 +28,6 @@ class BasicLabels:
 	FINISHED_ALL_JOBS = 'Finished all jobs.'
 	EXCEPTIONS = 'Exceptions occured!'
 	UNDETECTED = 'Could not detect what to do!'
-
 	DESTINATION = 'Destination'
 	DIRECTORY = 'Directory'
 	SELECT_OUTDIR = 'Select destination directory'
@@ -45,7 +44,6 @@ klick to auto generate from actual time
 	SELECT_SOURCE = 'Select Source'
 	TIP_SOURCE = 'Select source = root directory'
 	SOURCE_REQUIRED = 'Source is required'
-
 	MISSING_ENTRY = 'Missing entry'
 	TSV_FILE = 'TSV file'
 	COLUMN = 'Column'
@@ -53,8 +51,7 @@ klick to auto generate from actual time
 	TIP_TSV_NO_HEAD = '''Select if given TSV file
 has no head line'''
 	SELECT_COLUMN = 'Select column'
-	FIRST_CHOOSE_TSV = 'First choose text/TSV file'
-
+	FIRST_CHOOSE_TSV = 'First choose text/TSV file to select a column'
 
 class AxCheckerLabels(BasicLabels):
 
@@ -76,15 +73,11 @@ the relative file paths to compare'''
 	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
 	SELECT_ROOT = 'Select source root (e.g. partition or directory)'
 	CASE_REQUIRED = 'AXIOM case file is required'
-
-'''
-	UNABLE_DETECT_PATHS = 'Unable to detect paths'
-	UNABLE_DETECT_PARTITIONS = 'Unable to detect partitions'
-	
-	ID_REQUIRED = 'ID of AXIOM source as root to compare is required'
-	ROOT_DIR_REQUIRED = 'Root directory is required' 
+	ROOT_ID_REQUIRED = 'AXIOM source ID of root to compare is required'
+	ROOT_DIR_REQUIRED = 'Root directory (or drive) to compare with AXIOM case is required'
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 
+'''
 	SOURCE = 'Source'
 	ASK_SOURCE = 'Select source'
 	PATH = 'Path'

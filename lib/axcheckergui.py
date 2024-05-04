@@ -49,9 +49,8 @@ class AxCheckerGui(AxCheckerLabels):
 		GridLabel(frame, self.TASK)
 		self.task = StringRadiobuttons(
 			frame,
-			self.root.settings.init_stringvar('Task'),
-			('Check', 'CompareDir', 'CompareTSV'),
-			'Check'
+			self.root.settings.init_stringvar('Task', default='Check'),
+			('Check', 'CompareDir', 'CompareTSV')
 		)
 		GridLabel(frame, self.CHECK, column=1)
 		self.root_dir = DirSelector(
@@ -79,7 +78,7 @@ class AxCheckerGui(AxCheckerLabels):
 		)
 		self.tsv_no_head = Checker(
 			frame,
-			self.root.settings.init_stringvar('NoHead'),
+			self.root.settings.init_boolvar('NoHead'),
 			self.TSV_NO_HEAD,
 			columnspan = 3,
 			tip = self.TIP_TSV_NO_HEAD
@@ -87,11 +86,11 @@ class AxCheckerGui(AxCheckerLabels):
 		GridSeparator(frame)
 		GridBlank(frame)
 		AddJobButton(frame, self.MODULE, self._add_job)
-		self.child_win_active = False
+		self.root.child_win_active = False
 
 	def _select_root(self):
 		'''Select root to compare in the AXIOM case'''
-		if self.child_win_active:
+		if self.root.child_win_active:
 			return
 		mfdb = self.case_file.get()
 		if not mfdb:
@@ -127,75 +126,59 @@ class AxCheckerGui(AxCheckerLabels):
 
 	def _select_file_structure(self):
 		'''Select file structure to compare'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw('task').set('compare_dir')
+		self.task.set('CompareDir')
 
 	def _select_tsv_file(self):
 		'''Select TSV file to compare'''
-		self.root.settings.section = self.CMD
-		self.root.settings.raw('task').set('compare_tsv')
+		self.task.set('CompareTSV')
 
 	def _select_column(self):
 		'''Select column in TSV file to compare'''
-		SelectTsvColumn(self.root, self.CMD)
+		self.task.set('CompareTSV')
+		SelectTsvColumn(self.root, self.tsv_column, self.tsv_file)
 
 	def _add_job(self):
 		'''Generate command line'''
-		self.root.settings.section = self.CMD
-		mfdb = self.root.settings.get('case_file')
-		if not mfdb:
-			showerror(
-				title = self.MISSING_ENTRY,
-				message = self.CASE_REQUIRED
-			)
-			return
-		outdir = self.root.settings.get('outdir')
-		if not outdir:
-			showerror(
-				title = self.MISSING_ENTRY,
-				message = self.DEST_DIR_REQUIRED
-			)
-			return
-		filename = self.root.settings.get('filename')
-
-		verify = self.root.settings.get(self.root.VERIFY_FILE)
-
-		root_id = self.root.settings.get('root_id')
-
-		try:
-			int(root_id)
-		except ValueError:
-			root_id = None
-		if verify != self.root.DO_NOT_COMPARE and not root_id:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.ID_REQUIRED
-			)
-			return
-		file_structure = self.root.settings.get(self.root.FILE_STRUCTURE)
-		tsv = self.root.settings.get(self.root.TSV)
-		column = self.root.settings.get(self.root.COLUMN)
-		cmd = self.root.settings.section.lower()
-		cmd += f' --root {root_id}'
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		if verify == self.root.FILE_STRUCTURE:
-			if not file_structure:
+		mfdb = self.case_file.get()
+		outdir = self.outdir.get()
+		filename = self.filename.get()
+		task = self.task.get()
+		if task != 'Check':
+			root_id = self.root_id.get()
+			try:
+				int(root_id)
+			except ValueError:
 				showerror(
-					title = self.root.MISSING_ENTRIES,
-					message = self.root.ROOT_DIR_REQUIRED
+					title = self.MISSING_ENTRIES,
+					message = self.ROOT_ID_REQUIRED
 				)
 				return
-			cmd += f' --diff "{file_structure}"'
-		elif verify == self.root.TSV:
-			if not tsv or not column:
-				showerror(
-					title = self.root.MISSING_ENTRIES,
-					message = self.root.TSV_AND_COL_REQUIRED
+			if task == 'CompareDir':
+				root_dir = self.root_dir.get()
+				if not root_dir:
+					showerror(
+						title = self.MISSING_ENTRIES,
+						message = self.ROOT_DIR_REQUIRED
 					)
-				return
-			cmd += f' --diff "{tsv}" --column {column}'
-			if self.root.settings.get(self.root.TSV_NO_HEAD) == '1':
+					return
+			else:
+				tsv_file = self.tsv_file.get()
+				tsv_column = self.tsv_column.get()
+				if not tsv_file or not tsv_column:
+					showerror(
+						title = self.MISSING_ENTRIES,
+						message = self.TSV_AND_COL_REQUIRED
+					)
+					return
+				tsv_no_head = self.tsv_no_head.get()
+		cmd = f'axchecker --root "{root_id}" --outdir "{outdir}"'
+		if filename:
+			cmd += f' --filename "{filename}"'
+		if task == 'CompareDir':
+			cmd += f' --diff "{root_dir}"'
+		elif task == 'CompareTSV':
+			cmd += f' --diff "{tsv_file}" --column "{tsv_column}"'
+			if tsv_no_head:
 				cmd += ' --nohead'
 		cmd += f' "{mfdb}"'
 		self.root.append_job(cmd)

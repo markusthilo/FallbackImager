@@ -127,6 +127,8 @@ class GridMenu(OptionMenu):
 			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
+	def set(self, value):
+		self._variable.set(value=value)
 	def get(self):
 		return self._variable.get()
 
@@ -139,17 +141,21 @@ class Checker(Checkbutton):
 		GridLabel(parent, text, column=column+1, columnspan=columnspan-1)
 		if tip:
 			Hovertip(self, tip)
+	def set(self, value):
+		self._variable.set(value=value)
 	def get(self):
 		return self._variable.get()
 
 class StringRadiobuttons:
 	'''| Rabiobutton | | | |'''
-	def __init__(self, parent, variable, buttons, default, column=0, section=None):
+	def __init__(self, parent, variable, buttons, column=0, section=None):
 		self._variable = variable
 		for row, value in enumerate(buttons, parent.row):
 			button = Radiobutton(parent, variable=self._variable, value=value)
 			button.grid(row=row, column=column, sticky='w', padx=GuiConfig.PAD)
 			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
+	def set(self, value):
+		self._variable.set(value=value)
 	def get(self):
 		return self._variable.get()
 
@@ -165,6 +171,8 @@ class VerticalRadiobuttons:
 			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
 		if incrow:
 			parent.row += 1
+	def set(self, value):
+		self._variable.set(value=value)
 	def get(self):
 		return self._variable.get()
 
@@ -182,6 +190,7 @@ class StringSelector(Button):
 			width = GuiConfig.ENTRY_WIDTH
 		Entry(parent, textvariable=self._variable, width=width).grid(
 			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=GuiConfig.PAD)
+		self.missing = missing
 		if incrow:
 			parent.row += 1
 		if tip:
@@ -233,6 +242,8 @@ class DirSelector(Button):
 			self._variable.set(new_dir)
 		if self.command:
 			self.command()
+	def set(self, value):
+		self._variable.set(value=value)
 	def get(self):
 		directory = self._variable.get()
 		if directory:
@@ -253,7 +264,7 @@ class SourceDirSelector(DirSelector):
 	def __init__(self, parent, variable, tip=None):
 		if not tip:
 			tip = BasicLabels.TIP_SOURCE
-		super().__init__(root, parent, 'source', BasicLabels.SELECT_SOURCE,
+		super().__init__(root, parent, variable, BasicLabels.SELECT_SOURCE,
 			tip=tip, missing=BasicLabels.SOURCE_REQUIRED)
 
 class FileSelector(Button):
@@ -270,6 +281,7 @@ class FileSelector(Button):
 		self.filetype = filetype
 		self.initialdir = initialdir
 		self.command = command
+		self.missing = missing
 		if incrow:
 			parent.row += 1
 		if tip:
@@ -284,6 +296,8 @@ class FileSelector(Button):
 			self._variable.set(new_filename)
 		if self.command:
 			self.command()
+	def set(self, value):
+		self._variable.set(value=value)
 	def get(self):
 		filename = self._variable.get()
 		if filename:
@@ -310,13 +324,13 @@ class ChildWindow(Toplevel):
 
 	def __init__(self, root, title):
 		'''Open child window'''
-		super().__init__(root)
+		self.root = root
+		super().__init__(self.root)
 		self.title(title)
 		self.resizable(0, 0)
-		self.iconphoto(True, root.appicon)
+		self.iconphoto(True, self.root.appicon)
 		self.protocol('WM_DELETE_WINDOW', self.destroy)
-		root.child_win_active = True
-		self.root = root
+		self.root.child_win_active = True
 
 	def destroy(self):
 		'''Destroy the child window'''
@@ -326,59 +340,54 @@ class ChildWindow(Toplevel):
 class SelectTsvColumn(ChildWindow):
 	'''Window to select column of a TSV file'''
 
-	def __init__(self, root, cmd, file='tsv_file', column='tsv_column', no_head = 'tsv_no_head'):
-		'''Open child window for module=cmd'''
+	def __init__(self, root, column_var, file_var):
+		'''Open child window to select column of TSV file'''
 		if root.child_win_active:
 			return
-		self.root = root
-		self.cmd = cmd
-		self.file_key = file
-		self.column_key = column
-		self.no_head_key = no_head
-		self.root.settings.section = self.cmd
-		tsv = self.root.settings.get(self.file_key)
-		if tsv:
-			encoding, head = ExtPath.read_utf_head(Path(tsv), lines_out=self.root.MAX_ROW_QUANT)
-			try:
-				columns = len(head[0].split('\t'))
-			except IndexError:
-				columns = 1
-			if columns == 1:
-				self.root.settings.raw(self.column_key).set('1')
-				return
-			if len(head) < 2:
-				tsv = None
+		self.column_var = column_var
+		self.file_var = file_var
+		tsv = self.file_var.get()
 		if not tsv:
 			showerror(
 				title = BasicLabels.MISSING_ENTRY,
 				message = BasicLabels.FIRST_CHOOSE_TSV
 			)
 			return
-		super().__init__(self.root, BasicLabels.SELECT_COLUMN)
+		encoding, head = ExtPath.read_utf_head(Path(tsv), lines_out=GuiConfig.MAX_ROW_QUANT)
+		try:
+			columns = len(head[0].split('\t'))
+		except IndexError:
+			columns = 1
+		if columns == 1:
+			self.file_var.set('1')
+			return
+		if len(head) < 2:
+			tsv = None
+		super().__init__(root, BasicLabels.SELECT_COLUMN)
 		self._selected_column = StringVar()
-		frame = ExpandedFrame(self.root, self)
+		frame = ExpandedFrame(self)
 		preview = {(row, column): entry
 			for row, line in enumerate(head)
 			for column, entry in enumerate(line.split('\t'))
 		}
-		entry_heights = [0]*self.root.MAX_ROW_QUANT
-		for row in range(self.root.MAX_ROW_QUANT):
-			for column in range(self.root.MAX_COLUMN_QUANT):
+		entry_heights = [0]*GuiConfig.MAX_ROW_QUANT
+		for row in range(GuiConfig.MAX_ROW_QUANT):
+			for column in range(GuiConfig.MAX_COLUMN_QUANT):
 				try:
 					entry_heights[row] = max(
 						entry_heights[row],
-						min(int(len(preview[row, column])/self.root.MAX_ENTRY_WIDTH)+1,
-							self.root.MAX_ENTRY_HEIGHT)
+						min(int(len(preview[row, column])/GuiConfig.MAX_ENTRY_WIDTH)+1,
+							GuiConfig.MAX_ENTRY_HEIGHT)
 					)
 				except KeyError:
 					break
-		entry_widths = [self.root.MIN_ENTRY_WIDTH]*self.root.MAX_COLUMN_QUANT
-		for column in range(self.root.MAX_COLUMN_QUANT):
-			for row in range(self.root.MAX_ROW_QUANT):
+		entry_widths = [GuiConfig.MIN_ENTRY_WIDTH]*GuiConfig.MAX_COLUMN_QUANT
+		for column in range(GuiConfig.MAX_COLUMN_QUANT):
+			for row in range(GuiConfig.MAX_ROW_QUANT):
 				try:
 					entry_widths[column] = max(
 						entry_widths[column],
-						min(len(preview[row, column]), self.root.MAX_ENTRY_WIDTH)
+						min(len(preview[row, column]), GuiConfig.MAX_ENTRY_WIDTH)
 					)
 				except KeyError:
 					break
@@ -393,25 +402,20 @@ class SelectTsvColumn(ChildWindow):
 				text.bind('<Key>', lambda dummy: 'break')
 				text.insert('end', preview[row, column])
 				text.configure(state='disabled')
-		if columns > self.root.MAX_COLUMN_QUANT:
-			columns = self.root.MAX_COLUMN_QUANT
+		if columns > GuiConfig.MAX_COLUMN_QUANT:
+			columns = GuiConfig.MAX_COLUMN_QUANT
 		row += 1
 		for column in range(columns):
 			Button(frame,
 				text = f'{column+1}',
 				command = partial(self._get_column, column+1)
-			).grid(row=row, column=column, padx=self.GuiConfig.PAD, pady=self.GuiConfig.PAD)
-		frame = ExpandedFrame(self.root, self)
-		Checkbutton(frame,
-			text = self.root.TSV_NO_HEAD,
-			variable = self.root.settings.raw(self.no_head_key)
-		).pack(side='left', padx=self.GuiConfig.PAD)
-		RightButton(self.root, frame, BasicLabels.QUIT, self.destroy)
+			).grid(row=row, column=column, padx=GuiConfig.PAD, pady=GuiConfig.PAD)
+		frame = ExpandedFrame(self)
+		RightButton(frame, BasicLabels.QUIT, self.destroy)
 
 	def _get_column(self, column):
 		'''Get the selected column'''
-		self.root.settings.section = self.cmd
-		self.root.settings.raw(self.column_key).set(f'{column}')
+		self.column_var.set(f'{column}')
 		self.destroy()
 
 class BasicTab:

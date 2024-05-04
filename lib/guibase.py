@@ -65,7 +65,7 @@ class GuiBase(Tk):
 		'''Show help, usually from __description__'''
 		Help(self).start()
 			
-	def _append_job(self, cmd):
+	def append_job(self, cmd):
 		'''Append message in info box'''
 		last = self.jobs_text.get('end-2l', 'end').strip(';\n')
 		if not last or cmd != last:
