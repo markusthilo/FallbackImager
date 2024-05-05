@@ -15,11 +15,17 @@ from .guiconfig import GuiConfig
 from .timestamp import TimeStamp
 from .extpath import ExtPath
 
+class MissingEntry:
+	'''Show error for missing entry'''
+	def __init__(self, message):
+		showerror(title=BasicLabels.MISSING_ENTRY, message=message)
+
 class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
 	def __init__(self, parent):
 		super().__init__(parent)
 		self.pack(fill='both', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
+		self.row = 0
 
 class ExpandedNotebook(Notebook):
 	'''|<- Notebook ->|'''
@@ -86,12 +92,6 @@ class GridButton(Button):
 		if tip:
 			Hovertip(self, tip)
 
-class AddJobButton(GridButton):
-	'''| [Add job] | | |'''
-	def __init__(self, parent, module, command, column=0, columnspan=255):
-		super().__init__(parent, f'{BasicLabels.ADD_JOB} {module}', command,
-			column=column, columnspan=columnspan, tip=BasicLabels.TIP_ADD_JOB)
-
 class GridSeparator:
 	'''|-------|'''
 	def __init__(self, parent, column=0, columnspan=255, incrow=True):
@@ -114,6 +114,22 @@ class GridBlank:
 		Label(parent, width=width).grid(row=parent.row, column=column, padx=GuiConfig.PAD)
 		if incrow:
 			parent.row += 1
+
+class NotebookFrame(ExpandedFrame):
+	'''To start a module'''
+	def __init__(self, root, module_name):
+		root.settings.this_section = module_name
+		super().__init__(root.notebook)
+		root.notebook.add(self, text=f' {module_name} ')
+		GridSeparator(self)
+
+class AddJobButton(GridButton):
+	'''| [Add job] | | |'''
+	def __init__(self, parent, module, command, column=0, columnspan=255):
+		GridBlank(parent)
+		GridSeparator(parent)
+		super().__init__(parent, f'{BasicLabels.ADD_JOB} {module}', command,
+			column=column, columnspan=columnspan, tip=BasicLabels.TIP_ADD_JOB)
 
 class GridMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
@@ -207,7 +223,7 @@ class StringSelector(Button):
 		if string:
 			return string
 		if self.missing:
-			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
+			MissingEntry(self.missing)
 
 class FilenameSelector(StringSelector):
 	'''Button + Entry to select filename/base for output filenames'''	
@@ -249,13 +265,15 @@ class DirSelector(Button):
 		if directory:
 			return directory
 		if self.missing:
-			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
+			MissingEntry(self.missing)
 
 class OutDirSelector(DirSelector):
 	'''Select destination/output directory'''
 	def __init__(self, parent, variable, tip=None):
 		if not tip:
 			tip = BasicLabels.TIP_OUTDIR
+		GridSeparator(parent)
+		GridLabel(parent, BasicLabels.DESTINATION)
 		super().__init__(parent, variable, BasicLabels.SELECT_OUTDIR,
 			tip=tip, missing=BasicLabels.OUTDIR_REQUIRED)
 
@@ -264,6 +282,8 @@ class SourceDirSelector(DirSelector):
 	def __init__(self, parent, variable, tip=None):
 		if not tip:
 			tip = BasicLabels.TIP_SOURCE
+		GridSeparator(parent)
+		GridLabel(parent, BasicLabels.SOURCE)
 		super().__init__(root, parent, variable, BasicLabels.SELECT_SOURCE,
 			tip=tip, missing=BasicLabels.SOURCE_REQUIRED)
 
@@ -303,7 +323,7 @@ class FileSelector(Button):
 		if filename:
 			return filename
 		if self.missing:
-			showerror(title=BasicLabels.MISSING_ENTRY, message=self.missing)
+			MissingEntry(self.missing)
 
 class Tree(Treeview):
 	'''Treeview with vertical scroll bar'''
@@ -423,18 +443,14 @@ class BasicTab:
 
 	def __init__(self, root):
 		'''Notebook page'''
-		root.settings.init_section(self.CMD)
-		frame = ExpandedFrame(root, root.notebook)
+		root.settings.init_section(self.MODULE)
+		frame = ExpandedFrame(root.notebook)
 		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		SourceDirSelector(root, frame)
-		GridLabel(root, frame, root.DESTINATION, columnspan=2)
-		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
-			column=0, columnspan=3)
+		SourceDirSelector(frame)
+		GridLabel(frame, root.DESTINATION, columnspan=2)
+		FilenameSelector(frame, root.FILENAME, root.FILENAME)
+		DirSelector(frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR)
+		AddJobButton(frame, self.MODULE, self._add_job)
 		self.root = root
 	
 	def _add_job(self):

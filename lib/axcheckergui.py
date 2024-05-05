@@ -3,26 +3,20 @@
 
 from tkinter.messagebox import showerror
 from .guilabeling import AxCheckerLabels
-from .guielements import ChildWindow, GridBlank, Checker, Tree
-from .guielements import ExpandedFrame, GridSeparator, GridLabel
+from .guielements import MissingEntry, ChildWindow, GridBlank, Checker, Tree
+from .guielements import ExpandedFrame, GridSeparator, GridLabel, NotebookFrame
 from .guielements import DirSelector, OutDirSelector, SelectTsvColumn
 from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from .guielements import FileSelector, GridButton, LeftButton, RightButton, AddJobButton
+from .guielements import FileSelector, LeftButton, RightButton, AddJobButton
 from .mfdbreader import MfdbReader
 
 class AxCheckerGui(AxCheckerLabels):
 	'''Notebook page for AxChecker'''
 
-	MODULE = 'AxChecker'
-
 	def __init__(self, root):
 		'''Notebook page'''
 		self.root = root
-		self.root.settings.this_section = self.MODULE
-		frame = ExpandedFrame(self.root.notebook)
-		self.root.notebook.add(frame, text=f' {self.MODULE} ')
-		frame.row = 0
-		GridSeparator(frame)
+		frame = NotebookFrame(self.root, 'AxChecker')
 		GridLabel(frame, 'AXIOM')
 		self.case_file = FileSelector(
 			frame,
@@ -40,10 +34,8 @@ class AxCheckerGui(AxCheckerLabels):
 			command=self._select_root,
 			tip=self.TIP_ROOT
 		)	
-		GridSeparator(frame)
-		GridLabel(frame, self.DESTINATION)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
-		self.filename = FilenameSelector(frame, '{now}_' + self.MODULE.lower(),
+		self.filename = FilenameSelector(frame, '{now}_axchecker',
 			self.root.settings.init_stringvar('Filename'))
 		GridSeparator(frame)
 		GridLabel(frame, self.TASK)
@@ -83,9 +75,7 @@ class AxCheckerGui(AxCheckerLabels):
 			columnspan = 3,
 			tip = self.TIP_TSV_NO_HEAD
 		)
-		GridSeparator(frame)
-		GridBlank(frame)
-		AddJobButton(frame, self.MODULE, self._add_job)
+		AddJobButton(frame, 'AxChecker', self._add_job)
 		self.root.child_win_active = False
 
 	def _select_root(self):
@@ -148,27 +138,18 @@ class AxCheckerGui(AxCheckerLabels):
 			try:
 				int(root_id)
 			except ValueError:
-				showerror(
-					title = self.MISSING_ENTRIES,
-					message = self.ROOT_ID_REQUIRED
-				)
+				MissingEntry(self.ROOT_ID_REQUIRED)
 				return
 			if task == 'CompareDir':
 				root_dir = self.root_dir.get()
 				if not root_dir:
-					showerror(
-						title = self.MISSING_ENTRIES,
-						message = self.ROOT_DIR_REQUIRED
-					)
+					MissingEntry(self.ROOT_DIR_REQUIRED)
 					return
 			else:
 				tsv_file = self.tsv_file.get()
 				tsv_column = self.tsv_column.get()
 				if not tsv_file or not tsv_column:
-					showerror(
-						title = self.MISSING_ENTRIES,
-						message = self.TSV_AND_COL_REQUIRED
-					)
+					MissingEntry(self.TSV_AND_COL_REQUIRED)
 					return
 				tsv_no_head = self.tsv_no_head.get()
 		cmd = f'axchecker --root "{root_id}" --outdir "{outdir}"'

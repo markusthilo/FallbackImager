@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-class BasicLabels:
+### Labels and Tooltips ###
+### English ###
 
+class BasicLabels:
 	AVAILABLE_MODULES = 'Available modules:'
 	NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
@@ -41,10 +43,11 @@ klick to auto generate from actual time
 	SELECT_FILE = 'Select file'
 	TASK = 'Task'
 	TIP_RADIO_BUTTONS = 'Select one option'
+	SOURCE = 'Source'
 	SELECT_SOURCE = 'Select Source'
-	TIP_SOURCE = 'Select source = root directory'
+	TIP_SOURCE = 'Select source root'
 	SOURCE_REQUIRED = 'Source is required'
-	MISSING_ENTRY = 'Missing entry'
+	MISSING_ENTRIY = 'Missing entry'
 	TSV_FILE = 'TSV file'
 	COLUMN = 'Column'
 	TSV_NO_HEAD = 'TSV file has no head line'
@@ -54,7 +57,6 @@ has no head line'''
 	FIRST_CHOOSE_TSV = 'First choose text/TSV file to select a column'
 
 class AxCheckerLabels(BasicLabels):
-
 	CASE_FILE = 'Case File'
 	OPEN_CASE_FILE = 'Open case file'
 	TIP_CASE_FILE = 'Select Case.mfdb in the AXIOM case directory'
@@ -77,16 +79,23 @@ the relative file paths to compare'''
 	ROOT_DIR_REQUIRED = 'Root directory (or drive) to compare with AXIOM case is required'
 	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
 
+class DismImagerLabels(BasicLabels):
+	NAME = 'Name'
+	TIP_NAME = 'Image name (stored in WIM-image)'
+	DESCRIPTION = 'Description'
+	TIP_DESCRIPZION = 'Image description (stored in WIM-image)'
+	COMPRESSION = 'Compression'
+	TIP_COMPRESSION = 'Compression level for dismimg'
+	NONE = 'none'
+	FAST = 'fast'
+	MAX = 'max'
+	COPY_EXE = 'Copy WimMount.exe to destination directory'
+	TIP_COPY_EXE = '''WimMount.exe is a GUI tool to mount WIM-images.
+The executable has to be placed in the bin-subfolder.'''
+
+
 '''
-	SOURCE = 'Source'
-	ASK_SOURCE = 'Select source'
 	PATH = 'Path'
-	DIRECTORY = 'Directory'
-	
-	FILENAME = 'Filename'
-	OUTDIR = 'Outdir'
-	SELECT_DEST_DIR = 'Select destination directory'
-	FILTER = 'Filter'
 	FLAT = 'Flat structure without folders'
 	ISO_IMAGE = 'ISO image'
 	EWF_IMAGE = 'EWF/E01 image'
@@ -116,9 +125,7 @@ the relative file paths to compare'''
 	SELECT_BLACKLIST = 'Select blacklist'
 	WHITELIST = 'Whitelist'
 	SELECT_WHITELIST = 'Select whitelist'
-	COPY_EXE = 'Copy WimMount.exe to destination directory'
 
-	MISSING_ENTRIES = 'Missing entries'
 	WRONG_ENTRY = 'Wrong entry'
 	SOURCE_REQUIRED = 'Source is required'
 	DEST_DIR_REQUIRED = 'Destination directory is required'
