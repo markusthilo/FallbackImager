@@ -91,6 +91,9 @@ class AxChecker:
 		self.diff_path = ExtPath.path(diff)
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
 		axiom_file_paths = self.mfdb.file_paths(root_id)
+		
+		#print(axiom_file_paths)	### DEBUG ###
+		
 		self.log.info(f'Comparing {self.mfdb.paths[root_id][1]} recursivly to {self.diff_path.name}', echo=True)
 		missing_cnt = 0
 		if self.diff_path.is_dir():	# compare to dir
@@ -125,6 +128,10 @@ class AxChecker:
 					echo = lambda msg: self.echo(msg, overwrite=True)
 				echo(1)
 				for tsv_cnt, (tsv_path, line) in enumerate(tsv.read_lines()):
+
+					if not ExtPath.normalize_str(tsv_path) in axiom_file_paths:	### DEBUG ###
+						print(ExtPath.normalize_str(tsv_path))	### DEBUG ###
+
 					if not ExtPath.normalize_str(tsv_path) in axiom_file_paths:
 						print(line, file=fh)
 						missing_cnt += 1
