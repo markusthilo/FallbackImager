@@ -3,7 +3,7 @@
 
 from pathlib import Path
 from tkinter.messagebox import showerror
-from lib.guielements import SourceDirSelector, Checker, VerticalButtons
+from lib.guielements import SourceDirSelector, Checker
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, GridButton, GridBlank
 from lib.timestamp import TimeStamp

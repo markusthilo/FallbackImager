@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from .sqliteutils import SQLiteReader
+from .extpath import ExtPath
 
 class MfdbReader(SQLiteReader):
 	'''Extend SqliteReader for AXIOM data base'''
@@ -73,9 +74,11 @@ class MfdbReader(SQLiteReader):
 			if source_path.startswith(root_path):
 				yield source_id, source_type, source_path[root_len:]
 
-	def file_paths(self, root_id):
-		'''Get relative paths of all files under given root'''
-		return {relative_path for uu, source_type, relative_path in self.walk(root_id) if source_type == 'File'}
+	def get_relative_paths(self, root_id):
+		'''Get relative paths under given root'''
+		return {ExtPath.normalize(relative_path)
+			for source_id, source_type, relative_path in self.walk(root_id)
+		}
 
 	def tree(self):
 		'''Read table source and give possible roots'''

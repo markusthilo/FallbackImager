@@ -47,14 +47,7 @@ klick to auto generate from actual time
 	SELECT_SOURCE = 'Select Source'
 	TIP_SOURCE = 'Select source root'
 	SOURCE_REQUIRED = 'Source is required'
-	MISSING_ENTRIY = 'Missing entry'
-	TSV_FILE = 'TSV file'
-	COLUMN = 'Column'
-	TSV_NO_HEAD = 'TSV file has no head line'
-	TIP_TSV_NO_HEAD = '''Select if given TSV file
-has no head line'''
-	SELECT_COLUMN = 'Select column'
-	FIRST_CHOOSE_TSV = 'First choose text/TSV file to select a column'
+	MISSING_ENTRY = 'Missing entry'
 
 class AxCheckerLabels(BasicLabels):
 	CASE_FILE = 'Case File'
@@ -68,16 +61,22 @@ file structure or a TSV list of file paths'''
 	SELECT_COMP_DIR = 'Select directory to compare content'
 	TIP_COMP_DIR = '''Compare filepaths under given directory to
 files under given root (by ID) in AXIOM case'''
+	TSV_FILE = 'TSV file'
 	TIP_COMP_TSV = '''Compate filepaths in given TSV file to
 files under given root (by ID) in AXIOM case'''
-	TIP_TSV_COLUMN = '''Select column in TSV file containing
-the relative file paths to compare'''
+	ENCODING = 'Encoding'
+	TIP_ENCODING = '''Encoding of TSV file (e.g. cp1252,
+leave empty for default = utf-16-le on Win
+and utf-8 on other systems)'''
+	TSV_NO_HEAD = 'TSV file has no head line'
+	TIP_TSV_NO_HEAD = '''Select if given TSV file
+has no head line'''
 	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'
 	SELECT_ROOT = 'Select source root (e.g. partition or directory)'
 	CASE_REQUIRED = 'AXIOM case file is required'
 	ROOT_ID_REQUIRED = 'AXIOM source ID of root to compare is required'
 	ROOT_DIR_REQUIRED = 'Root directory (or drive) to compare with AXIOM case is required'
-	TSV_AND_COL_REQUIRED = 'Text/TSV file and column matching the AXIOM partition are required'
+	TSV_REQUIRED = 'Choose TSV file'
 
 class DismImagerLabels(BasicLabels):
 	NAME = 'Name'

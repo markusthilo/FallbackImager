@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from os import name as __os_name__
 from tkinter.messagebox import showerror
 from .guilabeling import AxCheckerLabels
-from .guielements import MissingEntry, ChildWindow, GridBlank, Checker, Tree
-from .guielements import ExpandedFrame, GridSeparator, GridLabel, NotebookFrame
-from .guielements import DirSelector, OutDirSelector, SelectTsvColumn
+from .guielements import MissingEntry, ChildWindow, Checker, Tree
+from .guielements import ExpandedFrame, GridSeparator, GridLabel
+from .guielements import DirSelector, OutDirSelector, NotebookFrame
 from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from .guielements import FileSelector, LeftButton, RightButton, AddJobButton
 from .mfdbreader import MfdbReader
@@ -13,10 +14,12 @@ from .mfdbreader import MfdbReader
 class AxCheckerGui(AxCheckerLabels):
 	'''Notebook page for AxChecker'''
 
+	MODULE = 'AxChecker'
+
 	def __init__(self, root):
 		'''Notebook page'''
 		self.root = root
-		frame = NotebookFrame(self.root, 'AxChecker')
+		frame = NotebookFrame(self.root, self.MODULE)
 		GridLabel(frame, 'AXIOM')
 		self.case_file = FileSelector(
 			frame,
@@ -61,12 +64,12 @@ class AxCheckerGui(AxCheckerLabels):
 			command = self._select_tsv_file,
 			tip = self.TIP_COMP_TSV
 		)
-		self.tsv_column = StringSelector(
+		self.tsv_encoding = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Column'),
-			self.COLUMN,
-			command = self._select_column,
-			tip = self.TIP_TSV_COLUMN
+			self.ENCODING,
+			command = self._default_encoding,
+			tip = self.TIP_ENCODING
 		)
 		self.tsv_no_head = Checker(
 			frame,
@@ -122,10 +125,16 @@ class AxCheckerGui(AxCheckerLabels):
 		'''Select TSV file to compare'''
 		self.task.set('CompareTSV')
 
-	def _select_column(self):
+	def _default_encoding(self):
 		'''Select column in TSV file to compare'''
 		self.task.set('CompareTSV')
-		SelectTsvColumn(self.root, self.tsv_column, self.tsv_file)
+		if self.tsv_encoding.get():
+			return
+		if __os_name__ == 'nt':
+			self.tsv_encoding.set('utf_16_le')
+		else:
+			self.tsv_encoding.set('utf-8')
+		self.tsv_encoding.set(AxChecker.default_encoding())
 
 	def _add_job(self):
 		'''Generate command line'''
@@ -147,9 +156,9 @@ class AxCheckerGui(AxCheckerLabels):
 					return
 			else:
 				tsv_file = self.tsv_file.get()
-				tsv_column = self.tsv_column.get()
-				if not tsv_file or not tsv_column:
-					MissingEntry(self.TSV_AND_COL_REQUIRED)
+				tsv_encoding = self.tsv_encoding.get()
+				if not tsv_file:
+					MissingEntry(self.TSV_REQUIRED)
 					return
 				tsv_no_head = self.tsv_no_head.get()
 		cmd = f'axchecker --root "{root_id}" --outdir "{outdir}"'
@@ -158,7 +167,9 @@ class AxCheckerGui(AxCheckerLabels):
 		if task == 'CompareDir':
 			cmd += f' --diff "{root_dir}"'
 		elif task == 'CompareTSV':
-			cmd += f' --diff "{tsv_file}" --column "{tsv_column}"'
+			cmd += f' --diff "{tsv_file}"'
+			if tsv_encoding:
+				cmd += f' --encoding "{tsv_encoding}"'
 			if tsv_no_head:
 				cmd += ' --nohead'
 		cmd += f' "{mfdb}"'

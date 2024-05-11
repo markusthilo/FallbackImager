@@ -58,13 +58,9 @@ class ExtPath:
 		return ''.join(char for char in string if char in f'-_{ascii_letters}{digits}')
 
 	@staticmethod
-	def normalize_str(string):
+	def normalize(string):
 		'''Normalize path given as string for better comparison'''
-		string = normalize('NFD', string).encode(errors='ignore').decode('utf-8', errors='ignore').strip('\t\n\\/')
-		string = string.replace('\n', ' ').replace('\t', ' ').replace('\r', '')
-		string = string.replace(b'\xe2\x86\xb2'.decode(), '')
-		string = string.replace(b'\x00\x00\x00\x00'.decode(), '.')
-		return string
+		return normalize('NFKD', string).strip('\\/').encode(errors='surrogateescape').decode(errors='surrogateescape')
 
 	@staticmethod
 	def normalize_posix(path):

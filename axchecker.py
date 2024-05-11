@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-01'
+__version__ = '0.5.1_2024-05-11'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -21,7 +21,6 @@ from lib.extpath import ExtPath, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.mfdbreader import MfdbReader
-from lib.tsvreader import TsvReader
 
 class AxChecker:
 	'''Compare AXIOM case file / SQlite data base with paths'''
@@ -78,8 +77,8 @@ class AxChecker:
 					print(f'{source_id}\t{source_type}\t"{source_path}"', file=fh)
 
 	def compare(self, root_id, diff,
-			column = None,
 			nohead = False,
+			encoding = None,
 			filename = None,
 			outdir = None,
 			log = None
@@ -88,61 +87,49 @@ class AxChecker:
 		self._set_output(filename, outdir, log)
 		if not root_id:
 			self.log.error('Missing root ID to compare')
-		self.diff_path = ExtPath.path(diff)
+		diff_path = ExtPath.path(diff)
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
-		axiom_file_paths = self.mfdb.file_paths(root_id)
-		
-		#print(axiom_file_paths)	### DEBUG ###
-		
-		self.log.info(f'Comparing {self.mfdb.paths[root_id][1]} recursivly to {self.diff_path.name}', echo=True)
+		axiom_paths = self.mfdb.get_relative_paths(root_id)
+		self.log.info(f'Comparing {self.mfdb.paths[root_id][1]} recursivly to {diff_path.name}', echo=True)
 		missing_cnt = 0
-		if self.diff_path.is_dir():	# compare to dir
-			progress = Progressor(self.diff_path, echo=self.echo)
+		if diff_path.is_dir():	# compare to dir
+			progress = Progressor(diff_path, echo=self.echo)
 			if __os_name__ == 'nt':
 				normalize = ExtPath.normalize_win
 			else:
 				normalize = ExtPath.normalize_posix
 			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
 				).open(mode='w', encoding='utf-8') as fh:
-				for absolut_path, relative_path, tp in ExtPath.walk(self.diff_path):
+				for absolut_path, relative_path, tp in ExtPath.walk(diff_path):
 					progress.inc()
-					if tp == 'File' and not normalize(relative_path) in axiom_file_paths:
+					if tp == 'File' and not normalize(relative_path) in axiom_paths:
 						print(relative_path, file=fh)
 						missing_cnt += 1
-		elif self.diff_path.is_file:	# compare to file
-			if column:
-				self.column = column
-			else:
-				self.column = 1
-			self.nohead = nohead
-			tsv = TsvReader(self.diff_path, column=self.column, nohead=self.nohead)
-			if tsv.column < 0:
-				self.log.error('Column out of range/undetected')
+		elif diff_path.is_file:	# compare to file
+			if not encoding:
+				if __os_name__ == 'nt':
+					encoding = 'utf_16_le'
+				else:
+					encoding = 'utf-8'
+				encoding = self.default_encoding()
+			tsv = diff_path.read_bytes().decode(encoding, errors='ignore').split('\n')
 			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
-				).open(mode='w', encoding='utf-8') as fh:
-				if not self.nohead:
-					print(tsv.head, file=fh)
+				).open(mode='w', encoding=encoding) as fh:
+				if not nohead:
+					print(tsv.pop(0).strip(), file=fh)
 				if self.echo == print:
 					echo = lambda msg: print(f'\r{msg}', end='')
 				else:
 					echo = lambda msg: self.echo(msg, overwrite=True)
 				echo(1)
-				for tsv_cnt, (tsv_path, line) in enumerate(tsv.read_lines()):
-
-					if not ExtPath.normalize_str(tsv_path) in axiom_file_paths:	### DEBUG ###
-						print(ExtPath.normalize_str(tsv_path))	### DEBUG ###
-
-					if not ExtPath.normalize_str(tsv_path) in axiom_file_paths:
-						print(line, file=fh)
+				for tsv_cnt, line in enumerate(tsv):
+					path = ExtPath.normalize(line.split('\t', 1)[0])
+					if not path in axiom_paths:
+						print(line.strip(), file=fh)
 						missing_cnt += 1
 					if tsv_cnt % 10000 == 0:
 						echo(tsv_cnt)
 			echo('')
-			if tsv.errors:
-				self.log.warning(
-					f'Found unprocessable line(s) in {diff_path.name}:\n'+
-					'\n'.join(tsv.errors)
-				)
 		else:
 			self.log.error(f'Unable to read/open {diff_path.name}')
 		if missing_cnt > 0:
@@ -155,11 +142,12 @@ class AxCheckerCli(ArgumentParser):
 	def __init__(self, **kwargs):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__, **kwargs)
-		self.add_argument('-c', '--column', type=str,
-			help='Column with path to compare (name or number)', metavar='STRING|INTEGER'
-		)
 		self.add_argument('-d', '--diff', type=ExtPath.path,
 			help='Path to file or directory to compare with', metavar='FILE|DIRECTORY'
+		)
+		self.add_argument('-e', '--encoding', type=str,
+			help='Encoding of the file given by --diff (default is utf_16_le on Win, utf-8 on other systems)',
+			metavar='STRING'
 		)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
@@ -175,7 +163,7 @@ class AxCheckerCli(ArgumentParser):
 			help='Directory to write log and CSV list(s)', metavar='DIRECTORY'
 		)
 		self.add_argument('-r', '--root', type=int,
-			help='ID of root path to list or to compare', metavar='INTEGER'
+			help='ID of root path to compare', metavar='INTEGER'
 		)
 		self.add_argument('mfdb', nargs=1, type=ExtPath.path,
 			help='AXIOM Case (.mfdb) / SQLite data base file', metavar='FILE'
@@ -185,8 +173,8 @@ class AxCheckerCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.mfdb = args.mfdb[0]
-		self.column = args.column
 		self.diff = args.diff
+		self.encoding = args.encoding
 		self.filename = args.filename
 		self.list = args.list
 		self.nohead = args.nohead
@@ -202,7 +190,7 @@ class AxCheckerCli(ArgumentParser):
 			return
 		if self.diff:
 			axchecker.compare(self.root, self.diff,
-				column = self.column,
+				encoding = self.encoding,
 				nohead = self.nohead,
 				filename = self.filename,
 				outdir = self.outdir

@@ -5,7 +5,7 @@ from tkinter.messagebox import showerror, askyesno
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
-from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridIntMenu, GridStringMenu
+from lib.guielements import SourceDirSelector, Checker, LeftLabel
 from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
 from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
