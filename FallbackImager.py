@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-11'
+__version__ = '0.5.1_2024-05-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -80,7 +80,7 @@ class Gui(GuiBase):
 			#	(SQLite, SQLiteCli, SQLiteGui),
 			#	(Reporter, ReporterCli, ReporterGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
-			#	(WipeR, WipeRCli, WipeRGui)
+				(WipeR, WipeRCli, WipeRGui)
 			)
 		super().__init__(__app_name__,__version__, __parent_path__,
 			[(Cli, Gui) for Module, Cli, Gui in candidates if Module().available],

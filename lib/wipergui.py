@@ -5,75 +5,133 @@ from tkinter.messagebox import showerror
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
-from lib.guielements import SourceDirSelector, Checker, LeftLabel, GridMenu
-from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
-from lib.linutils import LinUtils
-from lib.stringutils import StringUtils
+from .guilabeling import WipeLabels
+from .guiconfig import GuiConfig
+from .guielements import MissingEntry, ChildWindow, Checker, GridMenu
+from .guielements import ExpandedFrame, GridSeparator, GridLabel
+from .guielements import DirSelector, OutDirSelector, NotebookFrame
+from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
+from .guielements import FileSelector, LeftButton, RightButton, AddJobButton
+from .linutils import LinUtils
+from .stringutils import StringUtils
 
-class WipeRGui:
+class WipeRGui(WipeLabels):
 	'''Notebook page for WipeR'''
 
-	CMD = 'WipeR'
+	MODULE = 'WipeR'
 	DEF_BLOCKSIZE = 4096
 	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768)
-	DEF_VALUE = '0x00'
 	DEF_MAXBADBLOCKS = '200'
 	DEF_MAXRETRIES = '200'
-	TABLES = ('GPT', 'MBR')
+	TABLES = (WipeLabels.NONE, 'GPT', 'MBR')
 	DEF_TABLE = 'GPT'
 	FS = ('NTFS', 'exFAT', 'FAT32', 'Ext4')
 	DEF_FS = 'NTFS'
 
 	def __init__(self, root):
 		'''Notebook page'''
-		root.settings.init_section(self.CMD)
+		self.root = root
 		self.default_wlh_path = root.parent_path/'wipe-log-head.txt'
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.WIPE)
-		StringSelector(root, frame, root.TARGET, root.TARGET,
-			command=self._select_target, columnspan=8)
-		root.settings.raw(root.TARGET).set('')
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.LOGGING)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=8)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.MOUNTPOINT)
-		DirSelector(root, frame, root.MOUNTPOINT,
-			root.DIRECTORY, root.SELECT_MOUNTPOINT, columnspan=8)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.TO_DO)
-		StringRadiobuttons(root, frame, root.TO_DO,
-			(root.NORMAL_WIPE, root.ALL_BYTES, root.EXTRA_PASS, root.VERIFY), root.NORMAL_WIPE)
-		GridLabel(root, frame, root.NORMAL_WIPE, column=1)
-		GridLabel(root, frame, root.ALL_BYTES, column=1)
-		GridLabel(root, frame, root.EXTRA_PASS, column=1)
-		GridLabel(root, frame, root.VERIFY, column=1)
-		root.row -= 4
-		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
-			default=self.DEF_BLOCKSIZE, column=3)
-		root.row -= 1
-		GridStringMenu(root, frame, root.PARTITION_TABLE, root.PARTITION_TABLE,
-			([root.DO_NOT_CREATE] + list(self.TABLES)), default=self.DEF_TABLE, column=4)
-		root.row -= 1
-		GridStringMenu(root, frame, root.FILE_SYSTEM, root.FILE_SYSTEM,
-			([root.DO_NOT_CREATE] + list(self.FS)), default=self.DEF_FS, column=6)
-		StringSelector(root, frame, root.VALUE, root.VALUE, default=self.DEF_VALUE,
-			width=root.SMALL_FIELD_WIDTH, column=3)
-		root.row -= 1
-		StringSelector(root, frame, root.VOLUME_NAME, root.VOLUME_NAME,
-			default=root.DEFAULT_VOLUME_NAME, width=root.SMALL_FIELD_WIDTH, column=6, columnspan=2)
-		StringSelector(root, frame, root.MAXBADBLOCKS, root.MAXBADBLOCKS, default=self.DEF_MAXBADBLOCKS,
-			width=root.SMALL_FIELD_WIDTH, column=3)
-		root.row -= 1
-		StringSelector(root, frame, root.MAXRETRIES, root.MAXRETRIES, default=self.DEF_MAXRETRIES,
-			width=root.SMALL_FIELD_WIDTH, column=6, columnspan=2)
+		frame = NotebookFrame(self)
+		GridLabel(frame, self.WIPE)
+		self.target = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Target'),
+			self.TARGET,
+			command=self._select_target,
+			tip=self.TIP_TARGET
+		)	
+		self.target.set('')
+		GridSeparator(frame)
+		GridLabel(frame, self.LOGGING)
+		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
+		GridSeparator(frame)
+		GridLabel(frame, self.MOUNTPOINT)
+		self.mountpoint = DirSelector(
+			frame,
+			self.root.settings.init_stringvar('MountPoint'),
+			self.SELECT_MOUNTPOINT,
+			tip = self.TIP_MOUNTPOINT
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.TASK)
+		self.task = StringRadiobuttons(
+			frame,
+			self.root.settings.init_stringvar('Task', default='Normal'),
+			('Normal', 'All', 'Extra', 'Verify')
+		)
+		GridLabel(frame, self.NORMAL_WIPE, column=1, columnspan=1, incrow=False)
+		GridMenu(
+			frame,
+			self.root.settings.init_intvar('Blocksize', default=self.DEF_BLOCKSIZE),
+			self.BLOCKSIZE,
+			self.BLOCKSIZES,
+			column = 2,
+			incrow = False,
+			tip = self.TIP_BLOCKSIZE
+		)
+		GridMenu(
+			frame,
+			self.root.settings.init_stringvar('PartitionTable', default=self.DEF_TABLE),
+			self.PARTITION_TABLE,
+			self.TABLES,
+			column = 4,
+			incrow = False,
+			tip = self.TIP_PARTITION_TABLE
+		)
+		GridMenu(
+			frame,
+			self.root.settings.init_stringvar('FileSystem', default=self.DEF_FS),
+			self.FILE_SYSTEM,
+			self.FS,
+			column = 6,
+			incrow = False,
+			tip = self.TIP_FILE_SYSTEM
+		)
+		self.part_name = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('PartitionName'),
+			self.PART_NAME,
+			default = self.DEF_PART_NAME,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 8,
+			columnspan = 2,
+			tip = self.TIP_PART_NAME
+		)
+		GridLabel(frame, self.ALL_BYTES, column=1, columnspan=1, incrow=False)
+		self.value = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Value', default='00'),
+			self.VALUE,
+			default = '00',
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 3,
+			tip = self.TIP_VALUE
+		)
+		GridLabel(frame, self.EXTRA_PASS, column=1, columnspan=1, incrow=False)
+		self.max_bad_blocks = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('MaxBadBlocks', default=self.DEF_MAXBADBLOCKS),
+			self.MAXBADBLOCKS,
+			default = self.DEF_MAXBADBLOCKS,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 3,
+			incrow = False,
+			tip = self.TIP_MAXBADBLOCKS
+		)
+		self.max_retries = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('MaxRetries', default=self.DEF_MAXRETRIES),
+			self.MAXRETRIES,
+			default = self.DEF_MAXRETRIES,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 7,
+			tip = self.TIP_MAXRETRIES
+		)
+		GridLabel(frame, self.VERIFY, column=1, columnspan=1, incrow=False)
+
+		return
+
 		GridSeparator(root, frame)
 		GridLabel(root, frame, root.CONFIGURATION)
 		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
@@ -84,7 +142,6 @@ class WipeRGui:
 		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
 			self._add_job, column=0, columnspan=3)
 		root.child_win_active = False
-		self.root = root
 		self.filenames = None
 
 	def _default_head(self):

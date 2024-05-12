@@ -19,7 +19,7 @@ class AxCheckerGui(AxCheckerLabels):
 	def __init__(self, root):
 		'''Notebook page'''
 		self.root = root
-		frame = NotebookFrame(self.root, self.MODULE)
+		frame = NotebookFrame(self)
 		GridLabel(frame, 'AXIOM')
 		self.case_file = FileSelector(
 			frame,

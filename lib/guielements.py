@@ -117,10 +117,10 @@ class GridBlank:
 
 class NotebookFrame(ExpandedFrame):
 	'''To start a module'''
-	def __init__(self, root, module_name):
-		root.settings.this_section = module_name
-		super().__init__(root.notebook)
-		root.notebook.add(self, text=f' {module_name} ')
+	def __init__(self, parent):
+		parent.root.settings.this_section = parent.MODULE
+		super().__init__(parent.root.notebook)
+		parent.root.notebook.add(self, text=f' {parent.MODULE} ')
 		GridSeparator(self)
 
 class AddJobButton(GridButton):
@@ -134,11 +134,11 @@ class AddJobButton(GridButton):
 class GridMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
 	def __init__(self, parent, variable, text, values,
-		default=None, column=1, columnspan=2, incrow=True, tip=None, section=None):
+		column=1, columnspan=2, incrow=True, tip=None):
 		self._variable = variable
-		Label(parent, text=text, width=len(text)+1).grid(sticky='e', row=parent.row, column=column, padx=(GuiConfig.PAD, 0))
+		Label(parent, text=f'{text}: ').grid(sticky='e', row=parent.row, column=column, padx=(GuiConfig.PAD, 0))
 		super().__init__(parent, self._variable, self._variable.get(), *values)
-		self.grid(sticky='w', row=root.row, column=column+1, columnspan=columnspan-1, padx=(0,GuiConfig.PAD))
+		self.grid(sticky='w', row=parent.row, column=column+1, columnspan=columnspan-1, padx=(0,GuiConfig.PAD))
 		if incrow:
 			parent.row += 1
 		if tip:
@@ -150,7 +150,7 @@ class GridMenu(OptionMenu):
 
 class Checker(Checkbutton):
 	'''Checkbox'''
-	def __init__(self, parent, variable, text, default=False, column=0, columnspan=2, tip=None, section=None):
+	def __init__(self, parent, variable, text, column=0, columnspan=2, tip=None):
 		self._variable = variable
 		super().__init__(parent, variable=self._variable)
 		self.grid(row=parent.row, column=column)
@@ -164,7 +164,7 @@ class Checker(Checkbutton):
 
 class StringRadiobuttons:
 	'''| Rabiobutton | | | |'''
-	def __init__(self, parent, variable, buttons, column=0, section=None):
+	def __init__(self, parent, variable, buttons, column=0):
 		self._variable = variable
 		for row, value in enumerate(buttons, parent.row):
 			button = Radiobutton(parent, variable=self._variable, value=value)
@@ -177,7 +177,7 @@ class StringRadiobuttons:
 
 class VerticalRadiobuttons:
 	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
-	def __init__(self, parent, variable, buttons, default, column=1, columnspan=255, incrow=True, section=None):
+	def __init__(self, parent, variable, buttons, default, column=1, columnspan=255, incrow=True):
 		frame = Frame(parent)
 		frame.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
 		self._variable = variable
@@ -195,7 +195,7 @@ class VerticalRadiobuttons:
 class StringSelector(Button):
 	'''Button + Entry to select/write a string'''
 	def __init__(self, parent, variable, text, command=None, default=None, width=None,
-		column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
+		column=1, columnspan=255, incrow=True, tip=None, missing=None):
 		self._variable = variable
 		if not command:
 			command = self._command
@@ -239,7 +239,7 @@ class FilenameSelector(StringSelector):
 class DirSelector(Button):
 	'''Button + Entry to select a directory'''
 	def __init__(self, parent, variable, ask,
-		default=None, command=None, column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
+		default=None, command=None, column=1, columnspan=255, incrow=True, tip=None, missing=None):
 		self._variable = variable
 		super().__init__(parent, text=BasicLabels.DIRECTORY, command=self._select, width=GuiConfig.BUTTON_WIDTH)
 		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD)
@@ -291,7 +291,7 @@ class FileSelector(Button):
 	'''Select a file'''
 	def __init__(self, parent, variable, text, ask, command=None,
 		filetype=('Text files', '*.txt'), default=None, initialdir=None,
-		column=1, columnspan=255, incrow=True, tip=None, missing=None, section=None):
+		column=1, columnspan=255, incrow=True, tip=None, missing=None):
 		self._variable = variable
 		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
 		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD, pady=(GuiConfig.PAD, 0))
