@@ -290,7 +290,7 @@ class SourceDirSelector(DirSelector):
 class FileSelector(Button):
 	'''Select a file'''
 	def __init__(self, parent, variable, text, ask, command=None,
-		filetype=('Text files', '*.txt'), default=None, initialdir=None,
+		filetype=('Text files', '*.txt'), initialdir=None,
 		column=1, columnspan=255, incrow=True, tip=None, missing=None):
 		self._variable = variable
 		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)

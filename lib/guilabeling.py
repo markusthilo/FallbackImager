@@ -40,7 +40,11 @@ logs and resulting file(s)'''
 	TIP_FILENAME = '''Base of filename for generated files,
 klick to auto generate from actual time
 (when empty)'''
+	SELECT = 'Select'
+	FILE = 'file'
+	FILES = 'files'
 	SELECT_FILE = 'Select file'
+	SELECT_TEXT_FILE = 'Select text file'
 	TASK = 'Task'
 	TIP_RADIO_BUTTONS = 'Select one option'
 	SOURCE = 'Source'
@@ -49,6 +53,7 @@ klick to auto generate from actual time
 	SOURCE_REQUIRED = 'Source is required'
 	TARGET = 'Target'
 	LOGGING = 'Logging'
+	CONFIGURATION = 'Configuration'
 	NONE = 'None'
 	MISSING_ENTRY = 'Missing entry'
 
@@ -123,22 +128,22 @@ new partition after wipe (None: do not create)'''
 	TIP_MAXBADBLOCKS = 'Maximum of bad blocks before abort'
 	MAXRETRIES = 'Max. retries'
 	TIP_MAXRETRIES = 'Maximum retry attempts while reading/writing'
-
-
-	SELECT_DRIVE = 'Select drive'
-	SELECT_FILES = 'Select file(s) to wipe'
-
-
 	LOG_HEAD = 'Head of log file'
-	SELECT_TEXT_FILE = 'Select text file'
+	TIP_LOG_HEAD = 'The text will be put on top of the log'
+	TARGET_REQUIRED = 'Target (drive/files) is required)'
+	SELECT_DRIVE_TO_WIPE = 'Select drive to wipe'
+	SELECT_FILES_TO_WIPE = 'Select file(s) to wipe'
+
+'''
+
+
 	EXE = 'Executable'
 	SELECT_EXE = 'Select executable'
 	DO_NOT_CREATE = 'Do not create'
 	VOLUME_NAME = 'Volume name'
 	DEFAULT_VOLUME_NAME = 'Volume'
 	DRIVE_LETTER = 'Drive letter'
-	FILE = 'file'
-	FILES = 'files'
+
 	NEXT_AVAILABLE = 'Next available'
 	NEED_HEX = 'Byte to overwrite with has to be a hex value'
 	BYTE_RANGE = 'Byte to overwrite has to be inbetween 00 and ff'
@@ -149,7 +154,6 @@ new partition after wipe (None: do not create)'''
 	DRIVE_LETTER_IN_USE = 'Drive letter is in use'
 	USE_IT_ANYWAY = 'Use it anyway?'
 
-'''
 	PATH = 'Path'
 	FLAT = 'Flat structure without folders'
 	ISO_IMAGE = 'ISO image'
@@ -159,7 +163,7 @@ new partition after wipe (None: do not create)'''
 	SELECT_IMAGE = 'Select image file'
 	IMAGE_NAME = 'Name'
 	IMAGE_DESCRIPTION = 'Description'
-	CONFIGURATION = 'Configuration'
+	
 	MKISOFS = 'mkisofs'
 	SELECT_MKISOFS = 'Select mkisofs executable/binary'
 	OSCDIMG_EXE = 'OSCDIMG'
