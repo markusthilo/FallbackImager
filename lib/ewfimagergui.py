@@ -6,30 +6,29 @@ from tkinter.ttk import Label, Button
 from tkinter import Text
 from functools import partial
 from os import getlogin, access, R_OK
-from lib.timestamp import TimeStamp
-from lib.guielements import Checker, GridMenu, ChildWindow
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import StringSelector, StringRadiobuttons
-from lib.guielements import GridButton, LeftButton, RightButton, GridBlank
-from lib.linutils import LinUtils
-from lib.stringutils import StringUtils
+from .guilabeling import EwfImagerLabels
+from .guielements import Checker, GridMenu, ChildWindow, NotebookFrame
+from .guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
+from .guielements import StringSelector, StringRadiobuttons
+from .guielements import GridButton, LeftButton, RightButton, GridBlank
+from .timestamp import TimeStamp
+from .linutils import LinUtils
+from .stringutils import StringUtils
 
-class EwfImagerGui:
+class EwfImagerGui(EwfImagerLabels):
 	'''Notebook page for EwfImager'''
 
-	CMD = 'EwfImager'
+	MODULE = 'EwfImager'
 	MEDIA_TYPES = ['auto', 'fixed', 'removable', 'optical']
 	MEDIA_FLAGS = ['auto', 'logical', 'physical']
 	COMPRESSIONS = ['fast', 'best', 'none']
 
 	def __init__(self, root):
 		'''Notebook page'''
-		root.settings.init_section(self.CMD)
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.SOURCE)
+		self.root = root
+		frame = NotebookFrame(self)
+		GridLabel(frame, self.SOURCE)
+		return
 		StringSelector(root, frame, root.SOURCE, root.SOURCE,
 			command=self._select_source)
 		root.settings.raw(root.SOURCE).set('')

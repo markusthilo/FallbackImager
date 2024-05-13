@@ -3,6 +3,7 @@
 
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
+from tkinter.filedialog import askopenfilenames
 from functools import partial
 from .guilabeling import WipeLabels
 from .guiconfig import GuiConfig
@@ -41,6 +42,7 @@ class WipeRGui(WipeLabels):
 			tip=self.TIP_TARGET
 		)	
 		self.target.set('')
+		self.filenames = None
 		GridSeparator(frame)
 		GridLabel(frame, self.LOGGING)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
@@ -60,61 +62,14 @@ class WipeRGui(WipeLabels):
 			('Normal', 'All', 'Extra', 'Verify')
 		)
 		GridLabel(frame, self.NORMAL_WIPE, column=1, columnspan=1, incrow=False)
-		self.blocksize = GridMenu(
-			frame,
-			self.root.settings.init_intvar('Blocksize', default=self.DEF_BLOCKSIZE),
-			self.BLOCKSIZE,
-			self.BLOCKSIZES,
-			column = 2,
-			incrow = False,
-			tip = self.TIP_BLOCKSIZE
-		)
-		self.part_table = GridMenu(
-			frame,
-			self.root.settings.init_stringvar('PartitionTable', default=self.DEF_TABLE),
-			self.PARTITION_TABLE,
-			self.TABLES,
-			column = 4,
-			incrow = False,
-			tip = self.TIP_PARTITION_TABLE
-		)
-		self.filesystem = GridMenu(
-			frame,
-			self.root.settings.init_stringvar('FileSystem', default=self.DEF_FS),
-			self.FILE_SYSTEM,
-			self.FS,
-			column = 6,
-			incrow = False,
-			tip = self.TIP_FILE_SYSTEM
-		)
-		self.part_name = StringSelector(
-			frame,
-			self.root.settings.init_stringvar('PartitionName'),
-			self.PART_NAME,
-			default = self.DEF_PART_NAME,
-			width = GuiConfig.SMALL_FIELD_WIDTH,
-			column = 8,
-			columnspan = 2,
-			tip = self.TIP_PART_NAME
-		)
-		GridLabel(frame, self.ALL_BYTES, column=1, columnspan=1, incrow=False)
-		self.value = StringSelector(
-			frame,
-			self.root.settings.init_stringvar('Value', default='00'),
-			self.VALUE,
-			default = '00',
-			width = GuiConfig.SMALL_FIELD_WIDTH,
-			column = 3,
-			tip = self.TIP_VALUE
-		)
-		GridLabel(frame, self.EXTRA_PASS, column=1, columnspan=1, incrow=False)
 		self.max_bad_blocks = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('MaxBadBlocks', default=self.DEF_MAXBADBLOCKS),
 			self.MAXBADBLOCKS,
 			default = self.DEF_MAXBADBLOCKS,
 			width = GuiConfig.SMALL_FIELD_WIDTH,
-			column = 3,
+			column = 2,
+			columnspan = 2,
 			incrow = False,
 			tip = self.TIP_MAXBADBLOCKS
 		)
@@ -124,10 +79,58 @@ class WipeRGui(WipeLabels):
 			self.MAXRETRIES,
 			default = self.DEF_MAXRETRIES,
 			width = GuiConfig.SMALL_FIELD_WIDTH,
-			column = 7,
+			column = 4,
 			tip = self.TIP_MAXRETRIES
 		)
+		GridLabel(frame, self.ALL_BYTES, column=1, columnspan=1, incrow=False)
+		self.value = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Value', default='00'),
+			self.VALUE,
+			default = '00',
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 2,
+			columnspan = 2,
+			incrow = False,
+			tip = self.TIP_VALUE
+		)
+		self.blocksize = GridMenu(
+			frame,
+			self.root.settings.init_intvar('Blocksize', default=self.DEF_BLOCKSIZE),
+			self.BLOCKSIZE,
+			self.BLOCKSIZES,
+			column = 4,
+			tip = self.TIP_BLOCKSIZE
+		)
+		GridLabel(frame, self.EXTRA_PASS, column=1, columnspan=1, incrow=False)
+		self.part_name = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('PartitionName'),
+			self.PART_NAME,
+			default = self.DEF_PART_NAME,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 2,
+			columnspan = 2,
+			incrow = False,
+			tip = self.TIP_PART_NAME
+		)
+		self.part_table = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('PartitionTable', default=self.DEF_TABLE),
+			self.PARTITION_TABLE,
+			self.TABLES,
+			column = 4,
+			tip = self.TIP_PARTITION_TABLE
+		)
 		GridLabel(frame, self.VERIFY, column=1, columnspan=1, incrow=False)
+		self.filesystem = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('FileSystem', default=self.DEF_FS),
+			self.FILE_SYSTEM,
+			self.FS,
+			column = 4,
+			tip = self.TIP_FILE_SYSTEM
+		)
 		GridSeparator(frame)
 		GridLabel(frame, self.CONFIGURATION)
 		self.log_head = FileSelector(
@@ -212,7 +215,7 @@ class WipeRGui(WipeLabels):
 		value = self.value.get()
 		max_bad_blocks = self.max_bad_blocks.get()
 		max_retries = self.max_retries.get()
-		log_head = self.log_head
+		log_head = self.log_head.get()
 		if not target and not self.filenames:
 			MissingEntry(self.TARGET_REQUIRED)
 			self.filenames = None
@@ -248,19 +251,19 @@ class WipeRGui(WipeLabels):
 				pass
 			else:
 				cmd += f' --maxretries {max_retries}'
-		if filesystem:
-			if part_table == 'mbr':
-				cmd += f' --mbr'
-			cmd += f' --create {filesystem}'
-			if part_name:
-				cmd += f' --name "{part_name}"'
-			if log_head:
-				cmd += f' --loghead "{log_head}"'
-			if mountpoint:
-				cmd += f' --mount "{mountpoint}"'
-		if target:
-			cmd += f' {target}'
-		else:
+		if self.filenames:
 			for filename in self.filenames:
 				cmd += f' "{filename}"'
+		else:
+			if filesystem:
+				if part_table == 'mbr':
+					cmd += f' --mbr'
+				cmd += f' --create {filesystem}'
+				if part_name:
+					cmd += f' --name "{part_name}"'
+				if log_head:
+					cmd += f' --loghead "{log_head}"'
+				if mountpoint:
+					cmd += f' --mount "{mountpoint}"'
+			cmd += f' {target}'
 		self.root.append_job(cmd)

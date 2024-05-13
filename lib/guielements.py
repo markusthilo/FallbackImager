@@ -134,11 +134,14 @@ class AddJobButton(GridButton):
 class GridMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
 	def __init__(self, parent, variable, text, values,
-		column=1, columnspan=2, incrow=True, tip=None):
+		width=None, column=1, columnspan=2, incrow=True, tip=None):
 		self._variable = variable
-		Label(parent, text=f'{text}: ').grid(sticky='e', row=parent.row, column=column, padx=(GuiConfig.PAD, 0))
+		Label(parent, text=f'{text}:').grid(sticky='e', row=parent.row, column=column, padx=GuiConfig.PAD)
 		super().__init__(parent, self._variable, self._variable.get(), *values)
-		self.grid(sticky='w', row=parent.row, column=column+1, columnspan=columnspan-1, padx=(0,GuiConfig.PAD))
+		self.grid(sticky='w', row=parent.row, column=column+1, columnspan=columnspan-1, padx=GuiConfig.PAD)
+		if not width:
+			width = GuiConfig.MENU_WIDTH
+		self.configure(width=width)
 		if incrow:
 			parent.row += 1
 		if tip:
