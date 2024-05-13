@@ -134,7 +134,6 @@ class AxCheckerGui(AxCheckerLabels):
 			self.tsv_encoding.set('utf_16_le')
 		else:
 			self.tsv_encoding.set('utf-8')
-		self.tsv_encoding.set(AxChecker.default_encoding())
 
 	def _add_job(self):
 		'''Generate command line'''
