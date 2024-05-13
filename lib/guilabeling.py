@@ -70,8 +70,11 @@ file structure or a TSV list of file paths'''
 	TIP_COMP_DIR = '''Compare filepaths under given directory to
 files under given root (by ID) in AXIOM case'''
 	TSV_FILE = 'TSV file'
-	TIP_COMP_TSV = '''Compate filepaths in given TSV file to
-files under given root (by ID) in AXIOM case'''
+	TIP_COMP_TSV = '''Compate filepaths in given Text/TSV file to
+files under given root (by ID) in AXIOM case
+(TSV: full path without image or partition name
+has to be in the first column, paths should look like:
+\\Windows\\System32\\...)'''
 	ENCODING = 'Encoding'
 	TIP_ENCODING = '''Encoding of TSV file (e.g. cp1252,
 leave empty for default = utf-16-le on Win
