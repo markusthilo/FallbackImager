@@ -40,8 +40,7 @@ class WipeRGui(WipeLabels):
 			self.TARGET,
 			command=self._select_target,
 			tip=self.TIP_TARGET
-		)	
-		self.target.set('')
+		)
 		self.filenames = None
 		GridSeparator(frame)
 		GridLabel(frame, self.LOGGING)
@@ -51,6 +50,7 @@ class WipeRGui(WipeLabels):
 		self.mountpoint = DirSelector(
 			frame,
 			self.root.settings.init_stringvar('MountPoint'),
+			self.DIRECTORY,
 			self.SELECT_MOUNTPOINT,
 			tip = self.TIP_MOUNTPOINT
 		)

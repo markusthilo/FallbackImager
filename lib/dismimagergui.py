@@ -17,7 +17,11 @@ class DismImagerGui:
 		'''Notebook page'''
 		sekf,root = root
 		frame = NotebookFrame(self.root, 'DismImager')
-		self.source = SourceDirSelector(frame, self.root.settings.init_stringvar('Source'))
+		self.source = SourceDirSelector(
+			frame,
+			self.root.settings.init_stringvar('Source'),
+			tip = 'Select source volume/directory'
+		)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
 		self.filename = FilenameSelector(frame, '{now}_dismimager',
 			self.root.settings.init_stringvar('Filename'))

@@ -241,10 +241,10 @@ class FilenameSelector(StringSelector):
 
 class DirSelector(Button):
 	'''Button + Entry to select a directory'''
-	def __init__(self, parent, variable, ask,
+	def __init__(self, parent, variable, text, ask,
 		default=None, command=None, column=1, columnspan=255, incrow=True, tip=None, missing=None):
 		self._variable = variable
-		super().__init__(parent, text=BasicLabels.DIRECTORY, command=self._select, width=GuiConfig.BUTTON_WIDTH)
+		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
 		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD)
 		Entry(parent, textvariable=self._variable, width=GuiConfig.ENTRY_WIDTH).grid(
 			row=parent.row, column=column+1, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
@@ -275,19 +275,13 @@ class OutDirSelector(DirSelector):
 	def __init__(self, parent, variable, tip=None):
 		if not tip:
 			tip = BasicLabels.TIP_OUTDIR
-		GridSeparator(parent)
-		GridLabel(parent, BasicLabels.DESTINATION)
-		super().__init__(parent, variable, BasicLabels.SELECT_OUTDIR,
+		super().__init__(parent, variable, BasicLabels.DIRECTORY, BasicLabels.SELECT_OUTDIR,
 			tip=tip, missing=BasicLabels.OUTDIR_REQUIRED)
 
 class SourceDirSelector(DirSelector):
 	'''Select source directory'''
 	def __init__(self, parent, variable, tip=None):
-		if not tip:
-			tip = BasicLabels.TIP_SOURCE
-		GridSeparator(parent)
-		GridLabel(parent, BasicLabels.SOURCE)
-		super().__init__(root, parent, variable, BasicLabels.SELECT_SOURCE,
+		super().__init__(parent, variable, BasicLabels.SOURCE, BasicLabels.SELECT_SOURCE,
 			tip=tip, missing=BasicLabels.SOURCE_REQUIRED)
 
 class FileSelector(Button):
@@ -327,6 +321,12 @@ class FileSelector(Button):
 			return filename
 		if self.missing:
 			MissingEntry(self.missing)
+
+class SourceFileSelector(FileSelector):
+	'''Select source directory'''
+	def __init__(self, parent, variable, tip=None):
+		super().__init__(root, parent, variable, BasicLabels.SOURCE, BasicLabels.SELECT_SOURCE,
+			tip=tip, missing=BasicLabels.SOURCE_REQUIRED)
 
 class Tree(Treeview):
 	'''Treeview with vertical scroll bar'''

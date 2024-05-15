@@ -8,7 +8,7 @@ from functools import partial
 from os import getlogin, access, R_OK
 from .guilabeling import EwfImagerLabels
 from .guielements import Checker, GridMenu, ChildWindow, NotebookFrame
-from .guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
+from .guielements import ExpandedFrame, GridSeparator, GridLabel, OutDirSelector
 from .guielements import StringSelector, StringRadiobuttons
 from .guielements import GridButton, LeftButton, RightButton, GridBlank
 from .timestamp import TimeStamp
@@ -28,26 +28,81 @@ class EwfImagerGui(EwfImagerLabels):
 		self.root = root
 		frame = NotebookFrame(self)
 		GridLabel(frame, self.SOURCE)
+		self.source = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Source'),
+			self.SELECT,
+			command = self._select_source,
+			missing = self.SOURCE_REQUIRED,
+			tip = self.TIP_SOURCE
+		)
+		self.set_ro = Checker(
+			frame,
+			self.root.settings.init_boolvar('SetReadOnly'),
+			self.SETRO,
+			tip = self.TIP_SETRO
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			self.root.settings.init_stringvar('OutDir'),
+			tip = self.TIP_IMAGE_LOGS
+		)
+		self.root_id = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('CaseNo'),
+			self.CASE_NO,
+			command=self._set_ts_case_no,
+			tip=self.TIP_METADATA
+		)
+		self.evidence_no = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('EvidenceNo'),
+			self.EVIDENCE_NO,
+			command=self._set_def_evidence_no,
+			tip=self.TIP_METADATA
+		)
+		self.description = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Description'),
+			self.DESCRIPTION,
+			command=self._set_def_description,
+			tip=self.TIP_METADATA
+		)
+		self.examiner_name = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('ExaminerName'),
+			self.EXAMINER_NAME,
+			command=self._set_def_examiner_name,
+			tip=self.TIP_METADATA
+		)
+		self.notes_select = StringRadiobuttons(
+			frame,
+			self.root.settings.init_stringvar('Notes', default='A'),
+			'ABC'
+		)
+		self.notes = dict()
+		for index in 'ABC':
+			self.notes[index] = StringSelector(
+				frame,
+				self.root.settings.init_stringvar(f'Note{index}'),
+				f'{self.NOTES} {index}',
+				command=partial(self._select_notes, index),
+				tip=self.TIP_METADATA
+			)
+
+		self.segment_size = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('SegmentSize', default='auto'),
+			self.SEGMENT_SIZE,
+			command=self.self._set_auto,
+			tip=self.TIP_SEGMENT_SIZE
+		)
+
+
 		return
-		StringSelector(root, frame, root.SOURCE, root.SOURCE,
-			command=self._select_source)
-		root.settings.raw(root.SOURCE).set('')
-		Checker(root, frame, root.SETRO, root.SETRO)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION)
-		DirSelector(root, frame, root.OUTDIR, root.DIRECTORY, root.SELECT_DEST_DIR)
-		StringSelector(root, frame, root.CASE_NO, root.CASE_NO,
-			command=self._set_ts_case_no)
-		StringSelector(root, frame, root.EVIDENCE_NO, root.EVIDENCE_NO,
-			command=self._set_def_evidence_no)
-		StringSelector(root, frame, root.DESCRIPTION, root.DESCRIPTION,
-			command=self._set_def_description)
-		StringSelector(root, frame, root.EXAMINER_NAME, root.EXAMINER_NAME,
-			command=self._set_def_examiner_name)
-		notes = [f'Notes {index}' for index in ('A', 'B', 'C')]
-		StringRadiobuttons(root, frame, root.NOTES, notes, notes[0])
-		for choice in notes:
-			StringSelector(root, frame, choice, choice, command=partial(self._select_notes, choice))
+
 		StringSelector(root, frame, root.SEGMENT_SIZE, root.SEGMENT_SIZE, default=root.AUTO, command=self._set_auto,
 			width=root.SMALL_FIELD_WIDTH, columnspan=2, incrow=False)
 		Label(frame, width=4).grid(row=root.row, column=3)

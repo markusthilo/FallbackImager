@@ -49,9 +49,9 @@ klick to auto generate from actual time
 	TIP_RADIO_BUTTONS = 'Select one option'
 	SOURCE = 'Source'
 	SELECT_SOURCE = 'Select Source'
-	TIP_SOURCE = 'Select source root'
 	SOURCE_REQUIRED = 'Source is required'
 	TARGET = 'Target'
+	IMAGE = 'Image'
 	LOGGING = 'Logging'
 	CONFIGURATION = 'Configuration'
 	NONE = 'None'
@@ -61,18 +61,25 @@ klick to auto generate from actual time
 	ROOT_HELP = 'Root permission might help'
 
 class EwfImagerLabels(BasicLabels):
+	TIP_SOURCE = 'Select source to image as EWF/E01'
+	SETRO = 'Set device to read only'
+	TIP_SETRO = 'Execute "blockdev --setro /dev/..."'
+	TIP_IMAGE_LOGS = 'Destination directory to write image and logs'
 	CASE_NO = 'Case number'
+	TIP_METADATA = 'Metadata stored in the EWF/E91 image'
 	EVIDENCE_NO = 'Evidence number'
 	DEF_EVIDENCE_NO = 'EAV'
 	DESCRIPTION = 'Description'
 	DEF_DESCRIPTION = 'HD'
 	EXAMINER_NAME = 'Examiner name'
 	NOTES = 'Notes'
+
 	MEDIA_TYPE = 'Media type'
 	MEDIA_FLAG = 'Media flag'
 	SEGMENT_SIZE = 'Segment size (MiB)'
-	
-	
+	TIP_SEGMENT_SIZE = 
+
+
 	IMAGE_DETAILS_REQUIRED = 'Image details required'
 	SETRO = 'Set target to read only'
 	TEMPLATE = 'Template'
@@ -87,7 +94,6 @@ class EwfImagerLabels(BasicLabels):
 	ADD_SRC_FILES = 'Add file(s) to source'
 	ADD_SRC_DIR = 'Add directory to source'
 	UNABLE_ACCESS = 'Unable to access'
-	
 
 class AxCheckerLabels(BasicLabels):
 	CASE_FILE = 'Case File'
@@ -111,7 +117,8 @@ has to be in the first column, paths should look like:
 	TIP_ENCODING = '''Encoding of TSV file (e.g. cp1252,
 leave empty for default = utf-16-le on Win
 and utf-8 on other systems)'''
-	TSV_NO_HEAD = 'TSV file has no head line'
+	TSV_NO_HEAD = '''TSV file has no head row
+containing row names'''
 	TIP_TSV_NO_HEAD = '''Select if given TSV file
 has no head line'''
 	FIRST_CHOOSE_CASE = 'First choose AXIOM case file (Case.mfdb)'

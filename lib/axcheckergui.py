@@ -36,7 +36,9 @@ class AxCheckerGui(AxCheckerLabels):
 			self.ROOT,
 			command=self._select_root,
 			tip=self.TIP_ROOT
-		)	
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
 		self.filename = FilenameSelector(frame, '{now}_axchecker',
 			self.root.settings.init_stringvar('Filename'))
@@ -51,6 +53,7 @@ class AxCheckerGui(AxCheckerLabels):
 		self.root_dir = DirSelector(
 			frame,
 			self.root.settings.init_stringvar('RootDir'),
+			self.DIRECTORY,
 			self.SELECT_COMP_DIR,
 			command = self._select_file_structure,
 			tip  =self.TIP_COMP_DIR
