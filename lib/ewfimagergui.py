@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter.messagebox import showerror
-from tkinter.ttk import Label, Button
+from tkinter.ttk import Button
 from tkinter import Text
 from functools import partial
 from os import getlogin, access, R_OK
 from .guilabeling import EwfImagerLabels
+from .guiconfig import GuiConfig
 from .guielements import Checker, GridMenu, ChildWindow, NotebookFrame
 from .guielements import ExpandedFrame, GridSeparator, GridLabel, OutDirSelector
-from .guielements import StringSelector, StringRadiobuttons
+from .guielements import StringSelector, StringRadiobuttons, AddJobButton
 from .guielements import GridButton, LeftButton, RightButton, GridBlank
+from .guielements import Error, MissingEntry
 from .timestamp import TimeStamp
 from .linutils import LinUtils
 from .stringutils import StringUtils
@@ -19,9 +20,7 @@ class EwfImagerGui(EwfImagerLabels):
 	'''Notebook page for EwfImager'''
 
 	MODULE = 'EwfImager'
-	MEDIA_TYPES = ['auto', 'fixed', 'removable', 'optical']
-	MEDIA_FLAGS = ['auto', 'logical', 'physical']
-	COMPRESSIONS = ['fast', 'best', 'none']
+	DEF_SIZE = '40'
 
 	def __init__(self, root):
 		'''Notebook page'''
@@ -33,7 +32,6 @@ class EwfImagerGui(EwfImagerLabels):
 			self.root.settings.init_stringvar('Source'),
 			self.SELECT,
 			command = self._select_source,
-			missing = self.SOURCE_REQUIRED,
 			tip = self.TIP_SOURCE
 		)
 		self.set_ro = Checker(
@@ -49,33 +47,33 @@ class EwfImagerGui(EwfImagerLabels):
 			self.root.settings.init_stringvar('OutDir'),
 			tip = self.TIP_IMAGE_LOGS
 		)
-		self.root_id = StringSelector(
+		self.case_no = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('CaseNo'),
 			self.CASE_NO,
-			command=self._set_ts_case_no,
-			tip=self.TIP_METADATA
+			command = self._set_ts_case_no,
+			tip = self.TIP_METADATA
 		)
 		self.evidence_no = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('EvidenceNo'),
 			self.EVIDENCE_NO,
-			command=self._set_def_evidence_no,
-			tip=self.TIP_METADATA
+			command = self._set_def_evidence_no,
+			tip = self.TIP_METADATA
 		)
 		self.description = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Description'),
 			self.DESCRIPTION,
-			command=self._set_def_description,
-			tip=self.TIP_METADATA
+			command = self._set_def_description,
+			tip = self.TIP_METADATA
 		)
 		self.examiner_name = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('ExaminerName'),
 			self.EXAMINER_NAME,
-			command=self._set_def_examiner_name,
-			tip=self.TIP_METADATA
+			command = self._set_def_examiner_name,
+			tip = self.TIP_METADATA
 		)
 		self.notes_select = StringRadiobuttons(
 			frame,
@@ -88,71 +86,82 @@ class EwfImagerGui(EwfImagerLabels):
 				frame,
 				self.root.settings.init_stringvar(f'Note{index}'),
 				f'{self.NOTES} {index}',
-				command=partial(self._select_notes, index),
-				tip=self.TIP_METADATA
+				command = partial(self._select_notes, index),
+				tip = self.TIP_NOTE
 			)
-
 		self.segment_size = StringSelector(
 			frame,
-			self.root.settings.init_stringvar('SegmentSize', default='auto'),
+			self.root.settings.init_stringvar('SegmentSize', default=self.DEF_SIZE),
 			self.SEGMENT_SIZE,
-			command=self.self._set_auto,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			command = self._set_def_size,
+			columnspan = 2,
+			incrow = False,
 			tip=self.TIP_SEGMENT_SIZE
 		)
-
-
-		return
-
-		StringSelector(root, frame, root.SEGMENT_SIZE, root.SEGMENT_SIZE, default=root.AUTO, command=self._set_auto,
-			width=root.SMALL_FIELD_WIDTH, columnspan=2, incrow=False)
-		Label(frame, width=4).grid(row=root.row, column=3)
-		GridStringMenu(root, frame, root.COMPRESSION, root.COMPRESSION,
-			self.COMPRESSIONS, default=self.COMPRESSIONS[0], column=4, incrow=False)
-		Label(frame, width=4).grid(row=root.row, column=6)
-		GridStringMenu(root, frame, root.MEDIA_TYPE, root.MEDIA_TYPE,
-			self.MEDIA_TYPES, default=self.MEDIA_TYPES[0], column=7, incrow=False)
-		Label(frame, width=4).grid(row=root.row, column=9)
-		GridStringMenu(root, frame, root.MEDIA_FLAG, root.MEDIA_FLAG,
-			self.MEDIA_FLAGS, default=self.MEDIA_FLAGS[0], column=10)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
-			column=0, columnspan=3)
-		self.root = root
+		self.compression = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('Compression', default='fast'),
+			self.COMPRESSION,
+			('fast', 'best', 'none'),
+			column = 3,
+			incrow = False,
+			tip = self.TIP_COMPRESSION
+		)
+		self.media_type = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('MediaType', default='fixed'),
+			self.MEDIA_TYPE,
+			('auto', 'fixed', 'removable', 'optical'),
+			column = 5,
+			incrow = False,
+			tip = self.TIP_METADATA
+		)
+		self.media_flag = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('MediaFlag', default='physical'),
+			self.MEDIA_FLAG,
+			('auto', 'logical', 'physical'),
+			column = 7,
+			tip = self.TIP_METADATA
+		)
+		self.filename = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Filename'),
+			self.FILENAME,
+			command = self._set_filename,
+			tip = self.TIP_FILENAME
+		)
+		AddJobButton(frame, 'AxChecker', self._add_job)
+		self.root.child_win_active = False
 
 	def _select_source(self):
 		'''Select source'''
 		if self.root.child_win_active:
 			return
-		self.source_window = ChildWindow(self.root, self.root.SELECT)
-		self.root.settings.section = self.CMD
-		frame = ExpandedFrame(self.root, self.source_window)
-		self.root.row = 0
-		GridLabel(self.root, frame, self.root.SELECT_SOURCE)
+		self.source_window = ChildWindow(self.root, self.SELECT_SOURCE)
+		frame = ExpandedFrame(self.source_window)
 		for diskpath, diskinfo in LinUtils.diskinfo().items():
-			Button(frame, text=diskpath, width=self.root.BUTTON_WIDTH,
+			Button(frame, text=diskpath, width=GuiConfig.BUTTON_WIDTH,
 				command=partial(self._put_source, diskpath)).grid(
-				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
-			text = Text(frame, width=self.root.ENTRY_WIDTH, height=1)
-			text.grid(row=self.root.row, column=1)
+				row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
+			text = Text(frame, width=GuiConfig.FILES_FIELD_WIDTH, height=1)
+			text.grid(row=frame.row, column=1)
 			text.insert('end', f'Disk: {StringUtils.join(diskinfo["disk"], delimiter=", ")}')
 			text.configure(state='disabled')
-			self.root.row += 1
+			frame.row += 1
 			for partition, info in diskinfo['partitions'].items():
-				Button(frame, text=partition, width=self.root.BUTTON_WIDTH,
+				Button(frame, text=partition, width=GuiConfig.BUTTON_WIDTH,
 					command=partial(self._put_source, partition)).grid(
-					row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
-				text = Text(frame, width=self.root.ENTRY_WIDTH, height=1)
-				text.grid(row=self.root.row, column=1)
+					row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
+				text = Text(frame, width=GuiConfig.FILES_FIELD_WIDTH, height=1)
+				text.grid(row=frame.row, column=1)
 				text.insert('end', f'Partition: {StringUtils.join(info, delimiter=", ")}')
 				text.configure(state='disabled')
-				self.root.row += 1
-		frame = ExpandedFrame(self.root, self.source_window)
-		LeftButton(self.root, frame, self.root.REFRESH, self._refresh_source_window)
-		frame = ExpandedFrame(self.root, self.source_window)
-		GridSeparator(self.root, frame)
-		frame = ExpandedFrame(self.root, self.source_window)
-		RightButton(self.root, frame, self.root.QUIT, self.source_window.destroy)
+				frame.row += 1
+		frame = ExpandedFrame(self.source_window)
+		LeftButton(frame, self.REFRESH, self._refresh_source_window)
+		RightButton(frame, self.QUIT, self.source_window.destroy)
 
 	def _refresh_source_window(self):
 		'''Destroy and reopen Target Window'''
@@ -163,50 +172,44 @@ class EwfImagerGui(EwfImagerLabels):
 		'''Put drive id to sourcestring'''
 		self.source_window.destroy()
 		if access(dev, R_OK):
-			self.root.settings.section = self.CMD
-			self.root.settings.raw(self.root.SOURCE).set(dev)
+			self.source.set(dev)
 		else:
-			showerror(
-				title = self.root.UNABLE_ACCESS,
-				message = self.root.ROOT_HELP
-			)
+			Error(self.ARE_YOU_ROOT)
 
 	def _set_ts_case_no(self):
-		self.root.settings.section = self.CMD
-		if self.root.settings.get(self.root.CASE_NO):
-			return
-		self.root.settings.raw(self.root.CASE_NO).set(TimeStamp.now(path_comp=True))
+		if not self.case_no.get():
+			self.case_no.set(TimeStamp.now(path_comp=True))
 
 	def _set_def_evidence_no(self):
-		self.root.settings.section = self.CMD
-		if self.root.settings.get(self.root.EVIDENCE_NO):
-			return
-		self.root.settings.raw(self.root.EVIDENCE_NO).set(self.root.DEF_EVIDENCE_NO)
+		if not self.evidence_no.get():
+			self.evidence_no.set(self.DEF_EVIDENCE_NO)
 
 	def _set_def_description(self):
-		self.root.settings.section = self.CMD
-		if self.root.settings.get(self.root.DESCRIPTION):
-			return
-		self.root.settings.raw(self.root.DESCRIPTION).set(self.root.DEF_DESCRIPTION)
+		if not self.description.get():
+			self.description.set(self.DEF_DESCRIPTION)
 
 	def _set_def_examiner_name(self):
-		self.root.settings.section = self.CMD
-		if self.root.settings.get(self.root.EXAMINER_NAME):
-			return
-		self.root.settings.raw(self.root.EXAMINER_NAME).set(getlogin().upper())
+		if not self.examiner_name.get():
+			self.examiner_name.set(getlogin().upper())
 
 	def _select_notes(self, choice):
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.NOTES).set(choice)
+		self.notes_select.set(choice)
 
-	def _set_auto(self):
-		self.root.settings.section = self.CMD
-		if self.root.settings.get(self.root.SEGMENT_SIZE):
-			return
-		self.root.settings.raw(self.root.SEGMENT_SIZE).set(self.root.AUTO)
+	def _set_def_size(self):
+		if not self.segment_size.get():
+			self.segment_size.set(self.DEF_SIZE)
+
+	def _set_filename(self):
+		self.filename.set('TEST')
 
 	def _add_job(self):
 		'''Generate command line'''
+
+		#self.SOURCE_REQUIRED
+		#self.CASE_NO_REQUIRED
+		#self.EVIDENCE_NO_REQUIRED
+		#self.DESCRIPTION_REQUIRED
+
 		self.root.settings.section = self.CMD
 		source = self.root.settings.get(self.root.SOURCE)
 		outdir = self.root.settings.get(self.root.OUTDIR)

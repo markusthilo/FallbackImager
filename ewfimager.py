@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-13'
+__version__ = '0.5.1_2024-05-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -14,6 +14,7 @@ Use libewf to create and check an EWF/E01 image of a block device.
 from sys import executable as __executable__
 from os import getlogin
 from pathlib import Path
+from math import ceil
 from argparse import ArgumentParser
 from datetime import datetime
 from json import dump
@@ -40,7 +41,7 @@ class EwfImager:
 		else:
 			self.available = False
 
-	def acquire(self, source, case_number, evidence_number, description, *args,
+	def acquire(self, source, case_number, evidence_number, description, size, *args,
 			outdir = None,
 			compression_values = None,
 			examiner_name = None,
@@ -48,7 +49,6 @@ class EwfImager:
 			media_type = None,
 			media_flags = None,
 			notes = None,
-			size = None,
 			setro = False,
 			echo = print,
 			log = None,
@@ -121,10 +121,17 @@ class EwfImager:
 			self.infos['notes'] = notes
 		else:
 			self.infos['notes'] = '-'
-		if size:
-			self.segment_size = size
-		else:
-			self.segment_size = max(int(self.source_size/85899345920) * 1073741824, 4294967296)
+		try:
+			if size[-1].lower() == 'm':
+				self.segment_size = int(size[:-1]) * 1048576
+			elif size[-1].lower() == 'g':
+				self.segment_size = int(size[:-1]) * 1073741824
+			else:
+				self.segment_size = ceil(self.source_size/int(size)/1073741824) * 1073741824
+			if self.segment_size < 0:
+				1/0	# throw the following exception on negative segment size
+		except (ValueError, ZeroDivisionError):
+			self.log.error(exception='Undecodable segment size')
 		self.infos['segment_size'] = StringUtils.bytes(self.segment_size)
 		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
 		cmd.extend(['-C', self.infos['case_number']])
@@ -188,6 +195,10 @@ class EwfImagerCli(ArgumentParser):
 			help='Evidence number (required)',
 			metavar='STRING'
 		)
+		self.add_argument('-f', '--filename', type=str,
+			help='Image filename (without extension) to write to (default is assembled by case number etc.)',
+			metavar='STRING'
+		)
 		self.add_argument('-m', '--media_type', type=str,
 			choices=['fixed', 'removable', 'optical', 'memory'],
 			help='Media type, options: fixed, removable, optical, memory (auto if not set)',
@@ -206,16 +217,12 @@ class EwfImagerCli(ArgumentParser):
 			help='Directory to write generated files (default: current)',
 			metavar='DIRECTORY'
 		)
-		self.add_argument('-S', '--size', type=int,
-			help='Segment file size in bytes (default: calculated)',
-			metavar='INTEGER'
+		self.add_argument('-S', '--size', type=str,
+			help='Segment file size in MiB or GiB or MiB number of segments (e.g. "4g", "100m", "20", default: "8g")',
+			default='8g', metavar='GiB/MiB/INTEGER/STRING'
 		)
 		self.add_argument('--setro', action='store_true',
 			help='Set target block device to read only'
-		)
-		self.add_argument('-t', '--filename', type=ExtPath.path,
-			help='Target filename (without extension) to write to',
-			metavar='DIRECTORY'
 		)
 		self.add_argument('source', nargs=1, type=ExtPath.path,
 			help='The source device, partition or anything else that works with ewfacquire',
@@ -241,13 +248,12 @@ class EwfImagerCli(ArgumentParser):
 	def run(self, echo=print):
 		'''Run EwfImager and EwfVerify'''
 		imager = EwfImager()
-		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
+		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description, self.size,
 			compression_values = self.compression_values,
 			examiner_name = self.examiner_name,
 			filename = self.filename,
 			media_type = self.media_type,
 			notes = self.notes,
-			size = self.size,
 			setro = self.setro,
 			outdir = self.outdir,
 			echo = echo

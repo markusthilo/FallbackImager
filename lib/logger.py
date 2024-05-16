@@ -37,13 +37,18 @@ class Logger:
 		if echo:
 			self.echo('WARNING', *args)
 
-	def error(self, *args, exception='Unspecified error occured'):
+	def error(self, *args, exception=True):
 		'''Print error to log'''
-		print(TimeStamp.now(), 'ERROR', *args, file=self._fh)
-		self.echo('ERROR', *args)
-		if exception:
+		if args:
+			print(TimeStamp.now(), 'ERROR', *args, file=self._fh)
+			self.echo('ERROR', *args)
+		if isinstance(exception, str):
+			print(TimeStamp.now(), 'FATAL ERROR', exception, file=self._fh)
 			self._fh.close()
 			raise RuntimeError(exception)
+		if exception:
+			self._fh.close()
+			raise RuntimeError('Unspecified fatal error')
 
 	def close(self):
 		'''Close logfile'''

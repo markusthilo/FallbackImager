@@ -6,9 +6,7 @@
 
 class BasicLabels:
 	AVAILABLE_MODULES = 'Available modules:'
-	NOT_ADMIN = 'No Admin Privileges'
 	FATAL_ERROR = 'Fatal error'
-	NOT_ADMIN = 'No Admin Privileges'
 	MODULE_ERROR = 'Unable to load any module'
 	ERROR = 'Error'
 	HELP = 'Help'
@@ -22,6 +20,7 @@ class BasicLabels:
 	TIP_REMOVE_LAST_JOB = 'Remove last job from the job queue'
 	INFOS = 'Infos'
 	CLEAR_INFOS = 'Clear infos'
+	TIP_CLEAR_INFOS = 'Clear info field'
 	START_JOBS = 'Start jobs'
 	TIP_START_JOBS = 'Start job after job in queue'
 	RUNNING = 'Running'
@@ -38,8 +37,7 @@ logs and resulting file(s)'''
 	OUTDIR_REQUIRED = 'Destination directory is required'
 	FILENAME = 'Filename'
 	TIP_FILENAME = '''Base of filename for generated files,
-klick to auto generate from actual time
-(when empty)'''
+click to auto generate (if empty)'''
 	SELECT = 'Select'
 	FILE = 'file'
 	FILES = 'files'
@@ -54,11 +52,13 @@ klick to auto generate from actual time
 	IMAGE = 'Image'
 	LOGGING = 'Logging'
 	CONFIGURATION = 'Configuration'
+	COMPRESSION = 'Compression'
 	NONE = 'None'
 	REFRESH = 'Refresh'
 	AUTO = 'auto'
 	MISSING_ENTRY = 'Missing entry'
-	ROOT_HELP = 'Root permission might help'
+	ARE_YOU_ROOT = 'Are you root?'
+	ADMIN_REQUIRED = 'Admin privileges required'
 
 class EwfImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source to image as EWF/E01'
@@ -67,17 +67,24 @@ class EwfImagerLabels(BasicLabels):
 	TIP_IMAGE_LOGS = 'Destination directory to write image and logs'
 	CASE_NO = 'Case number'
 	TIP_METADATA = 'Metadata stored in the EWF/E91 image'
+	CASE_NO_REQUIRED = 'Case number is rquired for the EWF/E01 image'
 	EVIDENCE_NO = 'Evidence number'
 	DEF_EVIDENCE_NO = 'EAV'
+	EVIDENCE_NO_REQUIRED = 'Evidence number is rquired for the EWF/E01 image'
 	DESCRIPTION = 'Description'
 	DEF_DESCRIPTION = 'HD'
+	DESCRIPTION_REQUIRED = 'Description is rquired for the EWF/E01 image'
 	EXAMINER_NAME = 'Examiner name'
 	NOTES = 'Notes'
-
+	TIP_NOTE = 'Select this line to put in the image metadata'
+	SEGMENT_SIZE = 'Segment size'
+	TIP_SEGMENT_SIZE = '''Segment size of EWF/E01 image in
+MiB, GiB or number of segments
+(e.g. 512m, 4g, 40)'''
+	TIP_COMPRESSION = 'Compression level of the EWF/E01 image'
 	MEDIA_TYPE = 'Media type'
 	MEDIA_FLAG = 'Media flag'
-	SEGMENT_SIZE = 'Segment size (MiB)'
-	TIP_SEGMENT_SIZE = 
+	UNABLE_ACCESS = 'Unable to access'
 
 
 	IMAGE_DETAILS_REQUIRED = 'Image details required'
@@ -93,7 +100,7 @@ class EwfImagerLabels(BasicLabels):
 	ERRORS = 'error(s)'
 	ADD_SRC_FILES = 'Add file(s) to source'
 	ADD_SRC_DIR = 'Add directory to source'
-	UNABLE_ACCESS = 'Unable to access'
+	
 
 class AxCheckerLabels(BasicLabels):
 	CASE_FILE = 'Case File'
@@ -133,7 +140,6 @@ class DismImagerLabels(BasicLabels):
 	TIP_NAME = 'Image name (stored in WIM-image)'
 	DESCRIPTION = 'Description'
 	TIP_DESCRIPZION = 'Image description (stored in WIM-image)'
-	COMPRESSION = 'Compression'
 	TIP_COMPRESSION = 'Compression level for dismimg'
 	NONE = 'none'
 	FAST = 'fast'
@@ -225,7 +231,6 @@ new partition after wipe (None: do not create)'''
 	DEST_DIR_REQUIRED = 'Destination directory is required'
 	DEST_FN_REQUIRED = 'Destination filename is required'
 	IMAGE_REQUIRED = 'Image file is required'
-	COMPRESSION = 'Compression'
 	MAX = 'Max'
 	FAST = 'Fast'
 	NONE = 'None'

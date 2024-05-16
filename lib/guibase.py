@@ -51,7 +51,8 @@ class GuiBase(Tk):
 		self.jobs_text = ExpandedScrolledText(self, GuiConfig.JOB_HEIGHT)
 		frame = ExpandedFrame(self)
 		LeftLabel(frame, BasicLabels.INFOS)
-		RightButton(frame, BasicLabels.CLEAR_INFOS, self._clear_infos)
+		RightButton(frame, BasicLabels.CLEAR_INFOS, self._clear_infos,
+			tip=BasicLabels.TIP_CLEAR_INFOS)
 		self.infos_text = ExpandedScrolledText(self, GuiConfig.INFO_HEIGHT)
 		self.infos_text.bind('<Key>', lambda dummy: 'break')
 		self.infos_text.configure(state='disabled')

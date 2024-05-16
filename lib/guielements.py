@@ -15,6 +15,11 @@ from .guiconfig import GuiConfig
 from .timestamp import TimeStamp
 from .extpath import ExtPath
 
+class Error:
+	'''Show error'''
+	def __init__(self, message):
+		showerror(title=BasicLabels.ERROR, message=message)
+
 class MissingEntry:
 	'''Show error for missing entry'''
 	def __init__(self, message):
@@ -198,7 +203,7 @@ class VerticalRadiobuttons:
 class StringSelector(Button):
 	'''Button + Entry to select/write a string'''
 	def __init__(self, parent, variable, text, command=None, default=None, width=None,
-		column=1, columnspan=255, incrow=True, tip=None, missing=None):
+		column=1, columnspan=255, incrow=True, tip=None):
 		self._variable = variable
 		if not command:
 			command = self._command
@@ -209,7 +214,6 @@ class StringSelector(Button):
 			width = GuiConfig.ENTRY_WIDTH
 		Entry(parent, textvariable=self._variable, width=width).grid(
 			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=GuiConfig.PAD)
-		self.missing = missing
 		if incrow:
 			parent.row += 1
 		if tip:
@@ -222,11 +226,7 @@ class StringSelector(Button):
 	def set(self, value):
 		self._variable.set(value=value)
 	def get(self):
-		string = self._variable.get()
-		if string:
-			return string
-		if self.missing:
-			MissingEntry(self.missing)
+		return self._variable.get()
 
 class FilenameSelector(StringSelector):
 	'''Button + Entry to select filename/base for output filenames'''	
@@ -264,11 +264,7 @@ class DirSelector(Button):
 	def set(self, value):
 		self._variable.set(value=value)
 	def get(self):
-		directory = self._variable.get()
-		if directory:
-			return directory
-		if self.missing:
-			MissingEntry(self.missing)
+		return self._variable.get()
 
 class OutDirSelector(DirSelector):
 	'''Select destination/output directory'''
@@ -316,11 +312,7 @@ class FileSelector(Button):
 	def set(self, value):
 		self._variable.set(value=value)
 	def get(self):
-		filename = self._variable.get()
-		if filename:
-			return filename
-		if self.missing:
-			MissingEntry(self.missing)
+		return self._variable.get()
 
 class SourceFileSelector(FileSelector):
 	'''Select source directory'''
