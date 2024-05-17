@@ -1,24 +1,44 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter.messagebox import showerror
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel
-from lib.guielements import FilenameSelector, DirSelector, FileSelector
-from lib.guielements import GridButton, GridBlank
-from ewfchecker import EwfChecker
+from. guilabeling import EwfCheckerLabels
+from .guielements import NotebookFrame, FileSelector
+#from lib.guielements import ExpandedFrame, GridSeparator, GridLabel
+#from lib.guielements import FilenameSelector, DirSelector, FileSelector
+#from lib.guielements import GridButton, GridBlank
+#from ewfchecker import EwfChecker
 
-class EwfCheckerGui:
-	'''Notebook page'''
-	CMD = 'EwfChecker'
+class EwfCheckerGui(EwfCheckerLabels):
+	'''GUI for EwfChecker'''
+
+	MODULE = 'EwfChecker'
 
 	def __init__(self, root):
 		'''Notebook page'''
-		EwfChecker()
-		root.settings.init_section(self.CMD)
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		GridSeparator(root, frame)
+		self.root = root
+		frame = NotebookFrame(self)
+		self.image = FileSelector(
+			frame,
+			self.root.settings.init_stringvar('Image'),
+			self.IMAGE,
+			self.SELECT_IMAGE,
+			filetype=('EWF/E01', '*.e01'),
+			tip = self.SELECT_IMAGE
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			self.root.settings.init_stringvar('OutDir'),
+			tip = self.TIP_OUTDIR
+		)
+		self.image = FilenameSelector(
+			frame,
+			default,
+			variable
+		)
+
+		return
 		GridLabel(root, frame, root.EWF_IMAGE)
 		FileSelector(root, frame,
 			root.IMAGE, root.IMAGE, root.SELECT_IMAGE, filetype=('E01', '*.E01'))

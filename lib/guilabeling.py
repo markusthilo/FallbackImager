@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-### Labels and Tooltips ###
+### Labels, Tooltips and Errors ###
 ### English ###
 
 class BasicLabels:
@@ -63,17 +63,15 @@ click to auto generate (if empty)'''
 class EwfImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source to image as EWF/E01'
 	SETRO = 'Set device to read only'
-	TIP_SETRO = 'Execute "blockdev --setro /dev/..."'
+	TIP_SETRO = '''Execute "blockdev --setro /dev/..."
+to make sure, source stays untouched'''
 	TIP_IMAGE_LOGS = 'Destination directory to write image and logs'
 	CASE_NO = 'Case number'
 	TIP_METADATA = 'Metadata stored in the EWF/E91 image'
-	CASE_NO_REQUIRED = 'Case number is rquired for the EWF/E01 image'
 	EVIDENCE_NO = 'Evidence number'
 	DEF_EVIDENCE_NO = 'EAV'
-	EVIDENCE_NO_REQUIRED = 'Evidence number is rquired for the EWF/E01 image'
 	DESCRIPTION = 'Description'
 	DEF_DESCRIPTION = 'HD'
-	DESCRIPTION_REQUIRED = 'Description is rquired for the EWF/E01 image'
 	EXAMINER_NAME = 'Examiner name'
 	NOTES = 'Notes'
 	TIP_NOTE = 'Select this line to put in the image metadata'
@@ -81,12 +79,16 @@ class EwfImagerLabels(BasicLabels):
 	TIP_SEGMENT_SIZE = '''Segment size of EWF/E01 image in
 MiB, GiB or number of segments
 (e.g. 512m, 4g, 40)'''
+	DEF_SIZE = '40'
 	TIP_COMPRESSION = 'Compression level of the EWF/E01 image'
 	MEDIA_TYPE = 'Media type'
 	MEDIA_FLAG = 'Media flag'
 	UNABLE_ACCESS = 'Unable to access'
+	MISSING_METADATA = 'Case number, evidence number and description are required to generate filename'
+	METADATA_REQUIRED = 'Case number, evidence number and description are required as metadata for the EWF/E01 image'
 
-
+class EwfCheckerLabels(BasicLabels):
+	SELECT_IMAGE = 'Select EWF/E01 image (1st file/...e01)'
 	IMAGE_DETAILS_REQUIRED = 'Image details required'
 	SETRO = 'Set target to read only'
 	TEMPLATE = 'Template'
@@ -200,8 +202,6 @@ new partition after wipe (None: do not create)'''
 	PATH = 'Path'
 	FLAT = 'Flat structure without folders'
 	ISO_IMAGE = 'ISO image'
-	EWF_IMAGE = 'EWF/E01 image'
-	IMAGE = 'Image'
 	IMAGE_REQUIRED = 'Image required'
 	SELECT_IMAGE = 'Select image file'
 	IMAGE_NAME = 'Name'

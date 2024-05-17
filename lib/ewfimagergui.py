@@ -10,17 +10,15 @@ from .guiconfig import GuiConfig
 from .guielements import Checker, GridMenu, ChildWindow, NotebookFrame
 from .guielements import ExpandedFrame, GridSeparator, GridLabel, OutDirSelector
 from .guielements import StringSelector, StringRadiobuttons, AddJobButton
-from .guielements import GridButton, LeftButton, RightButton, GridBlank
-from .guielements import Error, MissingEntry
+from .guielements import LeftButton, RightButton, Error, MissingEntry
 from .timestamp import TimeStamp
 from .linutils import LinUtils
 from .stringutils import StringUtils
 
 class EwfImagerGui(EwfImagerLabels):
-	'''Notebook page for EwfImager'''
+	'''GUI for EwfImager'''
 
 	MODULE = 'EwfImager'
-	DEF_SIZE = '40'
 
 	def __init__(self, root):
 		'''Notebook page'''
@@ -40,13 +38,7 @@ class EwfImagerGui(EwfImagerLabels):
 			self.SETRO,
 			tip = self.TIP_SETRO
 		)
-		GridSeparator(frame)
-		GridLabel(frame, self.DESTINATION)
-		self.outdir = OutDirSelector(
-			frame,
-			self.root.settings.init_stringvar('OutDir'),
-			tip = self.TIP_IMAGE_LOGS
-		)
+
 		self.case_no = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('CaseNo'),
@@ -200,56 +192,46 @@ class EwfImagerGui(EwfImagerLabels):
 			self.segment_size.set(self.DEF_SIZE)
 
 	def _set_filename(self):
-		self.filename.set('TEST')
+		if not self.filename.get():
+			case_no = self.case_no.get()
+			evidence_number = self.evidence_no.get()
+			description = self.description.get()
+			if case_no and evidence_number and description:
+				self.filename.set(f'{case_no}_{evidence_number}_{description}')
+			else:
+				MissingEntry(self.MISSING_METADATA)
 
 	def _add_job(self):
 		'''Generate command line'''
-
-		#self.SOURCE_REQUIRED
-		#self.CASE_NO_REQUIRED
-		#self.EVIDENCE_NO_REQUIRED
-		#self.DESCRIPTION_REQUIRED
-
-		self.root.settings.section = self.CMD
-		source = self.root.settings.get(self.root.SOURCE)
-		outdir = self.root.settings.get(self.root.OUTDIR)
-		case_no = self.root.settings.get(self.root.CASE_NO)
-		evidence_number = self.root.settings.get(self.root.EVIDENCE_NO)
-		description = self.root.settings.get(self.root.DESCRIPTION)
-		examiner_name = self.root.settings.get(self.root.EXAMINER_NAME)
-		notes = self.root.settings.get(self.root.settings.get(self.root.NOTES))
-		media_type = self.root.settings.get(self.root.MEDIA_TYPE)
-		media_flag = self.root.settings.get(self.root.MEDIA_FLAG)
-		compression = self.root.settings.get(self.root.COMPRESSION)
-		setro = self.root.settings.get(self.root.SETRO)
+		source = self.source.get()
+		setro = self.set_ro.get()
+		outdir = self.outdir.get()
+		case_no = self.case_no.get()
+		evidence_number = self.evidence_no.get()
+		description = self.description.get()
+		examiner_name = self.examiner_name.get()
+		notes = self.notes[self.notes_select.get()].get()
+		compression = self.compression.get()
+		media_type = self.media_type.get()
+		media_flag = self.media_flag.get()
+		filename = self.filename.get()
 		if not source:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.SOURCE_REQUIRED
-			)
+			MissingEntry(self.SOURCE_REQUIRED)
 			return
 		if not outdir:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_DIR_REQUIRED
-			)
+			MissingEntry(self.OUTDIR_REQUIRED)
 			return
-		if not case_no or not evidence_number or not description or not examiner_name:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.IMAGE_DETAILS_REQUIRED
-			)
+		if not case_no or not evidence_number or not description:
+			MissingEntry(self.METADATA_REQUIRED)
 			return
-		cmd = self.root.settings.section.lower()
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' -C "{case_no}" -E "{evidence_number}" -D "{description}" -e "{examiner_name}"'
+		cmd = f'ewfimager --outdir "{outdir}" -C "{case_no}" -E "{evidence_number}" -D "{description}"'
+		if examiner_name:
+			cmd += f' -e "{examiner_name}"'
 		if notes:
 			cmd += f' -N "{notes}"'
-		cmd += f' -c {compression}'
-		if media_type != self.MEDIA_TYPES[0]:
-			cmd += f' -m {media_type}'
-		if media_flag != self.MEDIA_FLAGS[0]:
-			cmd += f' -M {media_flag}'
+		cmd += f' -c {compression} -m {media_type} -M {media_flag}'
+		if filename:
+			cmd += f' --filename "{filename}"'
 		if setro:
 			cmd += ' --setro'
 		cmd += f' "{source}"'

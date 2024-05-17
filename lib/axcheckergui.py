@@ -28,7 +28,6 @@ class AxCheckerGui(AxCheckerLabels):
 			f'{self.OPEN_CASE_FILE} (Case.mfdb)',
 			filetype = ('Case.mfdb', 'Case.mfdb'),
 			tip = self.TIP_CASE_FILE,
-			missing = self.FIRST_CHOOSE_CASE
 		)
 		self.root_id = StringSelector(
 			frame,
@@ -144,6 +143,15 @@ class AxCheckerGui(AxCheckerLabels):
 		outdir = self.outdir.get()
 		filename = self.filename.get()
 		task = self.task.get()
+		if not mfdb:
+			MissingEntry(self.CASE_REQUIRED)
+			return
+		if not outdir:
+			MissingEntry(self.OUTDIR_REQUIRED)
+			return
+		cmd = f'axchecker --outdir "{outdir}"'
+		if filename:
+			cmd += f' --filename "{filename}"'
 		if task != 'Check':
 			root_id = self.root_id.get()
 			try:
@@ -163,16 +171,14 @@ class AxCheckerGui(AxCheckerLabels):
 					MissingEntry(self.TSV_REQUIRED)
 					return
 				tsv_no_head = self.tsv_no_head.get()
-		cmd = f'axchecker --root "{root_id}" --outdir "{outdir}"'
-		if filename:
-			cmd += f' --filename "{filename}"'
-		if task == 'CompareDir':
-			cmd += f' --diff "{root_dir}"'
-		elif task == 'CompareTSV':
-			cmd += f' --diff "{tsv_file}"'
-			if tsv_encoding:
-				cmd += f' --encoding "{tsv_encoding}"'
-			if tsv_no_head:
-				cmd += ' --nohead'
+			if task == 'CompareDir':
+				cmd += f' --diff "{root_dir}"'
+			else:
+				cmd += f' --diff "{tsv_file}"'
+				if tsv_encoding:
+					cmd += f' --encoding "{tsv_encoding}"'
+				if tsv_no_head:
+					cmd += ' --nohead'
+			cmd += f' --root {root_id}'
 		cmd += f' "{mfdb}"'
 		self.root.append_job(cmd)
