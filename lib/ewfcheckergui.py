@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from. guilabeling import EwfCheckerLabels
-from .guielements import NotebookFrame, FileSelector
+from .guielements import NotebookFrame, FileSelector, GridSeparator
+from .guielements import GridLabel, OutDirSelector, FilenameSelector
+from .guielements import AddJobButton
 #from lib.guielements import ExpandedFrame, GridSeparator, GridLabel
 #from lib.guielements import FilenameSelector, DirSelector, FileSelector
 #from lib.guielements import GridButton, GridBlank
@@ -34,24 +36,10 @@ class EwfCheckerGui(EwfCheckerLabels):
 		)
 		self.image = FilenameSelector(
 			frame,
-			default,
-			variable
+			'{now}_ewfverify',
+			self.root.settings.init_stringvar('Filename')
 		)
-
-		return
-		GridLabel(root, frame, root.EWF_IMAGE)
-		FileSelector(root, frame,
-			root.IMAGE, root.IMAGE, root.SELECT_IMAGE, filetype=('E01', '*.E01'))
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION)
-		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
-			column=0, columnspan=3)
-		self.root = root
+		AddJobButton(frame, 'EwfVerify', self._add_job)
 
 	def _add_job(self):
 		'''Generate command line'''
