@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from. guilabeling import EwfCheckerLabels
+from. guilabeling import BasicLabels
 from .guielements import NotebookFrame, FileSelector, GridSeparator
 from .guielements import GridLabel, OutDirSelector, FilenameSelector
-from .guielements import AddJobButton
-#from lib.guielements import ExpandedFrame, GridSeparator, GridLabel
-#from lib.guielements import FilenameSelector, DirSelector, FileSelector
-#from lib.guielements import GridButton, GridBlank
-#from ewfchecker import EwfChecker
+from .guielements import AddJobButton, MissingEntry
 
-class EwfCheckerGui(EwfCheckerLabels):
+class EwfCheckerGui(BasicLabels):
 	'''GUI for EwfChecker'''
 
 	MODULE = 'EwfChecker'
@@ -34,39 +30,26 @@ class EwfCheckerGui(EwfCheckerLabels):
 			self.root.settings.init_stringvar('OutDir'),
 			tip = self.TIP_OUTDIR
 		)
-		self.image = FilenameSelector(
+		self.filename = FilenameSelector(
 			frame,
-			'{now}_ewfverify',
+			'{now}_ewfchecker',
 			self.root.settings.init_stringvar('Filename')
 		)
 		AddJobButton(frame, 'EwfVerify', self._add_job)
 
 	def _add_job(self):
 		'''Generate command line'''
-		self.root.settings.section = self.CMD
-		image = self.root.settings.get(self.root.IMAGE)
-		outdir = self.root.settings.get(self.root.OUTDIR)
-		filename = self.root.settings.get(self.root.FILENAME)
+		image = self.image.get()
+		outdir = self.outdir.get()
+		filename = self.filename.get()
 		if not image:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.IMAGE_REQUIRED
-			)
+			MissingEntry(self.IMAGE_REQUIRED)
 			return
 		if not outdir:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_DIR_REQUIRED
-			)
+			MissingEntry(self.OUTDIR_REQUIRED)
 			return
-		if not filename:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_FN_REQUIRED
-			)
-			return
-		cmd = self.root.settings.section.lower()
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
+		cmd = f'axchecker --outdir "{outdir}"'
+		if filename:
+			cmd += f' --filename "{filename}"'
 		cmd += f' "{image}"'
 		self.root.append_job(cmd)

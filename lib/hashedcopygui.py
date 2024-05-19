@@ -10,16 +10,15 @@ from lib.guielements import GridButton, GridBlank
 class HashedCopyGui:
 	'''Notebook page'''
 
-	CMD = 'HashedCopy'
+	MODULE = 'HashedCopy'
 
 	def __init__(self, root):
 		'''Notebook page'''
-		root.settings.init_section(self.CMD)
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
+		self.root = root
+		frame = NotebookFrame(self)
 		self.sources = ExpandedScrolledText(root, frame, root.JOB_HEIGHT)
 		frame = ExpandedFrame(root, frame)
-		root.row = 0
+
 		GridButton(root, frame, root.ADD_SRC_FILES, self._add_files,
 			column=0, columnspan=2, incrow=False)
 		GridButton(root, frame, root.ADD_SRC_DIR, self._add_dir, column=2)
