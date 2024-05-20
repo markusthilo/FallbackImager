@@ -30,6 +30,8 @@ class BasicLabels:
 	EXCEPTIONS = 'Exceptions occured!'
 	UNDETECTED = 'Could not detect what to do!'
 	DESTINATION = 'Destination'
+	DESTINATION_REQUIRED = 'Destination is required'
+	LOGGING_DIR_REQUIRED = 'Directory to write logs is required'
 	DIRECTORY = 'Directory'
 	SELECT_OUTDIR = 'Select destination directory'
 	TIP_OUTDIR = '''Select destination directory to write
@@ -92,8 +94,20 @@ MiB, GiB or number of segments
 class ZipImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source root to build ZIP file from'
 
-class HashedCopy(BasicLabels):
-	
+class HashedCopyLabels(BasicLabels):
+	ADD_FILES = 'Add file(s)'
+	TIP_ADD_FILES = 'Select file(s) to copy'
+	ADD_DIR = 'Add directory'
+	TIP_ADD_DIR = 'Select a directory to copy'
+	SELECT_DESTINATION = 'Select destination to copy to'
+	TIP_DESTINATION = 'Destination directory (or device/volume) to copy to'
+
+class SQLiteLabels(BasicLabels):
+	SQLITE_DB = 'SQLite DB'
+	SELECT_DB = 'Select SQLite database file'
+	TIP_SQLITE_DB = '''Choose SQLite database file to
+export content from
+or to execute commands on'''
 
 class AxCheckerLabels(BasicLabels):
 	CASE_FILE = 'Case File'

@@ -15,6 +15,7 @@ class ZipImagerGui(ZipImagerLabels):
 		'''Notebook page'''
 		self.root = root
 		frame = NotebookFrame(self)
+		GridLabel(frame, self.SOURCE)
 		self.source = SourceDirSelector(
 			frame,
 			self.root.settings.init_stringvar('Source'),

@@ -2,32 +2,38 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from tkinter.messagebox import showerror
-from .guielements import ChildWindow, Tree, DirSelector
-from .guielements import ExpandedFrame, GridSeparator, GridLabel
-from .guielements import FilenameSelector, StringSelector, GridButton
-from .guielements import FileSelector, LeftButton, RightButton
-from .guielements import GridBlank, VerticalRadiobuttons
-from .sqliteutils import SQLiteReader
+from .guilabeling import SQLiteLabels
+from .guielements import NotebookFrame, GridLabel, FileSelector
+from .guielements import GridSeparator
+#from .guielements import ChildWindow, Tree, DirSelector
+#from .guielements import ExpandedFrame, GridSeparator, GridLabel
+#from .guielements import FilenameSelector, StringSelector, GridButton
+#from .guielements import FileSelector, LeftButton, RightButton
+#from .guielements import GridBlank, VerticalRadiobuttons
+#from .sqliteutils import SQLiteReader
 
-class SQLiteGui:
+class SQLiteGui(SQLiteLabels):
 	'''Notebook page for SQLite'''
 
-	CMD = 'SQLite'
+	MODULE = 'SQLite'
 
 	def __init__(self, root):
 		'''Notebook page'''
-		root.settings.init_section(self.CMD)
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DATABASE)
-		FileSelector(root, frame, root.SQLITE_DB, root.SQLITE_DB,
-			f'{root.SELECT_DB} ({root.SELECT_DB})',
-			filetype=(root.SQLITE_DB, '*.db'))
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.DESTINATION)
+		self.root = root
+		frame = NotebookFrame(self)
+		GridLabel(frame, 'SQLite')
+		self.sqlite_db = FileSelector(
+			frame,
+			self.root.settings.init_stringvar('DBFile'),
+			self.SQLITE_DB,
+			self.SELECT_DB,
+			filetype = ('SQLITE DB', '*.db'),
+			tip = self.TIP_SQLITE_DB,
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+
+		return
 		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
 		DirSelector(root, frame, root.OUTDIR,
 			root.DIRECTORY, root.SELECT_DEST_DIR)

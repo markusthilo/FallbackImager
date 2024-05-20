@@ -15,6 +15,7 @@ class EwfCheckerGui(BasicLabels):
 		'''Notebook page'''
 		self.root = root
 		frame = NotebookFrame(self)
+		GridLabel(frame, self.SOURCE)
 		self.image = FileSelector(
 			frame,
 			self.root.settings.init_stringvar('Image'),

@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-19'
+__version__ = '0.5.1_2024-05-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -66,7 +66,7 @@ class Gui(GuiBase):
 			#	(DismImager, DismImagerCli, DismImagerGui),
 				(ZipImager, ZipImagerCli, ZipImagerGui),
 				(HashedCopy, HashedCopyCli, HashedCopyGui),
-			#	(SQLite, SQLiteCli, SQLiteGui),
+				(SQLite, SQLiteCli, SQLiteGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
 			#	(Reporter, ReporterCli, ReporterGui),
 			#	(WipeW, WipeWCli, WipeWGui)
@@ -77,7 +77,7 @@ class Gui(GuiBase):
 				(EwfChecker, EwfCheckerCli, EwfCheckerGui),
 				(ZipImager, ZipImagerCli, ZipImagerGui),
 				(HashedCopy, HashedCopyCli, HashedCopyGui),
-			#	(SQLite, SQLiteCli, SQLiteGui),
+				(SQLite, SQLiteCli, SQLiteGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
 			#	(Reporter, ReporterCli, ReporterGui),
 				(WipeR, WipeRCli, WipeRGui)

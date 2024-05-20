@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter.messagebox import showerror
 from tkinter.filedialog import askopenfilenames, askdirectory
-from lib.guielements import ExpandedScrolledText, FilenameSelector
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import GridButton, GridBlank
+from tkinter.scrolledtext import ScrolledText
+from .guiconfig import GuiConfig
+from .guilabeling import HashedCopyLabels
+from .guielements import DirSelector, FilenameSelector, OutDirSelector
+from .guielements import GridSeparator, GridLabel, NotebookFrame
+from .guielements import GridButton, AddJobButton, MissingEntry
 
-class HashedCopyGui:
+class HashedCopyGui(HashedCopyLabels):
 	'''Notebook page'''
 
 	MODULE = 'HashedCopy'
@@ -16,65 +18,76 @@ class HashedCopyGui:
 		'''Notebook page'''
 		self.root = root
 		frame = NotebookFrame(self)
-		self.sources = ExpandedScrolledText(root, frame, root.JOB_HEIGHT)
-		frame = ExpandedFrame(root, frame)
-
-		GridButton(root, frame, root.ADD_SRC_FILES, self._add_files,
-			column=0, columnspan=2, incrow=False)
-		GridButton(root, frame, root.ADD_SRC_DIR, self._add_dir, column=2)
-		GridLabel(root, frame, root.DESTINATION)
-		DirSelector(root, frame, root.DESTINATION,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridLabel(root, frame, root.LOGGING)
-		FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}' , self._add_job,
-			column=0, columnspan=3)
-		self.root = root
+		GridLabel(frame, self.SOURCE)
+		self.sources = ScrolledText(
+			frame,
+			width = GuiConfig.ENTRY_WIDTH,
+			height = GuiConfig.INFO_HEIGHT
+		)
+		self.sources.grid(row=frame.row, column=2, rowspan=2)
+		GridButton(frame, self.ADD_FILES, self._add_files, tip=self.TIP_ADD_FILES)
+		GridButton(frame, self.ADD_DIR, self._add_dir, tip=self.TIP_ADD_DIR)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.destination = DirSelector(
+			frame,
+			self.root.settings.init_stringvar('Destination'),
+			self.DIRECTORY,
+			self.SELECT_DESTINATION,
+			tip  = self.TIP_DESTINATION
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.LOGGING)
+		self.outdir = OutDirSelector(
+			frame,
+			self.root.settings.init_stringvar('OutDir'),
+			tip = self.TIP_OUTDIR
+		)
+		self.filename = FilenameSelector(
+			frame,
+			'{now}_zipimager',
+			self.root.settings.init_stringvar('Filename')
+		)
+		AddJobButton(frame, 'ZipImager', self._add_job)
 
 	def _add_files(self):
 		'''Add source file(s)'''
-		filenames = askopenfilenames(title=self.root.ADD_SRC_FILES)
+		filenames = askopenfilenames(title=self.ADD_FILES)
 		if filenames:
 			for filename in filenames:
 				self.sources.insert('end', f'{filename}\n')
+			self.sources.yview('end')
 
 	def _add_dir(self):
 		'''Add source directory'''
-		dir = askdirectory(title=self.root.ADD_SRC_DIR)
+		dir = askdirectory(title=self.ADD_DIR)
 		if dir:
 			self.sources.insert('end', f'{dir}\n')
 			self.sources.yview('end')
 
 	def _add_job(self):
 		'''Generate command line'''
-		self.root.settings.section = self.CMD
-		outdir = self.root.settings.get(self.root.OUTDIR)
-		filename = self.root.settings.get(self.root.FILENAME)
-		destination = self.root.settings.get(self.root.DESTINATION)
-		cmd = self.root.settings.section.lower()
-		if not outdir or not destination:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_DIR_REQUIRED
-			)
+		destination = self.destination.get()
+		outdir = self.outdir.get()
+		filename = self.filename.get()
+		if not destination:
+			MissingEntry(self.DESTINATION_REQUIRED)
 			return
-		if not filename:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.DEST_FN_REQUIRED
-			)
+		if not outdir:
+			MissingEntry(self.LOGGING_DIR_REQUIRED)
 			return
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		cmd += f' --{self.root.FILENAME.lower()} "{filename}"'
-		cmd += f' --{self.root.DESTINATION.lower()} "{destination}"'
+		source = ''
 		while True:
 			line = self.sources.get('1.0', '2.0').strip()
 			if not line:
 				break
 			self.sources.delete('1.0', '2.0')
-			cmd += f' "{line}"'
+			source += f' "{line}"'
+		if not source:
+			MissingEntry(self.SOURCE_REQUIRED)
+			return
+		cmd = f'hashedcopy --destination "{destination}" --outdir "{outdir}"'
+		if filename:
+			cmd += f' --filename "{filename}"'
+		cmd += f' "{source}"'
 		self.root.append_job(cmd)
