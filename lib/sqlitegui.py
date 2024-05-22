@@ -3,10 +3,10 @@
 
 from pathlib import Path
 from .guilabeling import SQLiteLabels
-from .guielements import NotebookFrame, GridLabel, FileSelector
-from .guielements import GridSeparator
-#from .guielements import ChildWindow, Tree, DirSelector
-#from .guielements import ExpandedFrame, GridSeparator, GridLabel
+from .guielements import NotebookFrame, GridLabel, FilenameSelector
+from .guielements import GridSeparator, OutDirSelector, FileSelector
+from .guielements import StringRadiobuttons, StringSelector, GridLabel
+from .guielements import AddJobButton, Error
 #from .guielements import FilenameSelector, StringSelector, GridButton
 #from .guielements import FileSelector, LeftButton, RightButton
 #from .guielements import GridBlank, VerticalRadiobuttons
@@ -32,56 +32,66 @@ class SQLiteGui(SQLiteLabels):
 		)
 		GridSeparator(frame)
 		GridLabel(frame, self.DESTINATION)
-
-		return
-		self.filename_str = FilenameSelector(root, frame, root.FILENAME, root.FILENAME)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.TO_DO)
-		VerticalRadiobuttons(root, frame, root.TO_DO,
-			(root.EXECUTE_SQL, root.ALTERNATIVE, root.DUMP_SCHEMA, root.DUMP_CONTENT),
-			root.EXECUTE_SQL)
-		FileSelector(root, frame, root.SQL_FILE, root.SQL_FILE,
-			f'{root.SELECT_SQL_FILE} ({root.SELECT_SQL_FILE})',
-			filetype=(root.SQL_FILE, '*.sql'))
-		StringSelector(root, frame, root.TABLE, root.TABLE, command=self._list_schema)
-		StringSelector(root, frame, root.COLUMN, root.COLUMN, command=self._list_schema)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
-			self._add_job, column=0, columnspan=3)
-		root.child_win_active = False
-		self.root = root
+		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
+		self.filename = FilenameSelector(frame, '{now}_sqlite',
+			self.root.settings.init_stringvar('Filename'))
+		GridSeparator(frame)
+		GridLabel(frame, self.TASK)
+		self.task = StringRadiobuttons(
+			frame,
+			self.root.settings.init_stringvar('Task', default='Execute'),
+			('Execute', 'Alternative', 'DumpSchema', 'DumpContent')
+		)
+		self.sql_file = FileSelector(
+			frame,
+			self.root.settings.init_stringvar('SQLFile'),
+			self.EXECUTE_SQL_FILE,
+			self.SELECT_SQL_FILE,
+			filetype = ('SQL', '*.sql'),
+			tip = self.TIP_SQL_FILE,
+		)
+		GridLabel(frame, self.ALTERNATIVE, column=2)
+		self.table = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Table'),
+			self.TABLE,
+			command = self._list_schema,
+			tip = self.TIP_TABLE
+		)
+		self.column = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Column'),
+			self.COLUMN,
+			command = self._list_schema,
+			tip = self.TIP_COLUMN
+		)
+		AddJobButton(frame, 'AxChecker', self._add_job)
+		self.root.child_win_active = False
 
 	def _list_schema(self):
 		'''Show database schema'''
 		if self.root.child_win_active:
 			return
-		self.root.settings.section = self.CMD
-		sqlite_db = self.root.settings.get(self.root.SQLITE_DB)
+		sqlite_db = self.sqlite_db.get()
 		if not sqlite_db:
-			showerror(
-				title = self.root.SQLITE_DB,
-				message = self.root.FIRST_CHOOSE_DB
-			)
+			Error(self.FIRST_CHOOSE_DB)
 			return
 		try:
 			reader = SQLiteReader(Path(sqlite_db))
 		except Exception as e:
-			showerror(title=self.root.ERROR, message=repr(e))
+			Error(repr(e))
 			return
 		self.child_window = ChildWindow(self.root, self.root.SCHEMA)
-		frame = ExpandedFrame(self.root, self.child_window)
-		self.tree = Tree(self.root, frame)
+		frame = ExpandedFrame(elf.child_window)
+		self.tree = Tree(frame)
 		for table_name, column_names in reader.list_tables():
 			table = self.tree.insert('', 'end', text=table_name, iid=f'{table_name}\t')
 			for column_name in column_names:
 				self.tree.insert(table, 'end', text=column_name, iid=f'{table_name}\t{column_name}')
 
-		frame = ExpandedFrame(self.root, self.child_window)
-		LeftButton(self.root, frame, self.root.SELECT, self._get_selected)
-		RightButton(self.root, frame, self.root.QUIT, self.child_window.destroy)
+		frame = ExpandedFrame(self.child_window)
+		LeftButton(frame, self.SELECT, self._get_selected)
+		RightButton(frame, self.QUIT, self.child_window.destroy)
 
 	def _get_selected(self):
 		'''Get the selected root'''

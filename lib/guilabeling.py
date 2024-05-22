@@ -108,6 +108,18 @@ class SQLiteLabels(BasicLabels):
 	TIP_SQLITE_DB = '''Choose SQLite database file to
 export content from
 or to execute commands on'''
+	EXECUTE_SQL_FILE = 'Execute SQL file'
+	SELECT_SQL_FILE = 'Select SQL file'
+	TIP_SQL_FILE = '''SQL file to execute on the given database
+(choose "Execute" for SQLite driver or
+"Alternative" to ignore commands only available
+for server/client implementations)'''
+	ALTERNATIVE = 'Alternative method to execute SQL file ignoring commands that do not work with SQLite'
+	TABLE = 'Dump table'
+	TIP_TABLE = 'Select table of DB to dump'
+	COLUMN = 'Dump column'
+	TIP_COLUMN = 'Select column of the DB table to dump'
+	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
 
 class AxCheckerLabels(BasicLabels):
 	CASE_FILE = 'Case File'
@@ -265,7 +277,6 @@ new partition after wipe (None: do not create)'''
 	TABLE = 'Table'
 	SQL_FILE = 'SQL file'
 	SELECT_SQL_FILE = 'Select SQL file'
-	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
 	SQLITE_DB_REQUIRED = 'SQLite database file is required'
 	SQL_FILE_REQUIRED = 'SQL file is required'
 '''
