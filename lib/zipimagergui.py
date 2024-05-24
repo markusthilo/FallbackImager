@@ -46,7 +46,7 @@ class ZipImagerGui(ZipImagerLabels):
 		if not outdir:
 			MissingEntry(self.OUTDIR_REQUIRED)
 			return
-		cmd = f'axchecker --outdir "{outdir}"'
+		cmd = f'zipimager --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'
 		cmd += f' "{source}"'

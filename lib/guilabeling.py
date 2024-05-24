@@ -91,6 +91,9 @@ MiB, GiB or number of segments
 	MISSING_METADATA = 'Case number, evidence number and description are required to generate filename'
 	METADATA_REQUIRED = 'Case number, evidence number and description are required as metadata for the EWF/E01 image'
 
+class OscdImagerLabels(BasicLabels):
+	TIP_SOURCE = 'Select source root to build ISO file from'
+
 class ZipImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source root to build ZIP file from'
 

@@ -29,7 +29,7 @@ class GuiBase(Tk):
 		super().__init__()
 		title = f'{self.app_name} v{self.version}'
 		if not_admin:
-			title += f' ({BasicLabels.NOT_ADMIN})'
+			title += f' ({BasicLabels.ADMIN_REQUIRED})'
 		self.title(title)
 		self.resizable(0, 0)
 		self.appicon = PhotoImage(file=parent_path/'appicon.png')
