@@ -3,17 +3,18 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-20'
+__version__ = '0.5.1_2024-05-24'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
 This is a modular utility for forensic work as a complement
 or fallback to the commercial and/or established tools.
-The modules write log files into given output directories,
+The modules write log files into given output directory,
 calculate hashes and/or lists of copied files etc.
 Multiple jobs can be generated and executed sequentially.
-This is work in progress.
+This is the GUI but I would recommand the CLI tools that
+are provided alongside. This is work in progress.
 '''
 
 from pathlib import Path
@@ -67,8 +68,8 @@ class Gui(GuiBase):
 				(ZipImager, ZipImagerCli, ZipImagerGui),
 				(HashedCopy, HashedCopyCli, HashedCopyGui),
 				(SQLite, SQLiteCli, SQLiteGui),
+				(Reporter, ReporterCli, ReporterGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
-			#	(Reporter, ReporterCli, ReporterGui),
 			#	(WipeW, WipeWCli, WipeWGui)
 			)
 		else:
@@ -78,8 +79,8 @@ class Gui(GuiBase):
 				(ZipImager, ZipImagerCli, ZipImagerGui),
 				(HashedCopy, HashedCopyCli, HashedCopyGui),
 				(SQLite, SQLiteCli, SQLiteGui),
+				(Reporter, ReporterCli, ReporterGui),
 				(AxChecker, AxCheckerCli, AxCheckerGui),
-			#	(Reporter, ReporterCli, ReporterGui),
 				(WipeR, WipeRCli, WipeRGui)
 			)
 		super().__init__(__app_name__,__version__, __parent_path__,

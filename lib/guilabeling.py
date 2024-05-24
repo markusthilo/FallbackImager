@@ -121,6 +121,18 @@ for server/client implementations)'''
 	TIP_COLUMN = 'Select column of the DB table to dump'
 	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
 
+class ReporterLabels(BasicLabels):
+	TEMPLATE = 'Template'
+	SELECT_TEMPLATE = 'Select template text file to parse'
+	TIP_TEMPLATE = 'Select tamplate to parse by JSON file'
+	JSON = 'JSON file'
+	SELECT_JSON = 'Select JSON file'
+	TIP_JSON = 'JSON file to parse by template file'
+	PARSE = 'Parse'
+	TEMPLATE_REQUIRED = 'Template to parse is required'
+	JSON_REQUIRED = 'JSON file is required'
+	PREVIEW = 'Preview'
+
 class AxCheckerLabels(BasicLabels):
 	CASE_FILE = 'Case File'
 	OPEN_CASE_FILE = 'Open case file'
