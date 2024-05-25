@@ -182,7 +182,7 @@ class StringRadiobuttons:
 
 class VerticalRadiobuttons:
 	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
-	def __init__(self, parent, variable, buttons, default, column=1, columnspan=255, incrow=True):
+	def __init__(self, parent, variable, buttons, column=1, columnspan=255, incrow=True):
 		frame = Frame(parent)
 		frame.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
 		self._variable = variable

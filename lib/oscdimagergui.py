@@ -30,7 +30,7 @@ class OscdImagerGui(OscdImagerLabels):
 		)
 		self.filename = FilenameSelector(
 			frame,
-			'{now}_zipimager',
+			'{now}_oscdimager',
 			self.root.settings.init_stringvar('Filename')
 		)
 		AddJobButton(frame, 'OscdImager', self._add_job)

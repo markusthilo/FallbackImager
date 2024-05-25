@@ -2,29 +2,39 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from tkinter.messagebox import showerror
-from lib.guielements import SourceDirSelector, Checker
-from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-from lib.guielements import FilenameSelector, StringSelector, GridButton, GridBlank
-from lib.timestamp import TimeStamp
+from .guilabeling import DismImagerLabels
+from .guielements import NotebookFrame, SourceDirSelector, GridSeparator
+from .guielements import GridLabel, OutDirSelector, FilenameSelector
+from .guielements import StringSelector, VerticalRadiobuttons, Checker
+from .guielements import AddJobButton, MissingEntry
 
-class DismImagerGui:
+class DismImagerGui(DismImagerLabels):
 	'''Notebook page'''
 
-	CMD = 'DismImager'
+	MODULE = 'DismImager'
 
 	def __init__(self, root):
-		'''Notebook page'''
-		sekf,root = root
-		frame = NotebookFrame(self.root, 'DismImager')
+		'''Notebook page for DismImager'''
+		self.root = root
+		frame = NotebookFrame(self)
+		GridLabel(frame, self.SOURCE)
 		self.source = SourceDirSelector(
 			frame,
 			self.root.settings.init_stringvar('Source'),
-			tip = 'Select source volume/directory'
+			tip = self.TIP_SOURCE
 		)
-		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
-		self.filename = FilenameSelector(frame, '{now}_dismimager',
-			self.root.settings.init_stringvar('Filename'))
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			self.root.settings.init_stringvar('OutDir'),
+			tip = self.TIP_OUTDIR
+		)
+		self.filename = FilenameSelector(
+			frame,
+			'{now}_dismimager',
+			self.root.settings.init_stringvar('Filename')
+		)
 		self.name = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Name'),
@@ -32,25 +42,26 @@ class DismImagerGui:
 			command = self._gen_name,
 			tip = self.TIP_NAME
 		)
-		self.name = StringSelector(
+		self.description = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Description'),
 			self.DESCRIPTION,
 			command = self._gen_description,
 			tip = self.TIP_DESCRIPTION
 		)
+		GridLabel(frame, self.COMPRESSION, column=1, columnspan=1, incrow=False)
 		self.compression = VerticalRadiobuttons(
 			frame,
-			self.root.settings.init_boolvar('Compression'),
+			self.root.settings.init_stringvar('Compression', default='none'),
 			('none', 'fast', 'max'),
-			'none'
+			column = 2
 		)
 		GridSeparator(frame)
 		self.copy_exe = Checker(
 			frame,
 			self.root.settings.init_boolvar('CopyExe'),
 			self.COPY_EXE,
-			columnspan = 2,
+			columnspan = 3,
 			tip = self.TIP_COPY_EXE
 		)
 		AddJobButton(frame, 'DismImager', self._add_job)
@@ -58,17 +69,15 @@ class DismImagerGui:
 
 	def _gen_name(self):
 		'''Generate a name for the image'''
-		if not self.name.get():
-			self.name.set(Path(self.source.get()).name)
+		source = self.source.get()
+		if source and not self.name.get():
+			self.name.set(Path(source).name)
 	
 	def _gen_description(self):
 		'''Generate a description for the image'''
-		if not self.description.get():
-			descr = TimeStamp.now(no_ms=True)
-			source = self.source.get()
-			if source:
-				descr += f', {Path(source).name}'
-			self.description.set(descr)
+		source = self.source.get()
+		if source and not self.description.get():
+			self.description.set(f'{self.IMAGE_OF} "{Path(source).name}"')
 
 	def _add_job(self):
 		'''Generate command line'''
@@ -79,6 +88,12 @@ class DismImagerGui:
 		description = self.description.get()
 		compression = self.compression.get()
 		copy_exe = self.copy_exe.get()
+		if not source:
+			MissingEntry(self.SOURCE_REQUIRED)
+			return
+		if not outdir:
+			MissingEntry(self.OUTDIR_REQUIRED)
+			return
 		cmd = f'dismimager --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'

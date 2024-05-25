@@ -54,6 +54,7 @@ click to auto generate (if empty)'''
 	IMAGE = 'Image'
 	SELECT_IMAGE = 'Select image'
 	IMAGE_REQUIRED = 'Image is required'
+	DESCRIPTION = 'Description'
 	LOGGING = 'Logging'
 	CONFIGURATION = 'Configuration'
 	COMPRESSION = 'Compression'
@@ -74,7 +75,6 @@ to make sure, source stays untouched'''
 	TIP_METADATA = 'Metadata stored in the EWF/E91 image'
 	EVIDENCE_NO = 'Evidence number'
 	DEF_EVIDENCE_NO = 'EAV'
-	DESCRIPTION = 'Description'
 	DEF_DESCRIPTION = 'HD'
 	EXAMINER_NAME = 'Examiner name'
 	NOTES = 'Notes'
@@ -92,7 +92,18 @@ MiB, GiB or number of segments
 	METADATA_REQUIRED = 'Case number, evidence number and description are required as metadata for the EWF/E01 image'
 
 class OscdImagerLabels(BasicLabels):
-	TIP_SOURCE = 'Select source root to build ISO file from'
+	TIP_SOURCE = 'Select source root to build ISO image file from'
+
+class DismImagerLabels(BasicLabels):
+	TIP_SOURCE = 'Select source root to build WIM image file from'
+	NAME = 'Name'
+	TIP_NAME = 'Image name (stored in WIM-image)'
+	TIP_DESCRIPTION = 'Image description (stored in WIM image)'
+	TIP_COMPRESSION = 'Compression level for dismimg'
+	COPY_EXE = 'Copy WimMount.exe to destination directory'
+	TIP_COPY_EXE = '''WimMount.exe is a GUI tool to mount WIM-images.
+The executable has to be placed in the bin-subfolder.'''
+	IMAGE_OF = 'Image of'
 
 class ZipImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source root to build ZIP file from'
@@ -168,19 +179,6 @@ has no head line'''
 	ROOT_ID_REQUIRED = 'AXIOM source ID of root to compare is required'
 	ROOT_DIR_REQUIRED = 'Root directory (or drive) to compare with AXIOM case is required'
 	TSV_REQUIRED = 'Choose TSV file'
-
-class DismImagerLabels(BasicLabels):
-	NAME = 'Name'
-	TIP_NAME = 'Image name (stored in WIM-image)'
-	DESCRIPTION = 'Description'
-	TIP_DESCRIPZION = 'Image description (stored in WIM-image)'
-	TIP_COMPRESSION = 'Compression level for dismimg'
-	NONE = 'none'
-	FAST = 'fast'
-	MAX = 'max'
-	COPY_EXE = 'Copy WimMount.exe to destination directory'
-	TIP_COPY_EXE = '''WimMount.exe is a GUI tool to mount WIM-images.
-The executable has to be placed in the bin-subfolder.'''
 
 class WipeLabels(BasicLabels):
 	WIPE = 'Wipe'

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from os import environ
 from wmi import WMI
 from win32api import GetCurrentProcessId, GetLogicalDriveStrings
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
@@ -17,10 +18,14 @@ class WinUtils:
 	WINCMD_DELAY = 1
 
 	@staticmethod
-	def find_exe(name, parent_path, *possible_paths):
+	def find_exe(exe, parent_path, *possible_dirs):
 		'''Find executable file'''
-		for parent in parent_path/'bin', parent_path, *possible_paths:
-			exe_path = parent/name
+		for parent in parent_path/'bin', parent_path:
+			exe_path = parent/exe
+			if exe_path.is_file():
+				return exe_path
+		for directory in possible_dirs:
+			exe_path = Path(environ['SYSTEMDRIVE'])/directory/exe
 			if exe_path.is_file():
 				return exe_path
 

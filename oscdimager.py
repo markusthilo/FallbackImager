@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-24'
+__version__ = '0.5.1_2024-05-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -31,9 +31,7 @@ class OscdImager:
 	def __init__(self):
 		'''Look for oscdimg.exe'''
 		self.oscdimg_path = WinUtils.find_exe('oscdimg.exe', __parent_path__,
-		Path(__parent_path__/'Oscdimg'),
-		Path(__parent_path__/'bin'/'Oscdimg'),
-		Path('C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg'))
+			'\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg')
 		if self.oscdimg_path:
 			self.available = True
 		else:

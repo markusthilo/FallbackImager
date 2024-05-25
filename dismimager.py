@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-24'
+__version__ = '0.5.1_2024-05-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,6 +12,7 @@ This module is only availible with Admin privileges. It generates an image in th
 '''
 
 from sys import executable as __executable__
+from os import environ
 from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
 from argparse import ArgumentParser
@@ -34,11 +35,8 @@ class DismImager:
 
 	def __init__(self):
 		'''Look for dism.exe'''
-		self.dism_path = WinUtils.find_exe('dism.exe', __parent_path__,
-		Path(__parent_path__/'DISM'),
-		Path(__parent_path__/'bin'/'DISM'),
-		Path('C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\DISM'))
-		if self.dism_path and IsUserAnAdmin():
+		self.dism_path = Path(environ['SYSTEMDRIVE'])/'\\Windows\\system32\\dism.exe'
+		if self.dism_path.is_file() and IsUserAnAdmin():
 			self.available = True
 		else:
 			self.available = False
