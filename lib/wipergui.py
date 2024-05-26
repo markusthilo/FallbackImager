@@ -222,6 +222,9 @@ class WipeRGui(WipeLabels):
 		if not target or not self.target_type:
 			MissingEntry(self.TARGET_REQUIRED)
 			return
+		if not outdir:
+			MissingEntry(self.OUTDIR_REQUIRED)
+			return
 		cmd = f'wiper --outdir "{outdir}"'
 		if task == 'All':
 			cmd += ' --allbytes'
