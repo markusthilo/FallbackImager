@@ -38,7 +38,6 @@ class EwfImagerGui(EwfImagerLabels):
 			self.SETRO,
 			tip = self.TIP_SETRO
 		)
-
 		self.case_no = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('CaseNo'),

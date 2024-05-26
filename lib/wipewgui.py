@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from tkinter.messagebox import showerror, askyesno
+from tkinter import StringVar
+from tkinter.filedialog import askopenfilenames
+from tkinter.messagebox import askyesno
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
+from .guiconfig import GuiConfig
 from .guilabeling import WipeLabels
-from .guielements import NotebookFrame, GridLabel, StringSelector, GridSeparator
-from .guielements import OutDirSelector, GridStringMenu
+from .guielements import NotebookFrame, GridLabel, StringSelector, GridSeparator, MissingEntry
+from .guielements import OutDirSelector, GridMenu, StringRadiobuttons, FileSelector
+from .guielements import AddJobButton, ChildWindow, ExpandedFrame, LeftButton, RightButton
 #from lib.guielements import SourceDirSelector, Checker, LeftLabel
 #from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
 #from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
@@ -41,69 +45,108 @@ class WipeWGui(WipeLabels):
 			command=self._select_target,
 			tip=self.TIP_TARGET
 		)
-		self.filenames = None
+		self.target_type = None
 		GridSeparator(frame)
 		GridLabel(frame, self.LOGGING)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
 		GridSeparator(frame)
-
+		GridLabel(frame, self.NEW_PARTITION)
 		self.new_letter = GridMenu(
 			frame,
-			self.root.settings.init_stringvar('NewDriveLetter', default=self.DEF_TABLE),
+			StringVar(value=self.NEXT_AVAILABLE),
+			self.ASSIGN_DRIVE_LETTER,
+			([self.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
+			tip = self.TIP_NEW_DRIVE_LETTER
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.TASK)
+		self.task = StringRadiobuttons(
+			frame,
+			self.root.settings.init_stringvar('Task', default='Normal'),
+			('Normal', 'All', 'Extra', 'Verify')
+		)
+		GridLabel(frame, self.NORMAL_WIPE, column=1, columnspan=1, incrow=False)
+		self.max_bad_blocks = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('MaxBadBlocks', default=self.DEF_MAXBADBLOCKS),
+			self.MAXBADBLOCKS,
+			default = self.DEF_MAXBADBLOCKS,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 2,
+			columnspan = 2,
+			incrow = False,
+			tip = self.TIP_MAXBADBLOCKS
+		)
+		self.max_retries = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('MaxRetries', default=self.DEF_MAXRETRIES),
+			self.MAXRETRIES,
+			default = self.DEF_MAXRETRIES,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 4,
+			tip = self.TIP_MAXRETRIES
+		)
+		GridLabel(frame, self.ALL_BYTES, column=1, columnspan=1, incrow=False)
+		self.value = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Value', default='00'),
+			self.VALUE,
+			default = '00',
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 2,
+			columnspan = 2,
+			incrow = False,
+			tip = self.TIP_VALUE
+		)
+		self.blocksize = GridMenu(
+			frame,
+			self.root.settings.init_intvar('Blocksize', default=self.DEF_BLOCKSIZE),
+			self.BLOCKSIZE,
+			self.BLOCKSIZES,
+			column = 4,
+			tip = self.TIP_BLOCKSIZE
+		)
+		GridLabel(frame, self.EXTRA_PASS, column=1, columnspan=1, incrow=False)
+		self.part_name = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('PartitionName'),
+			self.PART_NAME,
+			default = self.DEF_PART_NAME,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			column = 2,
+			columnspan = 2,
+			incrow = False,
+			tip = self.TIP_PART_NAME
+		)
+		self.part_table = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('PartitionTable', default=self.DEF_TABLE),
 			self.PARTITION_TABLE,
-			([root.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
+			self.TABLES,
 			column = 4,
 			tip = self.TIP_PARTITION_TABLE
 		)
-
-		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
-			([root.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
-			default=root.NEXT_AVAILABLE, column=8)
+		GridLabel(frame, self.VERIFY, column=1, columnspan=1, incrow=False)
+		self.filesystem = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('FileSystem', default=self.DEF_FS),
+			self.FILE_SYSTEM,
+			self.FS,
+			column = 4,
+			tip = self.TIP_FILE_SYSTEM
+		)
 		GridSeparator(frame)
-		return
-		
-		GridLabel(root, frame, root.TO_DO)
-		StringRadiobuttons(root, frame, root.TO_DO,
-			(root.NORMAL_WIPE, root.ALL_BYTES, root.EXTRA_PASS, root.VERIFY), root.NORMAL_WIPE)
-		GridLabel(root, frame, root.NORMAL_WIPE, column=1)
-		GridLabel(root, frame, root.ALL_BYTES, column=1)
-		GridLabel(root, frame, root.EXTRA_PASS, column=1)
-		GridLabel(root, frame, root.VERIFY, column=1)
-		root.row -= 4
-		GridIntMenu(root, frame, root.BLOCKSIZE, root.BLOCKSIZE, self.BLOCKSIZES,
-			default=self.DEF_BLOCKSIZE, column=3)
-		root.row -= 1
-		GridStringMenu(root, frame, root.PARTITION_TABLE, root.PARTITION_TABLE,
-			([root.DO_NOT_CREATE] + list(self.TABLES)), default=self.DEF_TABLE, column=4)
-		root.row -= 1
-		GridStringMenu(root, frame, root.FILE_SYSTEM, root.FILE_SYSTEM,
-			([root.DO_NOT_CREATE] + list(self.FS)), default=self.DEF_FS, column=6)
-		root.row -= 1
-		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
-			([root.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
-			default=root.NEXT_AVAILABLE, column=8)
-		root.row += 1
-		StringSelector(root, frame, root.VALUE, root.VALUE, default=self.DEF_VALUE,
-			width=root.SMALL_FIELD_WIDTH, column=3)
-		root.row -= 1
-		StringSelector(root, frame, root.VOLUME_NAME, root.VOLUME_NAME,
-			default=root.DEFAULT_VOLUME_NAME, width=root.SMALL_FIELD_WIDTH, column=6, columnspan=2)
-		StringSelector(root, frame, root.MAXBADBLOCKS, root.MAXBADBLOCKS, default=self.DEF_MAXBADBLOCKS,
-			width=root.SMALL_FIELD_WIDTH, column=3)
-		root.row -= 1
-		StringSelector(root, frame, root.MAXRETRIES, root.MAXRETRIES, default=self.DEF_MAXRETRIES,
-			width=root.SMALL_FIELD_WIDTH, column=6, columnspan=2)
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.CONFIGURATION)
-		FileSelector(root, frame, root.LOG_HEAD, root.LOG_HEAD, root.SELECT_TEXT_FILE,
-			default=self.default_wlh_path, command=self._notepad_log_head, columnspan=8)
-		GridSeparator(root, frame)
-		GridBlank(root, frame)
-		GridButton(root, frame, f'{root.ADD_JOB} {self.CMD}',
-			self._add_job, column=0, columnspan=3)
-		root.child_win_active = False
-		self.root = root
-		self.filenames = None
+		GridLabel(frame, self.CONFIGURATION)
+		self.log_head = FileSelector(
+			frame,
+			self.root.settings.init_stringvar('LogHead', default=self.default_wlh_path),
+			self.LOG_HEAD,
+			self.SELECT_TEXT_FILE,
+			filetype = ('Text', '*.txt'),
+			tip = self.TIP_LOG_HEAD
+		)
+		AddJobButton(frame, 'WipeW', self._add_job)
+		self.root.child_win_active = False
 
 	def _notepad_log_head(self):
 		'''Edit log header file with Notepad'''
@@ -114,28 +157,26 @@ class WipeWGui(WipeLabels):
 		'''Select drive to wipe'''
 		if self.root.child_win_active:
 			return
-		self.target_window = ChildWindow(self.root, self.root.SELECT)
-		self.root.settings.section = self.CMD
-		frame = ExpandedFrame(self.root, self.target_window)
-		self.root.row = 0
-		GridLabel(self.root, frame, self.root.SELECT_DRIVE)
+		self.target_window = ChildWindow(self.root, self.SELECT)
+		frame = ExpandedFrame(self.target_window)
+		GridLabel(frame, self.SELECT_DRIVE_TO_WIPE)
 		for drive_id, drive_info in WinUtils().list_drives():
 			Button(frame, text=drive_id, command=partial(self._put_drive, drive_id)).grid(
-				row=self.root.row, column=0, sticky='nw', padx=self.root.PAD)
-			text = ScrolledText(frame, width=self.root.ENTRY_WIDTH,
-				height=min(len(drive_info.split('\n')), self.root.MAX_ENTRY_HEIGHT ))
-			text.grid(row=self.root.row, column=1)
+				row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
+			text = ScrolledText(frame, width=GuiConfig.ENTRY_WIDTH,
+				height=min(len(drive_info.split('\n')), GuiConfig.MAX_ENTRY_HEIGHT ))
+			text.grid(row=frame.row, column=1)
 			text.bind('<Key>', lambda dummy: 'break')
 			text.insert('end', f'{drive_id} - {drive_info}')
 			text.configure(state='disabled')
-			self.root.row += 1
-		frame = ExpandedFrame(self.root, self.target_window)
-		LeftButton(self.root, frame, self.root.REFRESH, self._refresh_target_window)
-		frame = ExpandedFrame(self.root, self.target_window)
-		GridSeparator(self.root, frame)
-		frame = ExpandedFrame(self.root, self.target_window)
-		LeftButton(self.root, frame, self.root.SELECT_FILES, self._select_files)
-		RightButton(self.root, frame, self.root.QUIT, self.target_window.destroy)
+			frame.row += 1
+		frame = ExpandedFrame(self.target_window)
+		LeftButton(frame, self.REFRESH, self._refresh_target_window)
+		frame = ExpandedFrame(self.target_window)
+		GridSeparator(frame)
+		frame = ExpandedFrame(self.target_window)
+		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
+		RightButton(frame, self.QUIT, self.target_window.destroy)
 
 	def _refresh_target_window(self):
 		'''Destroy and reopen Target Window'''
@@ -145,122 +186,87 @@ class WipeWGui(WipeLabels):
 	def _put_drive(self, drive_id):
 		'''Put drive id to target string'''
 		self.target_window.destroy()
-		self.root.settings.section = self.CMD
-		self.root.settings.raw(self.root.TARGET).set(drive_id)
-		self.filenames = None
+		self.target.set(drive_id)
+		self.target_type = 'drive'
 
 	def _select_files(self):
 		'''Choose file(s) to wipe'''
 		self.target_window.destroy()
-		self.filenames = askopenfilenames(title=self.root.SELECT_FILES)
+		self.filenames = askopenfilenames(title=self.SELECT_FILES)
 		if self.filenames:
 			plus = len(self.filenames) -1
 			target = self.filenames[0]
 			if plus > 0:
 				if plus == 1:
-					target += f' + {plus} {self.root.FILE}'
+					target += f' + {plus} {self.FILE}'
 				else:
-					target += f' + {plus} {self.root.FILES}'
-			self.root.settings.raw(self.root.TARGET).set(target)
+					target += f' + {plus} {self.FILES}'
+			self.target.set(target)
+			self.target_type = 'files'
+		else:
+			self.target_type = None
 
 	def _add_job(self):
 		'''Generate command line'''
-		self.root.settings.section = self.CMD
-		target = self.root.settings.get(self.root.TARGET)
-		target_is_pd = WinUtils.is_physical_drive(target)
-		if not target or ( not target_is_pd and not self.filenames ):
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.TARGET_REQUIRED
-			)
-			self.filenames = None
+		target = self.target.get()
+		outdir = self.outdir.get()
+		new_letter = self.new_letter.get()
+		task = self.task.get()
+		blocksize = self.blocksize.get()
+		part_table = self.part_table.get()
+		filesystem = self.filesystem.get()
+		part_name = self.part_name.get()
+		value = self.value.get()
+		max_bad_blocks = self.max_bad_blocks.get()
+		max_retries = self.max_retries.get()
+		log_head = self.log_head.get()
+		if not target or not self.target_type:
+			MissingEntry(self.TARGET_REQUIRED)
 			return
-		outdir = self.root.settings.get(self.root.OUTDIR) 
-		if not outdir:
-			showerror(
-				title = self.root.MISSING_ENTRIES,
-				message = self.root.LOGDIR_REQUIRED
-			)
-			return
-		cmd = self.root.settings.section.lower()
-		cmd += f' --{self.root.OUTDIR.lower()} "{outdir}"'
-		to_do = self.root.settings.get(self.root.TO_DO)
-		if to_do == self.root.ALL_BYTES:
-			cmd += f' --allbytes'
-		elif to_do == self.root.EXTRA_PASS:
-			cmd += f' --extra'
-		elif to_do == self.root.VERIFY:
-			cmd += f' --verify'
-		blocksize = self.root.settings.get(self.root.BLOCKSIZE)
-		cmd += f' --blocksize {blocksize}'
-		value = self.root.settings.get(self.root.VALUE)
+		cmd = f'wiper --outdir "{outdir}"'
+		if task == 'All':
+			cmd += ' --allbytes'
+		elif task == 'Extra':
+			cmd += ' --extra'
+		elif task == 'Verify':
+			cmd += ' --verify'
+		if blocksize:
+			cmd += f' --blocksize {blocksize}'
 		if value:
 			try:
 				int(value, 16)
 			except ValueError:
-				showerror(
-					title = self.root.WRONG_ENTRY,
-					message = self.root.NEED_HEX
-				)
-				return
-			if int(value, 16) < 0 or int(value, 16) > 0xff:
-				showerror(
-					title = self.root.WRONG_ENTRY,
-					message = self.root.BYTE_RANGE
-				)
-				return
-			cmd += f' --value {value}'
-		maxbadblocks = self.root.settings.get(self.root.MAXBADBLOCKS)
-		if maxbadblocks:
+				pass
+			else:
+				if int(value, 16) >= 0 or int(value, 16) <= 0xff:
+					cmd += f' --value {value}'
+		if max_bad_blocks:
 			try:
-				int(maxbadblocks)
+				int(max_bad_blocks)
 			except ValueError:
-				showerror(
-					title = self.root.WRONG_ENTRY,
-					message = f'{self.root.NEED_INT} "{self.root.MAXBADBLOCKS}"'
-				)
-				return
-			cmd += f' --maxbadblocks {maxbadblocks}'
-		maxretries = self.root.settings.get(self.root.MAXRETRIES)
-		if maxretries:
+				pass
+			else:
+				cmd += f' --maxbadblocks {max_bad_blocks}'
+		if max_retries:
 			try:
-				int(maxretries)
+				int(max_retries)
 			except ValueError:
-				showerror(
-					title = self.root.WRONG_ENTRY,
-					message = f'{self.root.NEED_INT} "{self.root.MAXRETRIES}"'
-				)
-				return
-			cmd += f' --maxretries {maxretries}'
-		partition_table = self.root.settings.get(self.root.PARTITION_TABLE)
-		file_system = self.root.settings.get(self.root.FILE_SYSTEM)
-		if (
-			target_is_pd
-			and to_do != self.root.VERIFY
-			and partition_table != self.root.DO_NOT_CREATE
-			and file_system != self.root.DO_NOT_CREATE
-		):
-			if partition_table != self.TABLES[0]:
-				cmd += f' --mbr'
-			cmd += f' --create {file_system}'
-			volume_name = self.root.settings.get(self.root.VOLUME_NAME)
-			if volume_name:
-				cmd += f' --name "{volume_name}"'
-			drive_letter = self.root.settings.get(self.root.DRIVE_LETTER)
-			if (
-				drive_letter != self.root.NEXT_AVAILABLE
-				and askyesno(
-					title = self.root.DRIVE_LETTER_TAKEN,
-					message = self.root.USE_IT_ANYWAY
-				)
-			):
-				cmd += f' --driveletter {drive_letter}'
-			log_head = self.root.settings.get(self.root.LOG_HEAD)
-			if log_head:
-				cmd += f' --loghead "{log_head}"'
-		if target_is_pd:
-			cmd += f' {target}'
-		else:
+				pass
+			else:
+				cmd += f' --maxretries {max_retries}'
+		if self.target_type == 'files' and self.filenames:
 			for filename in self.filenames:
 				cmd += f' "{filename}"'
+		else:
+			if filesystem:
+				if part_table == 'mbr':
+					cmd += f' --mbr'
+				cmd += f' --create {filesystem}'
+				if part_name:
+					cmd += f' --name "{part_name}"'
+				if log_head:
+					cmd += f' --loghead "{log_head}"'
+				if new_letter != self.NEXT_AVAILABLE:
+					cmd += f' --driveletter {new_letter}'
+			cmd += f' {target}'
 		self.root.append_job(cmd)

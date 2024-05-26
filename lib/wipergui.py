@@ -42,7 +42,7 @@ class WipeRGui(WipeLabels):
 			command=self._select_target,
 			tip=self.TIP_TARGET
 		)
-		self.filenames = None
+		self.target_type = None
 		GridSeparator(frame)
 		GridLabel(frame, self.LOGGING)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
@@ -142,9 +142,8 @@ class WipeRGui(WipeLabels):
 			filetype = ('Text', '*.txt'),
 			tip = self.TIP_LOG_HEAD
 		)
-		AddJobButton(frame, 'AxChecker', self._add_job)
+		AddJobButton(frame, 'WipeR', self._add_job)
 		self.root.child_win_active = False
-		self.filenames = None
 
 	def _select_target(self):
 		'''Select drive to wipe'''
@@ -187,7 +186,7 @@ class WipeRGui(WipeLabels):
 		'''Put drive id to target string'''
 		self.target_window.destroy()
 		self.target.set(drive)
-		self.filenames = None
+		self.target_type = 'drive'
 
 	def _select_files(self):
 		'''Choose file(s) to wipe'''
@@ -202,6 +201,9 @@ class WipeRGui(WipeLabels):
 				else:
 					target += f' + {plus} {self.FILES}'
 			self.target.set(target)
+			self.target_type = 'files'
+		else:
+			self.target_type = None
 
 	def _add_job(self):
 		'''Generate command line'''
@@ -217,9 +219,8 @@ class WipeRGui(WipeLabels):
 		max_bad_blocks = self.max_bad_blocks.get()
 		max_retries = self.max_retries.get()
 		log_head = self.log_head.get()
-		if not target and not self.filenames:
+		if not target or not self.target_type:
 			MissingEntry(self.TARGET_REQUIRED)
-			self.filenames = None
 			return
 		cmd = f'wiper --outdir "{outdir}"'
 		if task == 'All':
@@ -252,7 +253,7 @@ class WipeRGui(WipeLabels):
 				pass
 			else:
 				cmd += f' --maxretries {max_retries}'
-		if self.filenames:
+		if self.target_type == 'files' and self.filenames:
 			for filename in self.filenames:
 				cmd += f' "{filename}"'
 		else:
