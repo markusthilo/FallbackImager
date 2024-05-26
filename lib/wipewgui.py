@@ -7,7 +7,7 @@ from tkinter.scrolledtext import ScrolledText
 from functools import partial
 from .guilabeling import WipeLabels
 from .guielements import NotebookFrame, GridLabel, StringSelector, GridSeparator
-from .guielements import OutDirSelector, DirSelector
+from .guielements import OutDirSelector, GridStringMenu
 #from lib.guielements import SourceDirSelector, Checker, LeftLabel
 #from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
 #from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
@@ -36,7 +36,7 @@ class WipeWGui(WipeLabels):
 		GridLabel(frame, self.WIPE)
 		self.target = StringSelector(
 			frame,
-			self.root.settings.init_stringvar('Target'),
+			StringVar(value=self.TARGET_WARNING),
 			self.TARGET,
 			command=self._select_target,
 			tip=self.TIP_TARGET
@@ -46,13 +46,19 @@ class WipeWGui(WipeLabels):
 		GridLabel(frame, self.LOGGING)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
 		GridSeparator(frame)
-		self.mountpoint = DirSelector(
+
+		self.new_letter = GridMenu(
 			frame,
-			self.root.settings.init_stringvar('MountPoint'),
-			self.DIRECTORY,
-			self.SELECT_MOUNTPOINT,
-			tip = self.TIP_MOUNTPOINT
+			self.root.settings.init_stringvar('NewDriveLetter', default=self.DEF_TABLE),
+			self.PARTITION_TABLE,
+			([root.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
+			column = 4,
+			tip = self.TIP_PARTITION_TABLE
 		)
+
+		GridStringMenu(root, frame, root.DRIVE_LETTER, root.DRIVE_LETTER,
+			([root.NEXT_AVAILABLE] + WinUtils.get_free_letters()),
+			default=root.NEXT_AVAILABLE, column=8)
 		GridSeparator(frame)
 		return
 		

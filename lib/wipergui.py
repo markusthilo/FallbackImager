@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from tkinter import StringVar
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilenames
@@ -36,7 +37,7 @@ class WipeRGui(WipeLabels):
 		GridLabel(frame, self.WIPE)
 		self.target = StringSelector(
 			frame,
-			self.root.settings.init_stringvar('Target'),
+			StringVar(value=self.TARGET_WARNING),
 			self.TARGET,
 			command=self._select_target,
 			tip=self.TIP_TARGET

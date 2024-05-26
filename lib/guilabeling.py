@@ -182,11 +182,16 @@ has no head line'''
 
 class WipeLabels(BasicLabels):
 	WIPE = 'Wipe'
-	TIP_TARGET = 'Target drive to wipe'
+	TIP_TARGET = '''Target drive to wipe - Warning:
+data will be irretrievably erased!'''
+	TARGET_WARNING = 'WARNING: DATA WILL BE ERASED!'
 	MOUNTPOINT = 'Moint point'
 	SELECT_MOUNTPOINT = 'Select mount point'
 	TIP_MOUNTPOINT = '''Choose directory to mount new partition
 if you want to use it after creation'''
+	NEW_DRIVE_LETTER = 'New drive letter'
+	TIP_NEW_DRIVE_LETTER = '''Choose drive letter to assign
+new partition to after wipe process'''
 	NORMAL_WIPE = 'Normal wipe'
 	ALL_BYTES = 'Wipe all bytes/blocks'
 	EXTRA_PASS = 'Extra/2 pass wipe'
