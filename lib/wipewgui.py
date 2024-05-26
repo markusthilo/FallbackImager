@@ -5,44 +5,57 @@ from tkinter.messagebox import showerror, askyesno
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
+from .guilabeling import WipeLabels
+from .guielements import NotebookFrame, GridLabel, StringSelector, GridSeparator
+from .guielements import OutDirSelector, DirSelector
 #from lib.guielements import SourceDirSelector, Checker, LeftLabel
 #from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
 #from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
 #from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
 #from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
-from lib.winutils import WinUtils
+from .winutils import WinUtils
 
-class WipeWGui:
+class WipeWGui(WipeLabels):
 	'''Notebook page for WipeW'''
 
-	CMD = 'WipeW'
+	MODULE = 'WipeW'
 	DEF_BLOCKSIZE = 4096
 	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768)
-	DEF_VALUE = '0x00'
 	DEF_MAXBADBLOCKS = '200'
 	DEF_MAXRETRIES = '200'
-	TABLES = ('GPT', 'MBR')
+	TABLES = (WipeLabels.NONE, 'GPT', 'MBR')
 	DEF_TABLE = 'GPT'
-	FS = ('NTFS', 'exFAT', 'FAT32')
+	FS = ('NTFS', 'exFAT', 'FAT32', 'Ext4')
 	DEF_FS = 'NTFS'
 
 	def __init__(self, root):
 		'''Notebook page'''
-		root.settings.init_section(self.CMD)
+		self.root = root
 		self.default_wlh_path = root.parent_path/'wipe-log-head.txt'
-		frame = ExpandedFrame(root, root.notebook)
-		root.notebook.add(frame, text=f' {self.CMD} ')
-		root.row = 0
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.WIPE)
-		StringSelector(root, frame, root.TARGET, root.TARGET,
-			command=self._select_target, columnspan=8)
-		root.settings.raw(root.TARGET).set('')
-		GridSeparator(root, frame)
-		GridLabel(root, frame, root.LOGGING)
-		DirSelector(root, frame, root.OUTDIR,
-			root.DIRECTORY, root.SELECT_DEST_DIR, columnspan=8)
-		GridSeparator(root, frame)
+		frame = NotebookFrame(self)
+		GridLabel(frame, self.WIPE)
+		self.target = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Target'),
+			self.TARGET,
+			command=self._select_target,
+			tip=self.TIP_TARGET
+		)
+		self.filenames = None
+		GridSeparator(frame)
+		GridLabel(frame, self.LOGGING)
+		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
+		GridSeparator(frame)
+		self.mountpoint = DirSelector(
+			frame,
+			self.root.settings.init_stringvar('MountPoint'),
+			self.DIRECTORY,
+			self.SELECT_MOUNTPOINT,
+			tip = self.TIP_MOUNTPOINT
+		)
+		GridSeparator(frame)
+		return
+		
 		GridLabel(root, frame, root.TO_DO)
 		StringRadiobuttons(root, frame, root.TO_DO,
 			(root.NORMAL_WIPE, root.ALL_BYTES, root.EXTRA_PASS, root.VERIFY), root.NORMAL_WIPE)
