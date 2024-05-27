@@ -21,7 +21,7 @@ class EwfCheckerGui(BasicLabels):
 			self.root.settings.init_stringvar('Image'),
 			self.IMAGE,
 			self.SELECT_IMAGE,
-			filetype=('EWF/E01', '*.e01'),
+			filetype=('EWF/E01', '*.E01'),
 			tip = self.SELECT_IMAGE
 		)
 		GridSeparator(frame)
@@ -49,7 +49,7 @@ class EwfCheckerGui(BasicLabels):
 		if not outdir:
 			MissingEntry(self.OUTDIR_REQUIRED)
 			return
-		cmd = f'axchecker --outdir "{outdir}"'
+		cmd = f'ewfchecker --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'
 		cmd += f' "{image}"'

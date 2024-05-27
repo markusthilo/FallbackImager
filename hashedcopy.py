@@ -48,8 +48,6 @@ class HashedCopy:
 		if self.dst_root_path.exists():
 			if not self.dst_root_path.is_dir():
 				self.log.error('Destination is not a directory')
-			elif any(self.dst_root_path.iterdir()):
-				self.log.error('Destination directory is not empty')
 		else:
 			self.dst_root_path.mkdir()
 		files = set()

@@ -45,10 +45,10 @@ class HashedCopyGui(HashedCopyLabels):
 		)
 		self.filename = FilenameSelector(
 			frame,
-			'{now}_zipimager',
+			'{now}_copy',
 			self.root.settings.init_stringvar('Filename')
 		)
-		AddJobButton(frame, 'ZipImager', self._add_job)
+		AddJobButton(frame, 'HashedCopy', self._add_job)
 
 	def _add_files(self):
 		'''Add source file(s)'''
@@ -76,18 +76,17 @@ class HashedCopyGui(HashedCopyLabels):
 		if not outdir:
 			MissingEntry(self.LOGGING_DIR_REQUIRED)
 			return
-		source = ''
-		while True:
-			line = self.sources.get('1.0', '2.0').strip()
-			if not line:
-				break
-			self.sources.delete('1.0', '2.0')
-			source += f' "{line}"'
-		if not source:
+		sources = ''
+		for line in self.sources.get('1.0', 'end').split('\n'):
+			path = line.strip()
+			if path:
+				sources += f' "{line.strip()}"'
+		self.sources.delete('1.0', 'end')
+		if not sources:
 			MissingEntry(self.SOURCE_REQUIRED)
 			return
 		cmd = f'hashedcopy --destination "{destination}" --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'
-		cmd += f' "{source}"'
+		cmd += sources
 		self.root.append_job(cmd)

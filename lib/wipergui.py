@@ -260,7 +260,7 @@ class WipeRGui(WipeLabels):
 			for filename in self.filenames:
 				cmd += f' "{filename}"'
 		else:
-			if filesystem:
+			if filesystem and task != 'Verify':
 				if part_table == 'mbr':
 					cmd += f' --mbr'
 				cmd += f' --create {filesystem}'

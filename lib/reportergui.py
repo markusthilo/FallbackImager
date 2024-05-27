@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
 from tkinter.scrolledtext import ScrolledText
+from .timestamp import TimeStamp
 from .guiconfig import GuiConfig
 from .guilabeling import ReporterLabels
 from .guielements import NotebookFrame, GridSeparator, GridLabel
-from .guielements import OutDirSelector, FilenameSelector, GridBlank
-from .guielements import FileSelector, GridButton, MissingEntry
-from .guielements import LeftButton, RightButton
+from .guielements import OutDirSelector, StringSelector, GridBlank
+from .guielements import FileSelector, GridButton, MissingEntry, ChildWindow
+from .guielements import ExpandedFrame, LeftButton, RightButton
 from reporter import Reporter
 
 class ReporterGui(ReporterLabels):
@@ -39,12 +41,22 @@ class ReporterGui(ReporterLabels):
 		GridSeparator(frame)
 		GridLabel(frame, self.DESTINATION)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
-		self.filename = FilenameSelector(frame, '{now}_report',
-			self.root.settings.init_stringvar('Filename'))
+		self.filename = StringSelector(frame, self.root.settings.init_stringvar('Filename'), self.FILENAME,
+			command=self._gen_filename, tip=self.TIP_FILENAME)
 		GridBlank(frame)
 		GridSeparator(frame)
 		GridButton(frame, self.PARSE, self._parse, column=0, columnspan=2)
 		self.root.child_win_active = False
+
+	def _gen_filename(self):
+		'''Generate default filename from JSON filename'''
+		if self.filename.get():
+			return
+		json = self.json.get()
+		if json:
+			self.filename.set(Path(json).stem)
+		else:
+			self.filename.set(f'{TimeStamp.now(path_comp=True)}_report')
 
 	def _parse(self):
 		'''Parse instantaniously and show in preview window'''
@@ -65,11 +77,10 @@ class ReporterGui(ReporterLabels):
 			height = 4*GuiConfig.INFO_HEIGHT,
 			wrap = 'word'
 		)
-		self.text.pack(fill='both', expand=True)
+		self.text.pack(fill='both', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
 		self.text.insert('1.0', self.reporter.parse(json, template))
 		if self.reporter.errors > 0:
-			self.text.insert('end', f'\n\n### {self.root.PARSER_REPORTED} {self.reporter.errors} {self.root.ERRORS} ###')
-
+			self.text.insert('end', f'\n\n### {self.PARSER_REPORTED} {self.reporter.errors} {self.ERRORS} ###')
 		frame = ExpandedFrame(self.preview_window)
 		if self.outdir.get():
 			LeftButton(frame, self.WRITE_TO_FILE, self._write)

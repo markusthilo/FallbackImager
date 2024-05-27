@@ -116,6 +116,13 @@ class EwfImagerGui(EwfImagerLabels):
 			column = 7,
 			tip = self.TIP_METADATA
 		)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			self.root.settings.init_stringvar('OutDir'),
+			tip = self.TIP_OUTDIR
+		)
 		self.filename = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Filename'),
@@ -213,6 +220,7 @@ class EwfImagerGui(EwfImagerLabels):
 		compression = self.compression.get()
 		media_type = self.media_type.get()
 		media_flag = self.media_flag.get()
+		segment_size = self.segment_size.get().replace(' ', '')
 		filename = self.filename.get()
 		if not source:
 			MissingEntry(self.SOURCE_REQUIRED)
@@ -223,7 +231,14 @@ class EwfImagerGui(EwfImagerLabels):
 		if not case_no or not evidence_number or not description:
 			MissingEntry(self.METADATA_REQUIRED)
 			return
-		cmd = f'ewfimager --outdir "{outdir}" -C "{case_no}" -E "{evidence_number}" -D "{description}"'
+		if segment_size:
+			try:
+				int(segment_size.replace(' ', '').rstrip('mMgGbB'))
+			except ValueError:
+				Error(self.UNDECODEABLE_SEGMENT_SIZE)
+				return
+		cmd = f'ewfimager --outdir "{outdir}" -C "{case_no}" -E "{evidence_number}"'
+		cmd += f' -D "{description}" -S {segment_size}'
 		if examiner_name:
 			cmd += f' -e "{examiner_name}"'
 		if notes:

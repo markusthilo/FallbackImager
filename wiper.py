@@ -255,7 +255,6 @@ class WipeRCli(ArgumentParser):
 			self.extra or
 			self.mbr or
 			self.mountpoint or
-			self.driveletter or
 			self.name
 		):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')

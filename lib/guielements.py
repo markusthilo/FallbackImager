@@ -219,7 +219,7 @@ class StringSelector(Button):
 		if self._variable.get():
 			return
 		if self.default:
-			self._variable.set(self.default)
+			self._variable.set(value=self.default.replace('{now}', TimeStamp.now(path_comp=True)))
 	def set(self, value):
 		self._variable.set(value=value)
 	def get(self):
@@ -228,13 +228,8 @@ class StringSelector(Button):
 class FilenameSelector(StringSelector):
 	'''Button + Entry to select filename/base for output filenames'''	
 	def __init__(self, parent, default, variable):
-		super().__init__(parent, variable, BasicLabels.FILENAME, command=self._command,
+		super().__init__(parent, variable, BasicLabels.FILENAME, default=default,
 			tip=BasicLabels.TIP_FILENAME)
-		self.default = default
-	def _command(self):
-		if self._variable.get():
-			return
-		self._variable.set(self.default.replace('{now}', TimeStamp.now(path_comp=True)))
 
 class DirSelector(Button):
 	'''Button + Entry to select a directory'''
@@ -255,7 +250,7 @@ class DirSelector(Button):
 	def _select(self):
 		new_dir = askdirectory(title=self.ask, mustexist=False)
 		if new_dir:
-			self._variable.set(new_dir)
+			self._variable.set(value=new_dir)
 		if self.command:
 			self.command()
 	def set(self, value):
@@ -302,7 +297,7 @@ class FileSelector(Button):
 			initialdir = self.initialdir
 		)
 		if new_filename:
-			self._variable.set(new_filename)
+			self._variable.set(value=new_filename)
 		if self.command:
 			self.command()
 	def set(self, value):

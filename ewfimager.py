@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-17'
+__version__ = '0.5.1_2024-05-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -121,6 +121,7 @@ class EwfImager:
 			self.infos['notes'] = notes
 		else:
 			self.infos['notes'] = '-'
+		size = size.replace(' ', '').rstrip('bB')
 		try:
 			if size[-1].lower() == 'm':
 				self.segment_size = int(size[:-1]) * 1048576
@@ -130,7 +131,7 @@ class EwfImager:
 				self.segment_size = ceil(self.source_size/int(size)/1073741824) * 1073741824
 			if self.segment_size < 0:
 				1/0	# throw the following exception on negative segment size
-		except (ValueError, ZeroDivisionError):
+		except (IndexError, ValueError, ZeroDivisionError):
 			self.log.error(exception='Undecodable segment size')
 		self.infos['segment_size'] = StringUtils.bytes(self.segment_size)
 		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
@@ -218,8 +219,8 @@ class EwfImagerCli(ArgumentParser):
 			metavar='DIRECTORY'
 		)
 		self.add_argument('-S', '--size', type=str,
-			help='Segment file size in MiB or GiB or MiB number of segments (e.g. "4g", "100m", "20", default: "8g")',
-			default='8g', metavar='GiB/MiB/INTEGER/STRING'
+			help='Segment file size in MiB or GiB or MiB number of segments (e.g. "4g", "100m", "20", default: "40")',
+			default='40', metavar='GiB/MiB/INTEGER/STRING'
 		)
 		self.add_argument('--setro', action='store_true',
 			help='Set target block device to read only'
