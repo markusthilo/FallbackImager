@@ -27,9 +27,9 @@ class WipeWGui(WipeLabels):
 	BLOCKSIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768)
 	DEF_MAXBADBLOCKS = '200'
 	DEF_MAXRETRIES = '200'
-	TABLES = (WipeLabels.NONE, 'GPT', 'MBR')
+	TABLES = ('-', 'GPT', 'MBR')
 	DEF_TABLE = 'GPT'
-	FS = ('NTFS', 'exFAT', 'FAT32', 'Ext4')
+	FS = ('-', NTFS', 'exFAT', 'FAT32', 'Ext4')
 	DEF_FS = 'NTFS'
 
 	def __init__(self, root):
