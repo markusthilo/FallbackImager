@@ -26,7 +26,7 @@ class WipeRGui(WipeLabels):
 	DEF_MAXRETRIES = '200'
 	TABLES = (WipeLabels.NONE, 'GPT', 'MBR')
 	DEF_TABLE = 'GPT'
-	FS = ('NTFS', 'exFAT', 'FAT32', 'Ext4')
+	FS = (WipeLabels.NONE, 'NTFS', 'exFAT', 'FAT32', 'Ext4')
 	DEF_FS = 'NTFS'
 
 	def __init__(self, root):
@@ -260,7 +260,7 @@ class WipeRGui(WipeLabels):
 			for filename in self.filenames:
 				cmd += f' "{filename}"'
 		else:
-			if filesystem and task != 'Verify':
+			if part_table != WipeLabels.NONE and filesystem != WipeLabels.NONE and task != 'Verify':
 				if part_table == 'mbr':
 					cmd += f' --mbr'
 				cmd += f' --create {filesystem}'

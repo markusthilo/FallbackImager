@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.1.0_2024-04-15";
+const char *VERSION = "1.0.0_2024-05-28";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -85,6 +85,16 @@ void help(const int r) {
 	exit(r);
 }
 
+/* Open file/device */
+void open_target(target_t *target, mode_t mode) {
+	target->file = open(target->path, mode);
+	if ( target->file < 0 ) {
+		fprintf(stderr, "Error: could not open %s\n", target->path);
+		exit(1);
+	}
+	target->ptr = 0;
+}
+
 /* Set file pointer */
 void set_pointer(target_t *target, const off_t offset) {
 	off_t ptr = target->ptr + offset;
@@ -102,6 +112,7 @@ void reset_pointer(target_t *target) {
 		close(target->file);
 		exit(1);
 	}
+	target->ptr = 0;
 }
 
 /* Check if block is wiped */
@@ -118,7 +129,8 @@ int check_bytes(const uint8_t *block, const config_t *conf, const size_t bs){
 
 /* Print bad blocks */
 void print_bad_blocks(const badblocks_t *badblocks) {
-	printf("Found %d bad block(s) (offset/[rwu]):", badblocks->cnt);
+	printf("Found %d bad block(s) (OFFSET/ERROR -> r = read error, w = write error, u = unwiped block):",
+		badblocks->cnt);
 	for (int i=0; i<badblocks->cnt; i++) {
 			if ( i % 4 == 0 ) printf("\n");
 			else printf("  ");
@@ -170,7 +182,7 @@ void write_error(target_t *target, const config_t *conf, badblocks_t *badblocks,
 	badblocks->offsets[badblocks->cnt] = target->ptr;	// add this bad block
 	badblocks->errors[badblocks->cnt] = 'w';	// mark as read error
 	check_max_bad_blocks(target, badblocks);
-	set_pointer(target, target->ptr+bs);	// go to next block
+	set_pointer(target, bs);	// go to next block
 }
 
 /* Print progress */
@@ -285,12 +297,8 @@ int main(int argc, char **argv) {
 	if ( badblocks.max == -1 ) badblocks.max = 200;	// default
 	badblocks.retry = uint_arg(rarg, 'r');
 	if ( badblocks.retry == -1 ) badblocks.retry = 200;	// default
-	if ( todo == 3 ) target.file = open(target.path, O_RDONLY);	// open device/file
-	else target.file = open(target.path, O_RDWR);
-	if ( target.file < 0 ) {
-		fprintf(stderr, "Error: could not open %s\n", target.path);
-		exit(1);
-	}
+	if ( todo == 3 ) open_target(&target, O_RDONLY | O_RSYNC);	// open device/file to verify
+	else open_target(&target, O_RDWR | O_SYNC | O_DSYNC | O_RSYNC);	// open device/file to wipe
 	target.size = lseek(target.file, 0, SEEK_END);
 	if ( target.size <= 0 ) {
 		if ( target.size == 0 ) fprintf(stderr, "Error: size of target seems to be 0\n");
@@ -300,8 +308,7 @@ int main(int argc, char **argv) {
 	}
 	target.blocks = target.size / conf.bs;	// full blocks
 	target.leftbytes = target.size % conf.bs;
-	target.ptr = 0;
-	set_pointer(&target, 0);
+	reset_pointer(&target);
 	badblocks.cnt = 0;
 	badblocks.offsets = malloc(sizeof(off_t) * badblocks.max);
 	badblocks.errors = malloc(sizeof(char) * badblocks.max);
@@ -344,11 +351,14 @@ int main(int argc, char **argv) {
 			for (int i=0; i<conf.bs; i++) conf.block[i] = (uint8_t)rand();
 			printf("Wiping, pass 1 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
+			if ( badblocks.cnt > 0 ) {
+				printf("Warning: finished 1st pass but found bad blocks\n");
+				print_bad_blocks(&badblocks);
+			}
+			badblocks.cnt = 0;
+			reset_pointer(&target);
 			print_time(start_time);
 			time(&start_time);
-			target.ptr = 0;
-			reset_pointer(&target);
-			badblocks.cnt = 0;
 			memset(conf.block, conf.value, conf.bs);
 			printf("Wiping, pass 2 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
@@ -359,9 +369,14 @@ int main(int argc, char **argv) {
 	if ( todo == 3 ) printf("Verifying\n");
 	else {
 		print_time(start_time);
+		close(target.file);
+		if ( badblocks.cnt > 0 ) {
+			printf("Warning: finished wiping but found bad blocks\n");
+			print_bad_blocks(&badblocks);
+		}
+		sync();
+		open_target(&target, O_RDONLY | O_RSYNC);	// open device/file to verify
 		time(&start_time);
-		target.ptr = 0;
-		reset_pointer(&target);
 		printf("Verifying, pass ");
 		if ( todo == 2 ) printf("3 of 3\n");
 		else printf("2 of 2\n");

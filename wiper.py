@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-15'
+__version__ = '0.5.1_2024-05-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -87,6 +87,11 @@ class WipeR:
 		if ExtPath.path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
+			if not verify:
+				for partition in LinUtils.lspart(targets[0]):
+					stdout, stderr = LinUtils.umount(partition)
+					if stderr:
+						self.log.warning(stderr, echo=True)
 		cmd = [f'{self.zd_path}']
 		if blocksize:
 			cmd.extend(['-b', f'{blocksize}'])

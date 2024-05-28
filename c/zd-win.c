@@ -138,7 +138,8 @@ int check_bytes(const BYTE *block, const config_t *conf, const LONGLONG bs){
 
 /* Print bad blocks */
 void print_bad_blocks(const badblocks_t *badblocks) {
-	printf("Found %d bad block(s) (offset/[rwu]):", badblocks->cnt);
+	printf("Found %d bad block(s) (OFFSET/ERROR -> r = read error, w = write error, u = unwiped block):",
+		badblocks->cnt);
 	for (int i=0; i<badblocks->cnt; i++) {
 			if ( i % 4 == 0 ) printf("\n");
 			else printf("  ");
