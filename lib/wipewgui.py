@@ -3,7 +3,6 @@
 
 from tkinter import StringVar
 from tkinter.filedialog import askopenfilenames
-from tkinter.messagebox import askyesno
 from tkinter.ttk import Button
 from tkinter.scrolledtext import ScrolledText
 from functools import partial
@@ -29,7 +28,7 @@ class WipeWGui(WipeLabels):
 	DEF_MAXRETRIES = '200'
 	TABLES = ('-', 'GPT', 'MBR')
 	DEF_TABLE = 'GPT'
-	FS = ('-', NTFS', 'exFAT', 'FAT32', 'Ext4')
+	FS = ('-', 'NTFS', 'exFAT', 'FAT32', 'Ext4')
 	DEF_FS = 'NTFS'
 
 	def __init__(self, root):
@@ -261,7 +260,7 @@ class WipeWGui(WipeLabels):
 			for filename in self.filenames:
 				cmd += f' "{filename}"'
 		else:
-			if filesystem:
+			if filesystem != '-' and part_table != '-':
 				if part_table == 'mbr':
 					cmd += f' --mbr'
 				cmd += f' --create {filesystem}'
