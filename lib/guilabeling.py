@@ -136,6 +136,7 @@ for server/client implementations)'''
 	COLUMN = 'Dump column'
 	TIP_COLUMN = 'Select column of the DB table to dump'
 	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
+	SCHEMA = 'Schema'
 
 class ReporterLabels(BasicLabels):
 	TEMPLATE = 'Template'
