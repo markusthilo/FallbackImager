@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-29'
+__version__ = '0.5.1_2024-05-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -79,7 +79,7 @@ class WipeW:
 			self.log = log
 		else:
 			self.log = Logger(
-				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe-log.txt',
+				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
 				outdir = self.outdir, 
 				head = 'wipew.WipeW',
 				echo = self.echo
@@ -114,7 +114,10 @@ class WipeW:
 		self.zd_error = False
 		for target in targets:
 			self.echo()
-			proc = OpenProc(f'{cmd} ' + str(target).rstrip('\\'), stderr=True)
+			if target.startswith('\\.PHYSICALDRIVE'):
+				proc = OpenProc(f'{cmd} \\\\.\\{target[2:].rstrip("\\")}', stderr=True)
+			else:
+				proc = OpenProc(f'{cmd} "{target}"', stderr=True)
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg.startswith('...'):
@@ -213,7 +216,7 @@ class WipeWCli(ArgumentParser):
 		self.add_argument('-x', '--extra', action='store_true',
 			help='Overwrite all bytes/blocks twice, write random bytes at 1st pass'
 		)
-		self.add_argument('targets', nargs='*', type=ExtPath.path,
+		self.add_argument('targets', nargs='*', type=str,
 			help='Target drive or file(s) (e.g. \\.\\\\PHYSICALDRIVE1)', metavar='DRIVE/FILE'
 		)
 
@@ -221,8 +224,6 @@ class WipeWCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.targets = args.targets
-		if len(self.targets) == 1 and self.targets[0].startswith('\\.PHYSICALDRIVE'):
-			self.targets = [f'\\\\.\\{self.targets[0][2:]}']
 		self.allbytes = args.allbytes
 		self.blocksize = args.blocksize
 		self.create = args.create

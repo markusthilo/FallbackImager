@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "1.0.0_2024-05-28";
+const char *VERSION = "1.0.0_2024-05-30";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -351,13 +351,13 @@ int main(int argc, char **argv) {
 			for (int i=0; i<conf.bs; i++) conf.block[i] = (uint8_t)rand();
 			printf("Wiping, pass 1 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
+			print_time(start_time);
 			if ( badblocks.cnt > 0 ) {
 				printf("Warning: finished 1st pass but found bad blocks\n");
 				print_bad_blocks(&badblocks);
 			}
 			badblocks.cnt = 0;
 			reset_pointer(&target);
-			print_time(start_time);
 			time(&start_time);
 			memset(conf.block, conf.value, conf.bs);
 			printf("Wiping, pass 2 of 3\n");

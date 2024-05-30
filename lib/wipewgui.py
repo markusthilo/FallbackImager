@@ -11,11 +11,6 @@ from .guilabeling import WipeLabels
 from .guielements import NotebookFrame, GridLabel, StringSelector, GridSeparator, MissingEntry
 from .guielements import OutDirSelector, GridMenu, StringRadiobuttons, FileSelector
 from .guielements import AddJobButton, ChildWindow, ExpandedFrame, LeftButton, RightButton
-#from lib.guielements import SourceDirSelector, Checker, LeftLabel
-#from lib.guielements import ChildWindow, SelectTsvColumn, ExpandedLabelFrame
-#from lib.guielements import ExpandedFrame, GridSeparator, GridLabel, DirSelector
-#from lib.guielements import FilenameSelector, StringSelector, StringRadiobuttons
-#from lib.guielements import FileSelector, GridButton, LeftButton, RightButton, GridBlank
 from .winutils import WinUtils
 
 class WipeWGui(WipeLabels):
@@ -225,7 +220,7 @@ class WipeWGui(WipeLabels):
 		if not outdir:
 			MissingEntry(self.OUTDIR_REQUIRED)
 			return
-		cmd = f'wiper --outdir "{outdir}"'
+		cmd = f'wipew --outdir "{outdir}"'
 		if task == 'All':
 			cmd += ' --allbytes'
 		elif task == 'Extra':

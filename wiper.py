@@ -79,7 +79,7 @@ class WipeR:
 			self.log = log
 		else:
 			self.log = Logger(
-				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe-log.txt',
+				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
 				outdir = self.outdir, 
 				head = 'wiper.WipeR',
 				echo = self.echo

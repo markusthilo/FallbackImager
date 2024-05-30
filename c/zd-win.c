@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "0.1.0_2024-04-15";
+const char *VERSION = "1.0.0_2024-05-30";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -122,6 +122,7 @@ void reset_pointer(target_t *target) {
 		close_target(target);
 		exit(1);
 	}
+	target->ptr = 0;
 }
 
 /* Check if block is wiped */
@@ -417,10 +418,13 @@ int main(int argc, char **argv) {
 			printf("Wiping, pass 1 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
 			print_time(start_time);
-			time(&start_time);
-			target.ptr = 0;
-			reset_pointer(&target);
+			if ( badblocks.cnt > 0 ) {
+				printf("Warning: finished 1st pass but found bad blocks\n");
+				print_bad_blocks(&badblocks);
+			}
 			badblocks.cnt = 0;
+			reset_pointer(&target);
+			time(&start_time);
 			memset(conf.block, conf.value, conf.bs);
 			printf("Wiping, pass 2 of 3\n");
 			wipe_all(&target, &conf, &badblocks);
@@ -430,9 +434,12 @@ int main(int argc, char **argv) {
 	if ( todo == 3 ) printf("Verifying\n");
 	else {
 		print_time(start_time);
-		time(&start_time);
-		target.ptr = 0;
+		if ( badblocks.cnt > 0 ) {
+			printf("Warning: finished wiping but found bad blocks\n");
+			print_bad_blocks(&badblocks);
+		}
 		reset_pointer(&target);
+		time(&start_time);
 		printf("Verifying, pass ");
 		if ( todo == 2 ) printf("3 of 3\n");
 		else printf("2 of 2\n");
