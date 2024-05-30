@@ -23,7 +23,7 @@ class HashedCopyGui(HashedCopyLabels):
 		font = nametofont('TkTextFont').actual()
 		self.sources = ScrolledText(
 			frame,
-			font = (font['family'], font['size']) ,
+			font = (font['family'], font['size']),
 			width = GuiConfig.ENTRY_WIDTH,
 			height = GuiConfig.INFO_HEIGHT
 		)

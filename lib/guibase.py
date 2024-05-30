@@ -3,12 +3,13 @@
 
 from tkinter import Tk, PhotoImage, TclError
 from tkinter.messagebox import askyesno, showerror
+from tkinter.font import nametofont
+from tkinter.scrolledtext import ScrolledText
 from .worker import Worker
 from .guielements import ExpandedNotebook, ExpandedFrame, ExpandedScrolledText
-from .guielements import LeftButton, RightButton, LeftLabel
+from .guielements import LeftButton, RightButton, LeftLabel, ChildWindow
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
-from .guihelp import Help
 
 class GuiBase(Tk):
 
@@ -32,7 +33,7 @@ class GuiBase(Tk):
 			title += f' ({BasicLabels.ADMIN_REQUIRED})'
 		self.title(title)
 		self.resizable(0, 0)
-		self.appicon = PhotoImage(file=parent_path/'appicon.png')
+		self.appicon = PhotoImage(file=self.parent_path/'appicon.png')
 		self.iconphoto(True, self.appicon)
 		self.protocol('WM_DELETE_WINDOW', self._quit_app)
 		frame = ExpandedFrame(self)
@@ -61,10 +62,6 @@ class GuiBase(Tk):
 		self.start_button = LeftButton(frame, BasicLabels.START_JOBS, self._start_jobs,
 			tip=BasicLabels.TIP_START_JOBS)
 		RightButton(frame, BasicLabels.QUIT, self._quit_app)
-
-	def _show_help(self):
-		'''Show help, usually from __description__'''
-		Help(self).start()
 			
 	def append_job(self, cmd):
 		'''Append message in info box'''
@@ -141,3 +138,28 @@ class GuiBase(Tk):
 				except:
 					pass
 			self.destroy()
+
+	def _show_help(self):
+		'''Show help window'''
+		help_window = ChildWindow(self, BasicLabels.HELP)
+		font = nametofont('TkTextFont').actual()
+		help_text = ScrolledText(
+			help_window,
+			font = (font['family'], font['size']),
+			width = GuiConfig.HELP_WIDTH,
+			height = GuiConfig.HELP_HEIGHT,
+			wrap = 'word'
+		)
+		help_text.pack(fill='both', expand=True)
+		help_text.bind('<Key>', lambda dummy: 'break')
+		help_text.insert('end', f'{self.app_name} v{self.version}\n\n')
+		help_text.insert('end', f'{BasicLabels.DESCRIPTION}\n\n\n')
+		try:
+			utf_text = (self.parent_path/'help.txt').read_text(encoding='utf-8')
+		except:
+			utf_text = 'Error: Unable to read help.txt'
+		help_text.insert('end', f'{utf_text}\n')
+		help_text.configure(state='disabled')
+		frame = ExpandedFrame(help_window)
+		RightButton(frame, BasicLabels.QUIT, help_window.destroy)
+		help_window.mainloop()

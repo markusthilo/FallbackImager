@@ -131,12 +131,17 @@ or to execute commands on'''
 "Alternative" to ignore commands only available
 for server/client implementations)'''
 	ALTERNATIVE = 'Alternative method to execute SQL file ignoring commands that do not work with SQLite'
+	DUMP_SCHEMA = 'Dump database schema'
+	DUMP_CONTENT = 'Dump content - all or select table/column'
 	TABLE = 'Dump table'
-	TIP_TABLE = 'Select table of DB to dump'
+	TIP_TABLE = '''Select table of DB to dump
+(leave empty to dump all)'''
 	COLUMN = 'Dump column'
-	TIP_COLUMN = 'Select column of the DB table to dump'
+	TIP_COLUMN = '''Select column of the DB table to dump
+(leave empty to dump all)'''
 	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
 	SCHEMA = 'Schema'
+	SQL_FILE_REQUIRED = 'File with SQL statements is required'
 
 class ReporterLabels(BasicLabels):
 	TEMPLATE = 'Template'

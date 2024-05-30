@@ -3,6 +3,7 @@
 
 from idlelib.tooltip import Hovertip
 from tkinter import Toplevel
+from tkinter.font import nametofont
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button, Treeview
 from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu, Scrollbar
 from tkinter.scrolledtext import ScrolledText
@@ -60,7 +61,9 @@ class LeftLabel:
 class ExpandedScrolledText(ScrolledText):
 	'''|<- ScrolledText ->|'''
 	def __init__(self, parent, height):
+		font = nametofont('TkTextFont').actual()
 		super().__init__(parent,
+			font = (font['family'], font['size']),
 			padx = GuiConfig.PAD,
 			pady = GuiConfig.PAD,
 			width = -1,

@@ -47,7 +47,9 @@ class SQLiteGui(SQLiteLabels):
 			filetype = ('SQL', '*.sql'),
 			tip = self.TIP_SQL_FILE,
 		)
-		GridLabel(frame, self.ALTERNATIVE, column=2)
+		GridLabel(frame, self.ALTERNATIVE, column=1)
+		GridLabel(frame, self.DUMP_SCHEMA, column=1)
+		GridLabel(frame, self.DUMP_CONTENT, column=1)
 		self.table = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Table'),
@@ -118,6 +120,9 @@ class SQLiteGui(SQLiteLabels):
 		if not outdir:
 			MissingEntry(self.DEST_DIR_REQUIRED)
 			return
+		if not sql_file and ( task == 'Execute' or task == 'Read' ):
+			MissingEntry(self.SQL_FILE_REQUIRED)
+			return
 		cmd = f'sqlite --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'
@@ -130,7 +135,7 @@ class SQLiteGui(SQLiteLabels):
 		else:
 			if table:
 				cmd += f' --table "{table}"'
-			if column:
-				cmd += f' --column "{column}"'
+				if column:
+					cmd += f' --column "{column}"'
 		cmd += f' "{sqlite_db}"'
 		self.root.append_job(cmd)
