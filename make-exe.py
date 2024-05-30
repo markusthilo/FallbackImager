@@ -36,7 +36,7 @@ class MkExe:
 		dir_path = Path.cwd()
 		if tobin:
 			dir_path = dir_path/'bin'
-			dir_path.mkdir()
+			dir_path.mkdir(exist_ok=True)
 		self.exe_path = self.exe_path.replace(dir_path/self.exe_path.name)
 		rmtree('build')
 		rmtree('dist')
@@ -60,6 +60,8 @@ if __name__ == '__main__':	# start here if called as application
 		exes.append(MkExe('sqlite.py').move())
 		exes.append(MkExe('wipew.py', admin=True).move())
 		exes.append(MkExe('zipimager.py').move())
+		exes.append(MkExe('hashedcopy.py').move())
+		exes.append(MkExe('reporter.py').move())
 	if args.gui or len(argv) == 1:
 		exes.append(MkExe('FallbackImager.py', admin=True, noconsole=True).move())
 	if args.wim or len(argv) == 1:
