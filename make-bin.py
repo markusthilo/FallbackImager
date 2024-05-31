@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.4.0_2024-02-06'
+__version__ = '0.5.1_2024-05-31'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -54,6 +54,7 @@ if __name__ == '__main__':	# start here if called as application
 		bins.append(MkBin('sqlite.py').move())
 		bins.append(MkBin('wiper.py').move())
 		bins.append(MkBin('zipimager.py').move())
+		bins.append(MkBin('hashedcopy.py').move())
 	if args.gui or len(argv) == 1:
 		bins.append(MkBin('FallbackImager.py').move())
 	if bins:

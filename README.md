@@ -5,44 +5,46 @@ The tool is currently developed for Linux based OS and Windows (>=10). It is wor
 
 ## Installation
 
+### Releases
+Download the releases for Linux or Windows. Unpack the ZIP and enter the FallbackImager directoery. You might use an install script to resolve dependencies on Linux based systems:
+```
+$ ./install-arch.sh
+```
+or
+```
+$ ./install-debian-ubuntu.sh
+```
+Start the gui with
+```
+$ ./FallbackImager.sh
+```
+or doubleclick FallbackImager.exe on Windows.
+
 ### Linux
 
 #### Python
 To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on your distro, e.g.:
 ```
-$ sudo apt install python3 python3-tk
+$ sudo apt install python3 python3-tk ewf-tools disktype
 ```
 ```
-$ sudo pacman install python tk
+$ yay install python tk libewf disktype
 ```
 ```
-$ sudo dnf install python3 python3-tkinter
-```
-```
-$ sudo zypper install python3 python3-tk
+$ sudo zypper install python3 python3-tk libewf-tools disktype
 ```
 
 #### C
-The realease brings a pre-compiled version of the wipe tool zd. To compile the source *gcc* is needed:
+To compile the wipe tool zd.c the compiler *gcc* is needed:
 ```
 $ gcc -o bin/zd c/zd.c
 ```
 
 #### 3rd party tools
-Install *libewf* from your distro repos, e.g.:
-```
-$ sudo apt install lib-ewf disktype
-```
-```
-$ sudo pacman install libewf disktype
-```
-```
-$ sudo dnf install libewf disktype
-```
-```
-$ sudo zypper install libewf disktype
-```
 FallbackImager tries to locate *ewfacquire*, *ewfextract*, *ewfinfo*, *ewfverify* and *disktype* in the (sub-) folder *bin*. Alternatively it tries to find the binaries in usal system paths (e.g. at */usr/bin*).
+
+#### Install Scripts
+Checkout the scripts *install-...sh* to install what is needed.
 
 ### Windows
 
@@ -57,11 +59,15 @@ $ pip install -r requirements.txt
 to install them. The scripts *make-FallbackImager-exe.py*, *make-WimMount-exe.py* and *make-win-cli-apps-exe.py* use *PyInstaller* to generate the executables if needed.
 
 #### C
-To compile zd-win.c you can use MSYS2 with MinGW-w64:
+To compile zd-win.c you need MinGW-w64, e.g.:
 ```
 $ pacman -Syu
 $ pacman -S mingw-w64-ucrt-x86_64-gcc
 $ gcc -o bin/zd-win.exe c/zd-win.c
+```
+This worked on Arch Linux and also on Windows with MSYS2. You can also use the make script:
+```
+$ ./make-zd.sh
 ```
 
 #### 3rd party tools
