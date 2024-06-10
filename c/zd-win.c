@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "1.0.0_2024-05-30";
+const char *VERSION = "1.0.1_2024-06-10";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -419,7 +419,7 @@ int main(int argc, char **argv) {
 			wipe_all(&target, &conf, &badblocks);
 			print_time(start_time);
 			if ( badblocks.cnt > 0 ) {
-				printf("Warning: finished 1st pass but found bad blocks\n");
+				printf("Warning: finished 1st pass but found bad block(s)\n");
 				print_bad_blocks(&badblocks);
 			}
 			badblocks.cnt = 0;
@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
 	else {
 		print_time(start_time);
 		if ( badblocks.cnt > 0 ) {
-			printf("Warning: finished wiping but found bad blocks\n");
+			printf("Warning: finished wiping but found bad block(s)\n");
 			print_bad_blocks(&badblocks);
 		}
 		reset_pointer(&target);
@@ -473,7 +473,7 @@ int main(int argc, char **argv) {
 	print_time(start_time);
 	close_target(&target);
 	if ( badblocks.cnt > 0 ) {
-		printf("Warning: all done but found bad blocks\n");
+		printf("Warning: all done but found bad block(s)\n");
 		print_bad_blocks(&badblocks);
 		fprintf(stderr, "Error: %d bad blocks in %s\n", badblocks.cnt, target.path);
 		exit(1);
