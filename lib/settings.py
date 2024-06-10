@@ -96,6 +96,7 @@ class Settings(dict):
 	def write(self):
 		'''Write settings to JSON file'''
 		try:
+			self.path.parent.mkdir(parents=True, exist_ok=True)
 			with self.path.open('w') as fh:
 				dump(self.decoded(), fh)
 		except OSError as err:

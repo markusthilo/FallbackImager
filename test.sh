@@ -1,4 +1,6 @@
 #!/usr/bin/bash
+
+
 rootuuid=`cat /mnt/archimager/etc/fstab \
 | grep '/efi' | grep -o 'UUID=[^ ]*'`
 liminecfg='TIMEOUT=5\n\n:ArchImager\n    PROTOCOL=linux\n    KERNEL_PATH=boot:///vmlinuz-linux\n'
