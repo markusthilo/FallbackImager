@@ -11,7 +11,13 @@ class LinUtils:
 	@staticmethod
 	def find_bin(name, parent_path):
 		'''Find a binary'''
-		for parent in (parent_path/'bin', parent_path, Path('/usr/bin/'), Path('/usr/local/bin/')):
+		for parent in (
+			parent_path/'bin',
+			parent_path/'dist-lin/bin',
+			Path('/usr/bin/'),
+			Path('/usr/local/bin/'),
+			Path('/opt/FallbackImager/bin')
+		):
 			bin_path = parent/name
 			if bin_path.is_file():
 				return bin_path
