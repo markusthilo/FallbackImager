@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "1.0.1_2024-06-10";
+const char *VERSION = "1.0.1_2024-06-11";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
 		OPEN_EXISTING,
 		0,
 		NULL
-	); else target.file = CreateFile(	// to write
+	); else target.file = CreateFile(	// to read and write
 		target.path,
 		FILE_READ_DATA | FILE_WRITE_DATA,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
