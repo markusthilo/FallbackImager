@@ -20,7 +20,7 @@ class WinUtils:
 	@staticmethod
 	def find_exe(exe, parent_path, *possible_dirs):
 		'''Find executable file'''
-		for parent in parent_path/'bin', parent_path:
+		for parent in parent_path/'dist-win'/'bin', parent_path/'bin', parent_path:
 			exe_path = parent/exe
 			if exe_path.is_file():
 				return exe_path
@@ -45,9 +45,11 @@ class WinUtils:
 		return not letter in WinUtils.get_used_letters()
 
 	@staticmethod
-	def is_physical_drive(path):
+	def physical_drive(path):
 		'''Return True if physical drive'''
-		return f'{path}'.upper().startswith('\\\\.\\PHYSICALDRIVE')
+		path_str = f'{path}'.upper()
+		if path_str.startswith('\\\\.\\PHYSICALDRIVE') or path_str.startswith('\\.\\PHYSICALDRIVE'):
+			return f'\\\\.\\{path_str.strip("\\.")}'
 
 	@staticmethod
 	def list_drives():

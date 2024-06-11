@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-30'
+__version__ = '0.5.2_2024-06-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -59,21 +59,6 @@ class WipeW:
 			echo = print
 		):
 		self.echo = echo
-		if len(targets) == 0:
-			raise FileNotFoundError('Missing drive or file(s) to wipe')
-		if verify and allbytes and extra:
-			raise RuntimeError(f'Too many arguments - you can perform normal wipe, all bytes, extra/2-pass or just verify')
-		if blocksize and (
-				blocksize % self.MIN_BLOCKSIZE != 0 or blocksize < self.MIN_BLOCKSIZE or blocksize > self.MAX_BLOCKSIZE
-			):
-				raise ValueError(f'Block size has to be n * {MIN_BLOCKSIZE}, >={MIN_BLOCKSIZE} and <={MAX_BLOCKSIZE}')
-		if value:
-			try:
-				int(value, 16)
-			except ValueError:
-				raise ValueError('Byte to overwrite with (-f/--value) has to be a hex value')
-			if int(value, 16) < 0 or int(value, 16) > 0xff:
-				raise ValueError('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
 		self.outdir = ExtPath.mkdir(outdir)
 		if log:
 			self.log = log
@@ -84,14 +69,32 @@ class WipeW:
 				head = 'wipew.WipeW',
 				echo = self.echo
 			)
-		if WinUtils.is_physical_drive(targets[0]):
-			if len(targets) != 1:
-				raise RuntimeError('Only one physical drive at a time')
-			if not IsUserAnAdmin():
-				raise RuntimeError('Admin rights are required to access block devices')
-			self.physicaldrive = True
+		if len(targets) == 0:
+			self.log.error('Missing drive or file(s) to wipe')
+		if verify and allbytes and extra:
+			self.log.error(f'Too many arguments - you can perform normal wipe, all bytes, extra/2-pass or just verify')
+		if blocksize and (
+				blocksize % self.MIN_BLOCKSIZE != 0 or blocksize < self.MIN_BLOCKSIZE or blocksize > self.MAX_BLOCKSIZE
+			):
+				self.log.error(f'Block size has to be n * {MIN_BLOCKSIZE}, >={MIN_BLOCKSIZE} and <={MAX_BLOCKSIZE}')
+		if value:
+			try:
+				int(value, 16)
+			except ValueError:
+				self.log.error('Byte to overwrite with (-f/--value) has to be a hex value')
+			if int(value, 16) < 0 or int(value, 16) > 0xff:
+				self.log.error('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
+		self.physical_drive = None
+		if len(targets) == 1:
+			self.physical_drive = WinUtils.physical_drive(targets[0])
+			if self.physical_drive:
+				if not IsUserAnAdmin():
+					self.log.error('Admin rights are required to access bphysical drives')
+				targets[0] = self.physical_drive
 		else:
-			self.physicaldrive = False
+			for target in targets:
+				if WinUtils.physical_drive(target):
+					self.log.error('Only one physical drive at a time')
 		cmd = f'{self.zd_path}'
 		if blocksize:
 			cmd += f' -b {blocksize}'
@@ -114,10 +117,7 @@ class WipeW:
 		self.zd_error = False
 		for target in targets:
 			self.echo()
-			if target.startswith('\\.PHYSICALDRIVE'):
-				proc = OpenProc(f'{cmd} \\\\.\\{target[2:].rstrip("\\")}', stderr=True)
-			else:
-				proc = OpenProc(f'{cmd} "{target}"', stderr=True)
+			proc = OpenProc(f'{cmd} "{target}"', stderr=True)
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg.startswith('...'):
@@ -137,6 +137,8 @@ class WipeW:
 			name = None
 		):
 		'''Generate partition and file system'''
+		if not self.physical_drive:
+				wiper.log.error('Creating partition only works on physical drive')
 		if loghead:
 			loghead = ExtPath.path(loghead)
 		else:
@@ -261,8 +263,6 @@ class WipeWCli(ArgumentParser):
 			echo = echo
 		)
 		if self.create:
-			if not wiper.physicaldrive:
-				wiper.log.error('Unable to create a oartition after wiping file(s)')
 			wiper.mkfs(self.targets[0],
 				fs = self.create,
 				driveletter = self.driveletter,

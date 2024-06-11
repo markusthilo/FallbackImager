@@ -64,7 +64,7 @@ click to auto generate (if empty)'''
 	AUTO = 'auto'
 	MISSING_ENTRY = 'Missing entry'
 	ARE_YOU_ROOT = 'Are you root?'
-	ADMIN_REQUIRED = 'Admin privileges required'
+	NOT_ADMIN = 'No Admin Privileges'
 
 class EwfImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source to image as EWF/E01'

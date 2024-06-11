@@ -1,3 +1,5 @@
 #! /bin/bash
-gcc -o bin/zd c/zd.c
-x86_64-w64-mingw32-gcc -o bin/zd-win.exe c/zd-win.c
+
+mkdir -pv dist-lin/bin
+echo 'Compiling c/zd.c to dist-lin/bin/zd'
+gcc -o dist-lin/bin/zd c/zd.c

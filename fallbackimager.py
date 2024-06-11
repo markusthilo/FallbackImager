@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-30'
+__version__ = '0.5.2_2024-06-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -33,8 +33,12 @@ from reporter import Reporter, ReporterCli
 from lib.reportergui import ReporterGui
 from hashedcopy import HashedCopy, HashedCopyCli
 from lib.hashedcopygui import HashedCopyGui
+if Path(__executable__).stem == __app_name__:
+	__parent_path__ = Path(__executable__).parent
+else:
+	__parent_path__ = Path(__file__).parent
 if __os_name__ == 'nt':
-	from win32com.shell.shell import IsUserAnAdmin
+	__default_config__ = __parent_path__/'config.json'
 	from oscdimager import OscdImager, OscdImagerCli
 	from lib.oscdimagergui import OscdImagerGui
 	from dismimager import DismImager, DismImagerCli
@@ -42,26 +46,20 @@ if __os_name__ == 'nt':
 	from wipew import WipeW, WipeWCli
 	from lib.wipewgui import WipeWGui
 else:
+	__default_config__ = Path.home()/'.config/fallbackimager.conf.json'
 	from ewfimager import EwfImager, EwfImagerCli
 	from lib.ewfimagergui import EwfImagerGui
 	from ewfchecker import EwfChecker, EwfCheckerCli
 	from lib.ewfcheckergui import EwfCheckerGui
 	from wiper import WipeR, WipeRCli
 	from lib.wipergui import WipeRGui
-if Path(__executable__).stem == __app_name__:
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
 
 class Gui(GuiBase):
 	'''Definitions for the GUI'''
 
-	def __init__(self, debug=False):
+	def __init__(self, config=None, debug=False):
 		'''Build GUI'''
-		not_admin = False
 		if __os_name__ == 'nt':
-			if not IsUserAnAdmin():
-				not_admin = True
 			candidates = (
 				(OscdImager, OscdImagerCli, OscdImagerGui),
 				(DismImager, DismImagerCli, DismImagerGui),
@@ -83,15 +81,21 @@ class Gui(GuiBase):
 				(AxChecker, AxCheckerCli, AxCheckerGui),
 				(WipeR, WipeRCli, WipeRGui)
 			)
-		super().__init__(__app_name__,__version__, __parent_path__,
+		if config:
+				settings = Settings(config)
+		else:
+				settings = Settings(__default_config__)
+		super().__init__(__app_name__,
+			__version__,
+			__parent_path__,
 			[(Cli, Gui) for Module, Cli, Gui in candidates if Module().available],
-			Settings(__parent_path__/'fisettings.json'),
-			not_admin = not_admin,
+			settings,
 			debug = debug
 		)
 
 if __name__ == '__main__':  # start here
 	argp = ArgumentParser(description=__description__.strip())
+	argp.add_argument('-c', '--config', type=Path, help=f'Config file (default: {__default_config__})')
 	argp.add_argument('-d', '--debug', default=False, action='store_true', help='Debug mode')
 	args = argp.parse_args()
 	Gui(debug=args.debug).mainloop()

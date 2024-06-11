@@ -10,10 +10,15 @@ from .guielements import ExpandedNotebook, ExpandedFrame, ExpandedScrolledText
 from .guielements import LeftButton, RightButton, LeftLabel, ChildWindow
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
+try:
+	from win32com.shell.shell import IsUserAnAdmin
+	__not_admin__ = not IsUserAnAdmin()
+except ModuleNotFoundError:
+	__not_admin__ = False
 
 class GuiBase(Tk):
 
-	def __init__(self, name, version, parent_path, modules, settings, not_admin=False, debug=False):
+	def __init__(self, name, version, parent_path, modules, settings, debug=False):
 		'''Add stuff to Tk'''
 		if len(modules) < 1:
 			showerror(
@@ -29,8 +34,8 @@ class GuiBase(Tk):
 		self.settings = settings
 		super().__init__()
 		title = f'{self.app_name} v{self.version}'
-		if not_admin:
-			title += f' ({BasicLabels.ADMIN_REQUIRED})'
+		if __not_admin__:
+			title += f' ({BasicLabels.NOT_ADMIN})!'
 		self.title(title)
 		self.resizable(0, 0)
 		self.appicon = PhotoImage(file=self.parent_path/'appicon.png')

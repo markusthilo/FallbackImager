@@ -2,14 +2,17 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.3.1_2024-02-22'
+__version__ = '0.5.2_2024-06-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Use PyInstaller to build FallbackImager release
+Use PyInstaller to build FallbackImager Windows Release
 '''
 
+from os import name as __os_name__
+if __os_name__ != 'nt':
+	raise EnvironmentError('Run on Windows (>=10)!')
 from pathlib import Path
 from shutil import rmtree
 from sys import argv
@@ -31,16 +34,17 @@ class MkExe:
 		PyInstaller.__main__.run(args)
 		self.exe_path = Path.cwd()/'dist'/f'{self.py_path.stem}.exe'
 
-	def move(self, tobin=False):
+	def move(self, to_bin=False):
 		'''Move executable to destination directory and clean up'''
-		dir_path = Path.cwd()
-		if tobin:
+		dir_path = Path.cwd()/'dist-win'
+		dir_path.mkdir(exist_ok=True)
+		if to_bin:
 			dir_path = dir_path/'bin'
-			dir_path.mkdir()
+			dir_path.mkdir(exist_ok=True)
 		self.exe_path = self.exe_path.replace(dir_path/self.exe_path.name)
-		rmtree('build')
-		rmtree('dist')
-		self.py_path.with_suffix('.spec').unlink()
+		rmtree('build', ignore_errors=True)
+		rmtree('dist', ignore_errors=True)
+		self.py_path.with_suffix('.spec').unlink(missing_ok=True)
 		return self.exe_path
 
 if __name__ == '__main__':	# start here if called as application
@@ -60,10 +64,12 @@ if __name__ == '__main__':	# start here if called as application
 		exes.append(MkExe('sqlite.py').move())
 		exes.append(MkExe('wipew.py', admin=True).move())
 		exes.append(MkExe('zipimager.py').move())
+		exes.append(MkExe('hashedcopy.py').move())
+		exes.append(MkExe('reporter.py').move())
 	if args.gui or len(argv) == 1:
-		exes.append(MkExe('FallbackImager.py', admin=True, noconsole=True).move())
+		exes.append(MkExe('fallbackimager.py', admin=True, noconsole=True).move())
 	if args.wim or len(argv) == 1:
-		exes.append(MkExe('WimMount.py', admin=True, noconsole=True).move(tobin=True))
+		exes.append(MkExe('wimmount.py', admin=True, noconsole=True).move(to_bin=True))
 	if exes:
 		print('\nBuild:')
 		for path in exes:

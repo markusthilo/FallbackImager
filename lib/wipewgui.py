@@ -265,5 +265,5 @@ class WipeWGui(WipeLabels):
 					cmd += f' --loghead "{log_head}"'
 				if new_letter != self.NEXT_AVAILABLE:
 					cmd += f' --driveletter {new_letter}'
-			cmd += f' {target}'
+			cmd += f' "\\\\.\\{target.strip("\\.").upper()}"'
 		self.root.append_job(cmd)
