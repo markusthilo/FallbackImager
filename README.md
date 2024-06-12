@@ -5,51 +5,56 @@ The tool is currently developed for Linux based OS and Windows (>=10). It is wor
 
 ## Installation
 
-### Releases
-Download the releases for Linux or Windows. Unpack the ZIP and enter the FallbackImager directoery. You might use an install script to resolve dependencies on Linux based systems:
-```
-$ ./install-arch.sh
-```
-or
-```
-$ ./install-debian-ubuntu.sh
-```
-Start the gui with
-```
-$ ./FallbackImager.sh
-```
-or doubleclick FallbackImager.exe on Windows.
-
 ### Linux
 
 #### Python
 To use the python sources you need Python (3.11 or newer). To use the GUI, tk is needed. The installation depends on your distro, e.g.:
 ```
-$ sudo apt install python3 python3-tk ewf-tools disktype
+$ sudo apt install python3 python3-tk
 ```
 ```
-$ yay install python tk libewf disktype
+$ sudo pacman install python tk
 ```
 ```
-$ sudo zypper install python3 python3-tk libewf-tools disktype
+$ sudo dnf install python3 python3-tkinter
+```
+```
+$ sudo zypper install python3 python3-tk
 ```
 
 #### C
-To compile the wipe tool zd.c the compiler *gcc* is needed:
+Pre-compiled versions of the wipe tool zd are included in the releases, so on AMD64 there is no need to compile.
+
+To compile the source *gcc* is needed. You might use my make script:
 ```
-$ gcc -o bin/zd c/zd.c
+$ cd FallbackImager
+$ ./make-bin.sh
+```
+This is also executed when running:
+```
+$ ./make-dist-lin.sh
 ```
 
-#### 3rd party tools
-FallbackImager tries to locate *ewfacquire*, *ewfextract*, *ewfinfo*, *ewfverify* and *disktype* in the (sub-) folder *bin*. Alternatively it tries to find the binaries in usal system paths (e.g. at */usr/bin*).
-
-#### Install Scripts
-Checkout the scripts *install-...sh* to install what is needed.
+#### libewf
+Install *libewf* (https://github.com/libyal/libewf) from your distro repos using something like:
+```
+$ sudo apt install lib-ewf
+```
+```
+$ sudo pacman install libewf
+```
+```
+$ sudo dnf install libewf
+```
+```
+$ sudo zypper install libewf
+```
+FallbackImager tries to locate *ewfacquire*, *ewfmount*, *ewfinfo* and *ewfverify* in the (sub-) folder *bin*. Alternatively it tries to find the binaries in usual system paths (e.g. */usr/bin*).
 
 ### Windows
 
 #### Out of the box
-The easiest way is to download the latest release and unpack the Zip anywhere. To use the compiled executables no Python or other dependencies are needed. Of course, you still might need the 3rd party tools (see below).
+The easiest way is to download the latest release and unpack the ZIP-file anywhere. To use the compiled executables no Python or other dependencies are needed. Of course, you still might need the Microsoft tools (see below).
 
 #### Python
 To use the python sources you need Python (3.11 or newer), the cloned git and the libraries *pyinstaller*, *pywin32* and *WMI*. You might want to use
@@ -59,46 +64,45 @@ $ pip install -r requirements.txt
 to install them. The scripts *make-FallbackImager-exe.py*, *make-WimMount-exe.py* and *make-win-cli-apps-exe.py* use *PyInstaller* to generate the executables if needed.
 
 #### C
-To compile zd-win.c you need MinGW-w64, e.g.:
+To compile zd-win.c you can use e.g. ArchLinux in WSL with MinGW-w64:
 ```
 $ pacman -Syu
 $ pacman -S mingw-w64-ucrt-x86_64-gcc
-$ gcc -o bin/zd-win.exe c/zd-win.c
+$ cd FalbackImager
+$ ./make-zd-win.sh
 ```
-This worked on Arch Linux and also on Windows with MSYS2. You can also use the make script:
-```
-$ ./make-zd.sh
-```
+The executable will be in */dist-win/bin/*.
 
-#### 3rd party tools
-For OscdImager and DismImager you need to install the Windows Assessment and Deployment Kit (Windows ADK) which is freely available from https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install. It is possible to put the tools in the *bin* subdirectory or just leave them at *C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64*.
+#### PyInstaller
+Windows Defender Realtime Protection needs to be turned off to run:
+```
+$ python.exe make-exe.py
+```
+The executables will be in */dist-win/*.
+
+
+#### Microsoft tools
+DismImager should come with your Windows but some Editions might not include it ("Home"?).
+For OscdImager you need to install the Windows Assessment and Deployment Kit (Windows ADK) which is freely available from https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install. It is possible to put the tools in the *bin* subdirectory or just leave them at *C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64*. Windows ADK also includes a version of DismImager.
 
 ## Usage of the GUI
 
 ### Start
-On Windows the executable *FallbackImager.exe* can be lauched by double clicking.
-
-When used without admin privileges most features are not available. Launch from the terminal using
-```
-$ sudo python FallbackImager.py
-```
-or open the PowerShell or CMD on Windos and run
+On Windows the executable *fallbackimager.exe* can be lauched by double clicking.
+When used without admin privileges most features are not available.
+If you have Python istalled, you can also open a PowerShell (as Administartor), go to the FallbackImager directory
+and run:
 ```
 $ python.exe FallbackImager.py
 ```
-as Admin. On Linux
+On Linux based Systems run from the terminal (as root using sudo -E):
 ```
-$ ./FallbackImager.sh
+$ ./fallbackimager-root.sh
 ```
-should do the job but
+Shure, you can run directly with *python* or *python3*:
 ```
-$ sudo python FallbackImager.py
+$ python fallbackimager.py
 ```
-or
-```
-$ sudo python FallbackImager.py
-```
-would also launch Python.
 
 ### Tabs
 Each module is represented by a tab in the upper part of the window.
@@ -155,9 +159,17 @@ Whe the target is a physical drive, you can create a partition where (after a su
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
 
 ## Cli
-Every module is executable from the Terminal or CMD. Use the parameter *-h* to get the command line arguments, e.g.:
+Every module is executable from the Terminal. Use the parameter *-h* to get the command line arguments, e.g.:
 ```
 $ python axchecker.py -h
+```
+On Windows use PowerShell or CMD:
+```
+$ python.exe axchecker.py -h
+```
+If you have the Windows executables you can run e.g.:
+```
+$ axchecker.exe -h
 ```
 
 ## Legal Notice

@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-24'
+__version__ = '0.5.2_2024-06-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -78,7 +78,7 @@ class HashedCopy:
 			sleep(sleep_time)
 		error_cnt = 0
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
-			print('Source_File\tDestination_File\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tCopied', file=fh)
+			print('Source_File\tDestination_File\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tSuccess', file=fh)
 			for src_path, dst_path, src_hashes in hashed_files:
 				dst_hashes = FileHashes(dst_path)
 				line = f'{src_path}\t{dst_path}\t{src_hashes.md5}\t{dst_hashes.md5}\t{src_hashes.sha256}\t{dst_hashes.sha256}\t'

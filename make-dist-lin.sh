@@ -8,6 +8,7 @@ do
     cp -uv "${file}" dist-lin
 done << EOF
 fallbackimager.py
+fallbackimager-root.sh
 ewfimager.py
 ewfchecker.py
 hashedcopy.py

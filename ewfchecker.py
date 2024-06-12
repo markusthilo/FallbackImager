@@ -3,16 +3,18 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-27'
+__version__ = '0.5.2_2024-06-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Verify EWF/E01 image using disktype. ewfinfo, ewfverify and ewfexport.
+Verify EWF/E01 image using ewfinfo, ewfverify and ewfmount.
 '''
 
 from sys import executable as __executable__
 from pathlib import Path
+from subprocess import run
+from re import sub
 from argparse import ArgumentParser
 from lib.extpath import ExtPath
 from lib.timestamp import TimeStamp
@@ -31,9 +33,8 @@ class EwfChecker:
 		'''Check if the needed binaries are present'''
 		self.ewfverify_path = LinUtils.find_bin('ewfverify', __parent_path__)
 		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', __parent_path__)
-		self.ewfexport_path = LinUtils.find_bin('ewfexport', __parent_path__)
-		self.disktype_path = LinUtils.find_bin('disktype', __parent_path__)
-		if self.ewfverify_path and self.ewfinfo_path and self.ewfexport_path and self.disktype_path:
+		self.ewfmount_path = LinUtils.find_bin('ewfmount', __parent_path__)
+		if self.ewfverify_path and self.ewfinfo_path and self.ewfmount_path:
 			self.available = True
 		else:
 			self.available = False
@@ -59,20 +60,6 @@ class EwfChecker:
 		proc.echo_output(skip=2)
 		if proc.returncode != 0:
 			self.log.warning(proc.stderr.read())
-		raw = (self.outdir/self.filename).with_suffix('')
-		proc = OpenProc([f'{self.ewfexport_path}', '-B', '10240', '-u', '-q', '-t', f'{raw}', f'{self.image_path}'])
-		if proc.wait() != 0:
-			self.log.warning(proc.stderr.read())
-		else:
-			raw = Path(f'{raw}.raw')
-			info = Path(f'{raw}.info')
-			xxd = ExtPath.read_bin(raw)
-			self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
-			self.log.info('Probing for partition table')
-			proc = OpenProc([f'{self.disktype_path}', f'{raw}'], log=self.log)
-			proc.echo_output(skip=2)
-			raw.unlink(missing_ok=True)
-			info.unlink(missing_ok=True)
 		self.log.info('Verifying image', echo=True)
 		proc = OpenProc([f'{self.ewfverify_path}', '-V'])
 		if proc.wait() != 0:
@@ -88,11 +75,48 @@ class EwfChecker:
 				self.hashes['md5'] = line.split(':', 1)[1].strip()
 			elif line.startswith('SHA256 hash calculated over data:'):
 				self.hashes['sha256'] = line.split(':', 1)[1].strip()
+		mountpoint = Path(f'/mnt/ewfmount_{self.hashes["md5"]}')
+		try:
+			mountpoint.mkdir()
+		except FileExistsError:
+			self.log.warning('Moint point already exists')
+		else:
+			ret = run([f'{self.ewfmount_path}', f'{self.image_path}', f'{mountpoint}'], capture_output=True, text=True)
+			if ret.stderr:
+				self.log.warning(proc.stderr)
+			else:
+				ewf = mountpoint/'ewf1'
+				xxd = ExtPath.read_bin(ewf)
+				self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
+				self.log.info('Trying to read partition table')
+				stdout, stderr = LinUtils.fdisk(ewf)
+				if stderr:
+					self.log.warning(stderr)
+				else:
+					msg = ''
+					for line in stdout.split('\n'):
+						if not line:
+							continue
+						line = sub(' {2,}', ' ', line)
+						if line.startswith(f'Disk {ewf}:'):
+							msg += f'This might be a disk image\nDisk size:{line.split(":", 1)[1]}\n'
+						elif line.startswith(f'{ewf}'):
+							msg += f'Part{line[len(f"{ewf}"):]}\n'
+						else:
+							msg += f'{line}\n'
+					self.log.info(msg, echo=True)
+				stdout, stderr = LinUtils.umount(mountpoint)
+				if ret.stderr:
+					self.log.warning(proc.stderr)
+				try:
+					mountpoint.rmdir()
+				except Exception as ex:
+					self.log.warning(ex)
 		if hashes:
 			for alg, hash in self.hashes.items():
 				if hash.lower() != hashes[alg].lower():
 					selg.log.error('Mismatching hashes')
-
+		
 class EwfCheckerCli(ArgumentParser):
 	'''CLI for EwfVerify'''
 

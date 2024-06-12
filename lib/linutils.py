@@ -85,6 +85,12 @@ class LinUtils:
 		'''Use lsblk with JSON output to get disk ort partition size'''
 		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
 			capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
+	
+	@staticmethod
+	def fdisk(path):
+		'''Use fdisk -l to read partition table'''
+		ret = run(['fdisk', '-l', f'{path}'], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
 
 	@staticmethod
 	def init_dev(dev, mbr=False, fs='ntfs'):
