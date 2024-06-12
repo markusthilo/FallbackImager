@@ -14,7 +14,7 @@ from os import name as __os_name__
 if __os_name__ != 'nt':
 	raise EnvironmentError('Run on Windows (>=10)!')
 from pathlib import Path
-from shutil import rmtree
+from shutil import rmtree, copy
 from sys import argv
 from argparse import ArgumentParser
 import PyInstaller.__main__
@@ -68,6 +68,7 @@ if __name__ == '__main__':	# start here if called as application
 		exes.append(MkExe('reporter.py').move())
 	if args.gui or len(argv) == 1:
 		exes.append(MkExe('fallbackimager.py', admin=True, noconsole=True).move())
+		copy('appicon.png', 'dist-win')
 	if args.wim or len(argv) == 1:
 		exes.append(MkExe('wimmount.py', admin=True, noconsole=True).move(to_bin=True))
 	if exes:
