@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=FallbackImager
+GenericName=Forensic Imager
+GenericName[de]=Forensischer Imager
+Comment=Forensic imager and toolbox
+Comment[de]=Forensischer Imager und Toolbox
+Terminal=false
+Exec=/opt/FallbackImager/fallbackimager-root.sh
+Icon=/opt/Fallback/mager/fallbackimager.png
+Categories=Forensics;System;
+StartupNotify=false
+Keywords=forensics;
+Keywords[de]=forensisch;
