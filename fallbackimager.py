@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.2_2024-06-12'
+__version__ = '0.5.2_2024-06-14'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -33,11 +33,11 @@ from reporter import Reporter, ReporterCli
 from lib.reportergui import ReporterGui
 from hashedcopy import HashedCopy, HashedCopyCli
 from lib.hashedcopygui import HashedCopyGui
-if Path(__executable__).stem == __app_name__:
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
 if __os_name__ == 'nt':
+	if Path(__executable__).name == 'python.exe':
+		__parent_path__ = Path(__file__).parent
+	else:
+		__parent_path__ = Path(__executable__).parent
 	__default_config__ = __parent_path__/'config.json'
 	from oscdimager import OscdImager, OscdImagerCli
 	from lib.oscdimagergui import OscdImagerGui
@@ -46,6 +46,7 @@ if __os_name__ == 'nt':
 	from wipew import WipeW, WipeWCli
 	from lib.wipewgui import WipeWGui
 else:
+	__parent_path__ = Path(__file__).parent
 	__default_config__ = Path.home()/'.config/fallbackimager.conf.json'
 	from ewfimager import EwfImager, EwfImagerCli
 	from lib.ewfimagergui import EwfImagerGui

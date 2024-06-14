@@ -20,7 +20,7 @@ class WinUtils:
 	@staticmethod
 	def find_exe(exe, parent_path, *possible_dirs):
 		'''Find executable file'''
-		for parent in parent_path/'dist-win'/'bin', parent_path/'bin', parent_path:
+		for parent in parent_path, parent_path/'dist-win', :
 			exe_path = parent/exe
 			if exe_path.is_file():
 				return exe_path
