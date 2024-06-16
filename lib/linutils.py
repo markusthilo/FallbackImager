@@ -4,6 +4,7 @@
 from pathlib import Path
 from subprocess import Popen, PIPE, run
 from json import loads
+from re import findall
 
 class LinUtils:
 	'Tools for Linux based systems'
@@ -138,6 +139,28 @@ class LinUtils:
 		run(['sync'], check=True)
 		ret = run(['umount', f'{target}'], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
+
+	@staticmethod
+	def get_workarea():
+		'''Use xprop -root to get _NET_WORKAREA(CARDINAL)'''
+		ret = run(['xprop', '-root'], capture_output=True, text=True)
+		if ret.stderr:
+			return ret.stdout, ret.stderr
+		for line in ret.stdout.split('\n'):
+			if line.startswith('_NET_WORKAREA(CARDINAL)'):
+				parts = line.split(',')
+				return int(parts[2].strip()), int(parts[3].strip())
+
+	@staticmethod
+	def get_xkb_layouts():
+		'''Get possible layouts for setxkbmap'''
+		return sorted(
+			list(
+				{ match.rstrip(':')
+					for match in findall('[a-z]{2}:', Path('/usr/share/X11/xkb/rules/xorg.lst').read_text())
+				}
+			)
+		)
 
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
