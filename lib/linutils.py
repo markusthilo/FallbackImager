@@ -162,6 +162,12 @@ class LinUtils:
 			)
 		)
 
+	@staticmethod
+	def set_xkb_layout(layout):
+		'''Set keyboard layout using setxkbmap'''
+		ret = run(['setxkbmap', layout], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
 
