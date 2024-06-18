@@ -12,10 +12,17 @@ fallbackimager-root.sh
 ewfimager.py
 ewfchecker.py
 hashedcopy.py
+zipimager.py
 sqlite.py
 reporter.py
 axchecker.py
 wiper.py
+appicon.png
+help.txt
+LICENSE
+README.md
+wipe-log-head.txt
+reporter-example-template
 EOF
 while read file # copy libraries to dist-lin/lib
 do
@@ -25,10 +32,12 @@ extpath.py
 fsreader.py
 guibase.py
 guiconfig.py
+guilabeling.py
 guielements.py
 hashes.py
 linutils.py
 logger.py
+mfdbreader.py
 settings.py
 sqliteutils.py
 stringutils.py
@@ -37,6 +46,7 @@ worker.py
 ewfimagergui.py
 ewfcheckergui.py
 hashedcopygui.py
+zipimagergui.py
 sqlitegui.py
 reportergui.py
 axcheckergui.py
