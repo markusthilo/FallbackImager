@@ -66,7 +66,8 @@ class LinUtils:
 				}
 				for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
-				if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
+				if not dev['path'].startswith('/dev/zram')
+				#if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
 		}
 
 	@staticmethod

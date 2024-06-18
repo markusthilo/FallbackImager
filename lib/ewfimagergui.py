@@ -7,6 +7,7 @@ from functools import partial
 from os import getlogin, access, R_OK
 from .guilabeling import EwfImagerLabels
 from .guiconfig import GuiConfig
+from .diskselectgui import DiskSelectGui
 from .guielements import Checker, GridMenu, ChildWindow, NotebookFrame
 from .guielements import ExpandedFrame, GridSeparator, GridLabel, OutDirSelector
 from .guielements import StringSelector, StringRadiobuttons, AddJobButton
@@ -25,9 +26,10 @@ class EwfImagerGui(EwfImagerLabels):
 		self.root = root
 		frame = NotebookFrame(self)
 		GridLabel(frame, self.SOURCE)
+		self.source_var = self.root.settings.init_stringvar('Source')
 		self.source = StringSelector(
 			frame,
-			self.root.settings.init_stringvar('Source'),
+			self.source_var,
 			self.SELECT,
 			command = self._select_source,
 			tip = self.TIP_SOURCE
@@ -38,6 +40,7 @@ class EwfImagerGui(EwfImagerLabels):
 			self.SETRO,
 			tip = self.TIP_SETRO
 		)
+		GridLabel(frame, self.SETTINGS)
 		self.case_no = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('CaseNo'),
@@ -130,49 +133,11 @@ class EwfImagerGui(EwfImagerLabels):
 			command = self._set_filename,
 			tip = self.TIP_FILENAME
 		)
-		AddJobButton(frame, 'AxChecker', self._add_job)
-		self.root.child_win_active = False
+		AddJobButton(frame, self.MODULE, self._add_job)
 
 	def _select_source(self):
-		'''Select source'''
-		if self.root.child_win_active:
-			return
-		self.source_window = ChildWindow(self.root, self.SELECT_SOURCE)
-		frame = ExpandedFrame(self.source_window)
-		for diskpath, diskinfo in LinUtils.diskinfo().items():
-			Button(frame, text=diskpath, width=GuiConfig.BUTTON_WIDTH,
-				command=partial(self._put_source, diskpath)).grid(
-				row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
-			text = Text(frame, width=GuiConfig.FILES_FIELD_WIDTH, height=1)
-			text.grid(row=frame.row, column=1)
-			text.insert('end', f'Disk: {StringUtils.join(diskinfo["disk"], delimiter=", ")}')
-			text.configure(state='disabled')
-			frame.row += 1
-			for partition, info in diskinfo['partitions'].items():
-				Button(frame, text=partition, width=GuiConfig.BUTTON_WIDTH,
-					command=partial(self._put_source, partition)).grid(
-					row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
-				text = Text(frame, width=GuiConfig.FILES_FIELD_WIDTH, height=1)
-				text.grid(row=frame.row, column=1)
-				text.insert('end', f'Partition: {StringUtils.join(info, delimiter=", ")}')
-				text.configure(state='disabled')
-				frame.row += 1
-		frame = ExpandedFrame(self.source_window)
-		LeftButton(frame, self.REFRESH, self._refresh_source_window)
-		RightButton(frame, self.QUIT, self.source_window.destroy)
-
-	def _refresh_source_window(self):
-		'''Destroy and reopen Target Window'''
-		self.source_window.destroy()
-		self._select_source()
-
-	def _put_source(self, dev):
-		'''Put drive id to sourcestring'''
-		self.source_window.destroy()
-		if access(dev, R_OK):
-			self.source.set(dev)
-		else:
-			Error(self.ARE_YOU_ROOT)
+		'''Select source to image'''
+		DiskSelectGui(self.root, self.source_var)
 
 	def _set_ts_case_no(self):
 		if not self.case_no.get():
@@ -222,6 +187,9 @@ class EwfImagerGui(EwfImagerLabels):
 		media_flag = self.media_flag.get()
 		segment_size = self.segment_size.get().replace(' ', '')
 		filename = self.filename.get()
+		if not access(source, R_OK):
+			Error(self.ARE_YOU_ROOT)
+			return
 		if not source:
 			MissingEntry(self.SOURCE_REQUIRED)
 			return
