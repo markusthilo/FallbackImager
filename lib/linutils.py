@@ -5,6 +5,7 @@ from pathlib import Path
 from subprocess import Popen, PIPE, run
 from json import loads
 from re import findall
+from .stringutils import StringUtils
 
 class LinUtils:
 	'Tools for Linux based systems'
@@ -30,6 +31,12 @@ class LinUtils:
 		return ret.stdout, ret.stderr
 
 	@staticmethod
+	def set_rw(dev):
+		'''Set block device to read and write access'''
+		ret = run(['blockdev', '--setrw', f'{dev}'], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	@staticmethod
 	def lsdisk():
 		'''Use lsblk with JSON output to get disks'''
 		return [dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
@@ -49,7 +56,7 @@ class LinUtils:
 
 	@staticmethod
 	def isdisk(dev):
-		'''Use lsblk with JSON output to check if device is a blockdevice'''
+		'''Use lsblk with JSON output to check if device is a disk'''
 		try:
 			return loads(run(['lsblk', '--json', '-o', 'TYPE', f'{dev}'],
 					capture_output=True, text=True).stdout)['blockdevices'][0]['type'] == 'disk'
@@ -66,9 +73,43 @@ class LinUtils:
 				}
 				for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
-				if not dev['path'].startswith('/dev/zram')
-				#if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
+				if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
 		}
+
+	@staticmethod
+	def lsblk(physical=False, exclude=None):
+		'''Use block devices'''
+		blkdevs = {
+			dev['path']: {
+				'type': dev['type'],
+				'size': dev['size'],
+				'label': dev['label'],
+				'vendor': dev['vendor'],
+				'model': dev['model'],
+				'mountpoints': dev['mountpoints']
+			} for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,MOUNTPOINTS'],
+				capture_output=True, text=True).stdout)['blockdevices']
+		}
+		for outer_path in blkdevs:
+			blkdevs[outer_path]['parent'] = ''
+			for inner_path in blkdevs:
+				if outer_path.startswith(inner_path) and outer_path != inner_path:
+					blkdevs[outer_path]['parent'] = inner_path
+					break
+		if physical:
+			blkdevs = {
+				path: details for path, details in blkdevs.items()
+					if not path.startswith('/dev/zram') and (
+						details['type'] in ('disk', 'rom')
+						or ( details['type'] == 'part' and details['parent'] and blkdevs[details['parent']]['type'] in ('disk', 'rom') )
+					)
+			}
+		if exclude:
+			blkdevs = {
+				path: details for path, details in blkdevs.items()
+					if not StringUtils.startswith(path, exclude)
+			}
+		return blkdevs
 
 	@staticmethod
 	def diskdetails(dev):
@@ -84,7 +125,7 @@ class LinUtils:
 
 	@staticmethod
 	def blkdevsize(dev):
-		'''Use lsblk with JSON output to get disk ort partition size'''
+		'''Use lsblk with JSON output to get disk or partition size'''
 		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
 			capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
 	

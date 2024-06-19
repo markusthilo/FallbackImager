@@ -5,8 +5,25 @@ class StringUtils:
 	'Functions (okay, still called methods) to handle and build strings'
 
 	@staticmethod
+	def str(value):
+		'''Transform to string but give empty string for None'''
+		if value:
+			return f'{value}'
+		return ''
+
+	@staticmethod
+	def startswith(string, candidats):
+		'''Extends startswith to an iterable argument'''
+		if isinstance(candidats, str):
+			return string.startswith(candidats)
+		for check in candidats:
+			if string.startswith(check):
+				return True
+		return False
+
+	@staticmethod
 	def join(iterable, delimiter=' '):
-		'''Join iterable to list but be telerant'''
+		'''Join iterable to list but be tolerant to missing items'''
 		return delimiter.join([f'{item.strip()}' for item in iterable if item])
 
 	@staticmethod

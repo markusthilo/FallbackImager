@@ -82,7 +82,7 @@ class SQLiteGui(SQLiteLabels):
 			return
 		self.child_window = ChildWindow(self.root, self.SCHEMA)
 		frame = ExpandedFrame(self.child_window)
-		self.tree = Tree(frame)
+		self.tree = Tree(frame, text=sqlite_db)
 		for table_name, column_names in reader.list_tables():
 			table = self.tree.insert('', 'end', text=table_name, iid=f'{table_name}\t')
 			for column_name in column_names:

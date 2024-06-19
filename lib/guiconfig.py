@@ -19,5 +19,14 @@ class GuiConfig:
 	MENU_WIDTH = 18
 	TREE_HEIGHT = 24
 	TREE_WIDTH = 640
+	LSBLK_NAME_WIDTH = 160
+	LSBLK_COLUMNS_WIDTH = {
+		'type': 60,
+		'size': 60,
+		'label': 80,
+		'vendor': 80,
+		'model': 200,
+		'mountpoints': 200
+	}
 	HELP_HEIGHT = 40
 	HELP_WIDTH = 120

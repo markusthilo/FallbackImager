@@ -78,7 +78,7 @@ class Gui(Tk, EwfImagerLabels):
 
 	def _select_source(self):
 		'''Select source to image'''
-		DiskSelectGui(self, self.source_var)
+		DiskSelectGui(self, self.source_var, physical=True)
 
 		'''
     

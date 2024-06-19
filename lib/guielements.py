@@ -316,13 +316,33 @@ class SourceFileSelector(FileSelector):
 
 class Tree(Treeview):
 	'''Treeview with vertical scroll bar'''
-	def __init__(self, parent, selectmode='browse', width=None, height=None):
+	def __init__(self, parent,
+		selectmode = 'browse',
+		text = None,
+		columns = None,
+		width = None,
+		height = None
+	):
 		if not width:
 			width = GuiConfig.TREE_WIDTH
 		if not height:
 			height = GuiConfig.TREE_HEIGHT
-		super().__init__(parent, selectmode=selectmode, height=height, show='tree')
-		self.column("#0", width=width)
+		if text:
+			show = None
+		else:
+			show = 'tree'
+		if columns:
+			column_names = list(columns.keys())
+		else:
+			column_names = None
+		super().__init__(parent, selectmode=selectmode, height=height, columns=column_names, show=show)
+		self.column('#0', width=width)
+		if text:
+			self.heading('#0', text=text.upper())
+		if columns:
+			for col_text, col_width in columns.items():
+				self.heading(col_text, text=col_text.upper())
+				self.column(col_text, width=col_width)
 		self.pack(side='left', expand=True)
 		vsb = Scrollbar(parent, orient='vertical', command=self.yview)
 		vsb.pack(side='right', fill='y')
