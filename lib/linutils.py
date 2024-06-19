@@ -37,12 +37,46 @@ class LinUtils:
 		return ret.stdout, ret.stderr
 
 	@staticmethod
-	def lsdisk():
-		'''Use lsblk with JSON output to get disks'''
-		return [dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
-			capture_output=True, text=True).stdout)['blockdevices']
-			if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
+	def get_blockdevs():
+		'''Use lsblk with JSON output to get block devices'''
+		return [
+			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH'],
+				capture_output=True, text=True).stdout)['blockdevices']
 		]
+
+	@staticmethod
+	def get_disks():
+		'''Get type disk except /dev/zram*'''
+		return [
+			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
+		]
+
+	@staticmethod
+	def get_physical_devs():
+		'''Get types part and disk except /dev/zram*'''
+		return [
+			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] in ('disk', 'part') and not dev['path'].startswith('/dev/zram')
+		]
+
+	@staticmethod
+	def get_rootdevs():
+		'''Get root devices = block devices without partition'''
+		return [
+			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] != 'part'
+		]
+
+	@staticmethod
+	def rootdev_of(part):
+		'''Root device of given partition'''
+		for rootdev in LinUtils.get_rootdevs():
+			if part.startswith(rootdev):
+				return rootdev
 
 	@staticmethod
 	def lspart(dev):
@@ -86,8 +120,9 @@ class LinUtils:
 				'label': dev['label'],
 				'vendor': dev['vendor'],
 				'model': dev['model'],
+				'ro': dev['ro'],
 				'mountpoints': dev['mountpoints']
-			} for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,MOUNTPOINTS'],
+			} for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,RO,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
 		}
 		for outer_path in blkdevs:
@@ -181,6 +216,32 @@ class LinUtils:
 		run(['sync'], check=True)
 		ret = run(['umount', f'{target}'], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
+
+	@staticmethod
+	def get_mounted():
+		'''Get mounted partitions'''
+		ret = run(['mount'], capture_output=True, text=True)
+		return [line.split(' ', 1)[0] for line in ret.stdout.split('\n') if line.startswith('/dev/')]
+
+	@staticmethod
+	def get_occupied():
+		'''Get mounted partition and their root devices'''
+		mounted = LinUtils.get_mounted()
+		return {LinUtils.rootdev_of(part) for part in mounted} | set(mounted)
+
+	@staticmethod
+	def get_ro(dev):
+		'''Get rw/ro of given blockdevice'''
+		return loads(run(['lsblk', '--json', '-o', 'RO', f'{dev}'],
+			capture_output=True, text=True).stdout)['blockdevices'][0]['ro']
+
+	@staticmethod
+	def set_unoccupied_ro():
+		'''Set types part and disk not mounted to ro except /dev/zram*'''
+		occopied_physical_blkdevs = set(LinUtils.get_physical_devs()) - LinUtils.get_occupied()
+		for dev in occopied_physical_blkdevs:
+			LinUtils.set_ro(dev)
+		return occopied_physical_blkdevs
 
 	@staticmethod
 	def get_workarea():
