@@ -3,7 +3,7 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-06-18'
+__version__ = '0.5.3_2024-06-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,15 +22,18 @@ from lib.guielements import ExpandedFrame, GridLabel, StringSelector
 class Gui(Tk, EwfImagerLabels):
 	'''Definitions for the GUI'''
 
-	PAD = 16
+	MAX_SIZE_X = 1920
+	MAX_SIZE_Y = 1080
+	PADDING = 40
+	DEF_SIZE = '40'
 
 	def __init__(self):
 		'''Build GUI'''
 		Tk.__init__(self)
 		self.title(f'{__app_name__} {__version__}')
 		self.area_x, self.area_y = LinUtils.get_workarea()
-		self.size_x = min(self.area_x-2*self.PAD, 1920-2*self.PAD)
-		self.size_y = min(self.area_y-2*self.PAD, 1080-2*self.PAD)
+		self.size_x = min(self.area_x-self.PADDING, self.MAX_SIZE_X-self.PADDING)
+		self.size_y = min(self.area_y-self.PADDING, self.MAX_SIZE_Y-self.PADDING)
 		self.geometry(f'{self.size_x}x{self.size_y}')
 		self.resizable(0, 0)
 		self.appicon = PhotoImage(file='appicon.png')
@@ -69,12 +72,71 @@ class Gui(Tk, EwfImagerLabels):
 			tip = self.TIP_METADATA
 		)
 		self.examiner_name_var = StringVar(value='EXAMINER NAME')
-		self.examiner_name = StringSelector(
+		self.examiner_name_sel = StringSelector(
 			frame,
 			self.examiner_name_var,
 			self.EXAMINER_NAME,
 			tip = self.TIP_METADATA
 		)
+		self.notes_var = StringVar(value='NOTES')
+		self.notes_sel = StringSelector(
+			frame,
+			self.notes_var,
+			self.NOTES,
+			tip = self.TIP_NOTE
+		)
+		self.segment_size_var = StringVar(value=self.DEF_SIZE)
+		self.segment_size_sel = StringSelector(
+			frame,
+			self.segment_size_var,
+			self.SEGMENT_SIZE,
+			width = GuiConfig.SMALL_FIELD_WIDTH,
+			command = self._set_def_size,
+			columnspan = 2,
+			incrow = False,
+			tip=self.TIP_SEGMENT_SIZE
+		)
+		self.compression = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('Compression', default='fast'),
+			self.COMPRESSION,
+			('fast', 'best', 'none'),
+			column = 3,
+			incrow = False,
+			tip = self.TIP_COMPRESSION
+		)
+		self.media_type = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('MediaType', default='fixed'),
+			self.MEDIA_TYPE,
+			('auto', 'fixed', 'removable', 'optical'),
+			column = 5,
+			incrow = False,
+			tip = self.TIP_METADATA
+		)
+		self.media_flag = GridMenu(
+			frame,
+			self.root.settings.init_stringvar('MediaFlag', default='physical'),
+			self.MEDIA_FLAG,
+			('auto', 'logical', 'physical'),
+			column = 7,
+			tip = self.TIP_METADATA
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			self.root.settings.init_stringvar('OutDir'),
+			tip = self.TIP_OUTDIR
+		)
+		self.filename = StringSelector(
+			frame,
+			self.root.settings.init_stringvar('Filename'),
+			self.FILENAME,
+			command = self._set_filename,
+			tip = self.TIP_FILENAME
+		)
+
 
 	def _select_source(self):
 		'''Select source to image'''

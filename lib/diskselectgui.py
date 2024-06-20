@@ -10,7 +10,7 @@ from .stringutils import StringUtils
 class DiskSelectGui(ChildWindow, EwfImagerLabels):
 	'''GUI to select disk (Linux)'''
 
-	def __init__(self, root, select, physical=False):
+	def __init__(self, root, select, physical=False, exclude=None):
 		'''Window to select disk'''
 		try:
 			if root.child_win_active:
@@ -20,13 +20,14 @@ class DiskSelectGui(ChildWindow, EwfImagerLabels):
 		self.root = root
 		self._select = select
 		self.physical = physical
+		self.exclude = exclude
 		self.root.child_win_active = True
 		ChildWindow.__init__(self, self.root, self.SELECT_SOURCE)
 		self._main_frame()
 		
 	def _main_frame(self):
 		'''Main frame'''
-		blkdevs = LinUtils.lsblk(physical=self.physical)
+		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
 		self.main_frame = ExpandedFrame(self)
 		frame = ExpandedFrame(self.main_frame)
 		self.tree = Tree(frame, text='name', width=GuiConfig.LSBLK_NAME_WIDTH, columns=GuiConfig.LSBLK_COLUMNS_WIDTH)
@@ -39,19 +40,7 @@ class DiskSelectGui(ChildWindow, EwfImagerLabels):
 				StringUtils.str(details['model']),
 				StringUtils.join(details['mountpoints'], delimiter=', ')
 			)
-			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path)
-		'''
-		for diskpath, diskinfo in LinUtils.diskinfo().items():
-			self.tree.insert('', 'end',
-				text = f'Disk {diskpath}: {StringUtils.join(diskinfo["disk"], delimiter=", ")}',
-				iid=f'{diskpath}'
-			)
-			for partition, info in diskinfo['partitions'].items():
-				self.tree.insert(f'{diskpath}', 'end',
-					text=f'Partition {partition}: {StringUtils.join(info, delimiter=", ")}',
-					iid=f'{partition}'
-				)
-		'''
+			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
 		frame = ExpandedFrame(self.main_frame)
