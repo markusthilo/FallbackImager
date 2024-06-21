@@ -231,3 +231,17 @@ new partition after wipe (None: do not create)'''
 	TARGET_REQUIRED = 'Target (drive/files) is required)'
 	SELECT_DRIVE_TO_WIPE = 'Select drive to wipe'
 	SELECT_FILES_TO_WIPE = 'Select file(s) to wipe'
+
+class ArchImagerLabels(EwfImagerLabels):
+	SYSTEM_SETTINGS = 'System settings'
+	DISPLAY = 'Display'
+	TIP_DISPLAY = 'Configure display'
+	KEYBOARD = 'Keyboard layout'
+	KBD_CANDIDATES = ('de', 'es', 'fr', 'gb', 'us')
+	DEFAULT_KBD = 'de'
+	TIP_KEYBOARD = 'Choose keyboard layout'
+	SYSTEM_TIME = 'System time'
+	REAL_TIME = 'Real time'
+	TIP_REAL_TIME = '''The real world time will be written to the
+log file when the imaging process is startet
+(open format, notes/comments are possible)'''

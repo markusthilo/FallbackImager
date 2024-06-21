@@ -105,11 +105,11 @@ class GridSeparator:
 		if incrow:
 			parent.row += 1
 
-class GridLabel:
+class GridLabel(Label):
 	'''| Label |'''
 	def __init__(self, parent, text, column=0, columnspan=255, incrow=True):
-		Label(parent, text=text).grid(row=parent.row, column=column, columnspan=columnspan,
-			sticky='w', padx=GuiConfig.PAD)
+		super().__init__(parent, text=text)
+		self.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
 		if incrow:
 			parent.row += 1
 
@@ -139,11 +139,13 @@ class AddJobButton(GridButton):
 class GridMenu(OptionMenu):
 	'''| | OptionMenu | | |'''
 	def __init__(self, parent, variable, text, values,
-		width=None, column=1, columnspan=2, incrow=True, tip=None):
+		command=None, width=None, column=1, columnspan=2, incrow=True, tip=None):
 		self._variable = variable
 		Label(parent, text=f'{text}:').grid(sticky='e', row=parent.row, column=column, padx=GuiConfig.PAD)
-		super().__init__(parent, self._variable, self._variable.get(), *values)
+		super().__init__(parent, self._variable, self._variable.get(), *values, command=command)
 		self.grid(sticky='w', row=parent.row, column=column+1, columnspan=columnspan-1, padx=GuiConfig.PAD)
+		#if command:
+		#	self._variable.trace('w', command)
 		if not width:
 			width = GuiConfig.MENU_WIDTH
 		self.configure(width=width)

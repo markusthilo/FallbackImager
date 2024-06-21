@@ -12,14 +12,18 @@ Arch ISO to image (EWF) booted device
 '''
 
 from pathlib import Path
+from threading import Thread
+from time import strftime
+from screenlayout.gui import main as display_settings
 from tkinter import Tk, PhotoImage, StringVar
 from lib.linutils import LinUtils
-from lib.guilabeling import EwfImagerLabels
+from lib.guilabeling import ArchImagerLabels
+from lib.guiconfig import GuiConfig
 from lib.diskselectgui import DiskSelectGui
-from lib.guielements import ExpandedFrame, GridLabel, StringSelector
+from lib.guielements import ExpandedFrame, GridLabel, StringSelector, GridMenu
+from lib.guielements import GridSeparator, OutDirSelector, GridBlank, GridButton
 
-
-class Gui(Tk, EwfImagerLabels):
+class Gui(Tk, ArchImagerLabels):
 	'''Definitions for the GUI'''
 
 	MAX_SIZE_X = 1920
@@ -34,71 +38,75 @@ class Gui(Tk, EwfImagerLabels):
 		self.area_x, self.area_y = LinUtils.get_workarea()
 		self.size_x = min(self.area_x-self.PADDING, self.MAX_SIZE_X-self.PADDING)
 		self.size_y = min(self.area_y-self.PADDING, self.MAX_SIZE_Y-self.PADDING)
-		self.geometry(f'{self.size_x}x{self.size_y}')
+		#self.geometry(f'{self.size_x}x{self.size_y}')
 		self.resizable(0, 0)
 		self.appicon = PhotoImage(file='appicon.png')
 		self.iconphoto(True, self.appicon)
 		#self.protocol('WM_DELETE_WINDOW', self._quit_app)
 		frame = ExpandedFrame(self)
-		GridLabel(frame, self.SOURCE)
-		self.source_var = StringVar()
-		self.source_sel = StringSelector(
+		GridLabel(frame, self.SYSTEM_SETTINGS)
+		GridButton(frame, self.DISPLAY, self._display_settings, incrow=False, tip=self.TIP_DISPLAY)
+		GridMenu(
 			frame,
-			self.source_var,
+			StringVar(value=self.DEFAULT_KBD),
+			self.KEYBOARD,
+			LinUtils.get_xkb_layouts(candidates=self.KBD_CANDIDATES),
+			command = self._change_kbd,
+			column = 3,
+			tip = self.TIP_KEYBOARD
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.SOURCE)
+		self.source = StringSelector(
+			frame,
+			StringVar(),
 			self.SELECT,
 			command = self._select_source,
 			tip = self.TIP_SOURCE
 		)
 		GridLabel(frame, self.SETTINGS)
-		self.case_no_var = StringVar(value='CASE NO')
-		self.case_no_sel = StringSelector(
+		self.case_no = StringSelector(
 			frame,
-			self.case_no_var,
+			StringVar(value='CASE NO'),
 			self.CASE_NO,
 			tip = self.TIP_METADATA
 		)
-		self.evidence_no_var = StringVar(value='EVIDENCE NO')
-		self.evidence_no_sel = StringSelector(
+		self.evidence_no = StringSelector(
 			frame,
-			self.evidence_no_var,
+			StringVar(value='EVIDENCE NO'),
 			self.EVIDENCE_NO,
 			tip = self.TIP_METADATA
 		)
-		self.description_var = StringVar(value='DESCRIPTION')
-		self.description_sel = StringSelector(
+		self.description = StringSelector(
 			frame,
-			self.description_var,
+			StringVar(value='DESCRIPTION'),
 			self.DESCRIPTION,
 			tip = self.TIP_METADATA
 		)
-		self.examiner_name_var = StringVar(value='EXAMINER NAME')
-		self.examiner_name_sel = StringSelector(
+		self.examiner_name = StringSelector(
 			frame,
-			self.examiner_name_var,
+			StringVar(value='EXAMINER NAME'),
 			self.EXAMINER_NAME,
 			tip = self.TIP_METADATA
 		)
-		self.notes_var = StringVar(value='NOTES')
-		self.notes_sel = StringSelector(
+		self.notes = StringSelector(
 			frame,
-			self.notes_var,
+			StringVar(value='NOTES'),
 			self.NOTES,
 			tip = self.TIP_NOTE
 		)
-		self.segment_size_var = StringVar(value=self.DEF_SIZE)
-		self.segment_size_sel = StringSelector(
+		self.segment_size = StringSelector(
 			frame,
-			self.segment_size_var,
+			StringVar(value=self.DEF_SIZE),
 			self.SEGMENT_SIZE,
 			width = GuiConfig.SMALL_FIELD_WIDTH,
-			command = self._set_def_size,
 			columnspan = 2,
 			incrow = False,
 			tip=self.TIP_SEGMENT_SIZE
 		)
-		self.compression = GridMenu(
+		self.compression_sel = GridMenu(
 			frame,
-			self.root.settings.init_stringvar('Compression', default='fast'),
+			StringVar(value='fast'),
 			self.COMPRESSION,
 			('fast', 'best', 'none'),
 			column = 3,
@@ -107,7 +115,7 @@ class Gui(Tk, EwfImagerLabels):
 		)
 		self.media_type = GridMenu(
 			frame,
-			self.root.settings.init_stringvar('MediaType', default='fixed'),
+			StringVar(value='fixed'),
 			self.MEDIA_TYPE,
 			('auto', 'fixed', 'removable', 'optical'),
 			column = 5,
@@ -116,7 +124,7 @@ class Gui(Tk, EwfImagerLabels):
 		)
 		self.media_flag = GridMenu(
 			frame,
-			self.root.settings.init_stringvar('MediaFlag', default='physical'),
+			StringVar(value='physical'),
 			self.MEDIA_FLAG,
 			('auto', 'logical', 'physical'),
 			column = 7,
@@ -126,21 +134,65 @@ class Gui(Tk, EwfImagerLabels):
 		GridLabel(frame, self.DESTINATION)
 		self.outdir = OutDirSelector(
 			frame,
-			self.root.settings.init_stringvar('OutDir'),
+			StringVar(),
 			tip = self.TIP_OUTDIR
 		)
 		self.filename = StringSelector(
 			frame,
-			self.root.settings.init_stringvar('Filename'),
+			StringVar(),
 			self.FILENAME,
 			command = self._set_filename,
 			tip = self.TIP_FILENAME
 		)
+		GridSeparator(frame)
+		GridLabel(frame, self.LOGGING)
+		GridLabel(frame, self.SYSTEM_TIME, column=1, incrow=False)
+		self.system_time = LinUtils.get_system_time()
+		self.clock = GridLabel(frame, self.system_time, column=2)
+		self.real_time = StringSelector(
+			frame,
+			StringVar(value=self.system_time),
+			self.REAL_TIME,
+			command = self._set_realtime,
+			tip=self.TIP_REAL_TIME
+		)
+		GridBlank(frame)
 
+	def track(self):
+		'''Track time and block devices'''
+
+		newtime = LinUtils.get_system_time()
+		if newtime != self.system_time:
+			self.system_time = newtime
+		self.clock.config(text=self.system_time)
+		self.clock.after(200, self.track)
+
+
+
+	def _display_settings(self):
+		'''Launch app for display settings'''
+		Thread(target=display_settings).start()
+
+	def _change_kbd(self, kbd_layout):
+		'''Change keyboard layout'''
+		LinUtils.set_xkb_layout(kbd_layout)
 
 	def _select_source(self):
 		'''Select source to image'''
-		DiskSelectGui(self, self.source_var, physical=True)
+		DiskSelectGui(self, self.source._variable, physical=True)
+
+	def _set_filename(self):
+		if not self.filename.get():
+			case_no = self.case_no.get()
+			evidence_number = self.evidence_no.get()
+			description = self.description.get()
+			if case_no and evidence_number and description:
+				self.filename.set(f'{case_no}_{evidence_number}_{description}')
+			else:
+				MissingEntry(self.MISSING_METADATA)
+
+	def _set_realtime(self):
+		self.real_time.set(LinUtils.get_system_time())
 
 		'''
     
@@ -173,4 +225,6 @@ class Gui(Tk, EwfImagerLabels):
 		'''
 
 if __name__ == '__main__':  # start here
-	Gui().mainloop()
+	gui = Gui()
+	gui.track()
+	gui.mainloop()

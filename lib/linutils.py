@@ -5,6 +5,7 @@ from pathlib import Path
 from subprocess import Popen, PIPE, run
 from json import loads
 from re import findall
+from time import strftime
 from .stringutils import StringUtils
 
 class LinUtils:
@@ -255,21 +256,22 @@ class LinUtils:
 				return int(parts[2].strip()), int(parts[3].strip())
 
 	@staticmethod
-	def get_xkb_layouts():
+	def get_xkb_layouts(candidates=None):
 		'''Get possible layouts for setxkbmap'''
-		return sorted(
-			list(
-				{ match.rstrip(':')
-					for match in findall('[a-z]{2}:', Path('/usr/share/X11/xkb/rules/xorg.lst').read_text())
-				}
-			)
-		)
+		layouts = { match.rstrip(':') for match in findall('[a-z]{2}:', Path('/usr/share/X11/xkb/rules/xorg.lst').read_text())}
+		if candidates:
+			layouts = layouts.intersection(candidates)
+		return sorted(list(layouts))
 
 	@staticmethod
 	def set_xkb_layout(layout):
 		'''Set keyboard layout using setxkbmap'''
 		ret = run(['setxkbmap', layout], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
+
+	@staticmethod
+	def get_system_time():
+		return strftime('%G-%m-%d %T %Z/%z')
 
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
