@@ -8,6 +8,7 @@ from tkinter.filedialog import askopenfilenames
 from functools import partial
 from .guilabeling import WipeLabels
 from .guiconfig import GuiConfig
+from .diskselectgui import DiskSelectGui
 from .guielements import MissingEntry, ChildWindow, GridMenu
 from .guielements import ExpandedFrame, GridSeparator, GridLabel
 from .guielements import DirSelector, OutDirSelector, NotebookFrame
@@ -15,6 +16,39 @@ from .guielements import StringSelector, StringRadiobuttons
 from .guielements import FileSelector, LeftButton, RightButton, AddJobButton
 from .linutils import LinUtils
 from .stringutils import StringUtils
+
+class SelectTargetWindow(DiskSelectGui, WipeLabels):
+	'''Gui to slect target to wipe'''
+
+	def __init__(self, root, title, select):
+		'''Window to select disk'''
+		try:
+			if root.child_win_active:
+				return
+		except AttributeError:
+			pass
+		DiskSelectGui.__init__(self, root, self.TARGET, select, physical=True)
+
+	def _main_frame(self):
+		'''Main frame'''
+		self.main_frame = ExpandedFrame(self)
+		self.lsblk(self.main_frame)
+		frame = ExpandedFrame(self.main_frame)
+		LeftButton(frame, self.REFRESH, self._refresh)
+		frame = ExpandedFrame(self.main_frame)
+		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
+		frame = ExpandedFrame(self.main_frame)
+		LeftButton(frame, self.SELECT, self._done)
+		RightButton(frame, self.QUIT, self.destroy)
+
+	def _select_files(self):
+		'''Choose file(s) to wipe'''
+		self.destroy()
+		filenames = [f'"{filename}"' for filename in askopenfilenames(title=self.SELECT_FILES_TO_WIPE)]
+		if filenames:
+			self._select.set(' '.join(filenames))
+		else:
+			self._select.set('')
 
 class WipeRGui(WipeLabels):
 	'''Notebook page for WipeR'''
@@ -42,7 +76,6 @@ class WipeRGui(WipeLabels):
 			command=self._select_target,
 			tip=self.TIP_TARGET
 		)
-		self.target_type = None
 		GridSeparator(frame)
 		GridLabel(frame, self.LOGGING)
 		self.outdir = OutDirSelector(frame, self.root.settings.init_stringvar('OutDir'))
@@ -147,63 +180,11 @@ class WipeRGui(WipeLabels):
 
 	def _select_target(self):
 		'''Select drive to wipe'''
-		if self.root.child_win_active:
-			return
-		self.target_window = ChildWindow(self.root, self.SELECT)
-		frame = ExpandedFrame(self.target_window)
-		GridLabel(frame, self.SELECT_DRIVE_TO_WIPE)
-		for diskpath, diskinfo in LinUtils.diskinfo().items():
-			infotext = f'Disk size: {StringUtils.join(diskinfo["disk"], delimiter=", ")}'
-			for partition, info in diskinfo['partitions'].items():
-				infotext += f'\n- {partition}: {StringUtils.join(info, delimiter=", ")}'
-			Button(
-				frame,
-				text = diskpath,
-				command = partial(self._put_drive, diskpath),
-				width = GuiConfig.BUTTON_WIDTH
-			).grid(row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
-			text = ScrolledText(frame, width=GuiConfig.ENTRY_WIDTH,
-				height=min(len(f'{(infotext)}'.split('\n')), GuiConfig.MAX_ENTRY_HEIGHT))
-			text.grid(row=frame.row, column=1)
-			text.bind('<Key>', lambda dummy: 'break')
-			text.insert('end', infotext)
-			text.configure(state='disabled')
-			frame.row += 1
-		frame = ExpandedFrame(self.target_window)
-		LeftButton(frame, self.REFRESH, self._refresh_target_window)
-		frame = ExpandedFrame(self.target_window)
-		GridSeparator(frame)
-		frame = ExpandedFrame(self.target_window)
-		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
-		RightButton(frame, self.QUIT, self.target_window.destroy)
-
-	def _refresh_target_window(self):
-		'''Destroy and reopen Target Window'''
-		self.target_window.destroy()
-		self._select_target()
-
-	def _put_drive(self, drive):
-		'''Put drive id to target string'''
-		self.target_window.destroy()
-		self.target.set(drive)
-		self.target_type = 'drive'
-
-	def _select_files(self):
-		'''Choose file(s) to wipe'''
-		self.target_window.destroy()
-		self.filenames = askopenfilenames(title=self.SELECT_FILES_TO_WIPE)
-		if self.filenames:
-			plus = len(self.filenames) -1
-			target = self.filenames[0]
-			if plus > 0:
-				if plus == 1:
-					target += f' + {plus} {self.FILE}'
-				else:
-					target += f' + {plus} {self.FILES}'
-			self.target.set(target)
-			self.target_type = 'files'
-		else:
-			self.target_type = None
+		self.select_target = SelectTargetWindow(
+			self.root,
+			self.SELECT_DRIVE_TO_WIPE,
+			self.target._variable
+		)
 
 	def _add_job(self):
 		'''Generate command line'''
@@ -219,7 +200,7 @@ class WipeRGui(WipeLabels):
 		max_bad_blocks = self.max_bad_blocks.get()
 		max_retries = self.max_retries.get()
 		log_head = self.log_head.get()
-		if not target or not self.target_type:
+		if not target:
 			MissingEntry(self.TARGET_REQUIRED)
 			return
 		if not outdir:
@@ -256,10 +237,7 @@ class WipeRGui(WipeLabels):
 				pass
 			else:
 				cmd += f' --maxretries {max_retries}'
-		if self.target_type == 'files' and self.filenames:
-			for filename in self.filenames:
-				cmd += f' "{filename}"'
-		else:
+		if LinUtils.is_disk(target):
 			if part_table != '-' and filesystem != '-' and task != 'Verify':
 				if part_table == 'mbr':
 					cmd += f' --mbr'
@@ -270,5 +248,5 @@ class WipeRGui(WipeLabels):
 					cmd += f' --loghead "{log_head}"'
 				if mountpoint:
 					cmd += f' --mount "{mountpoint}"'
-			cmd += f' {target}'
+		cmd += f' {target}'
 		self.root.append_job(cmd)

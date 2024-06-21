@@ -137,7 +137,7 @@ class EwfImagerGui(EwfImagerLabels):
 
 	def _select_source(self):
 		'''Select source to image'''
-		DiskSelectGui(self.root, self.source_var)
+		DiskSelectGui(self.root, self.SELECT_TARGET, self.source_var)
 
 	def _set_ts_case_no(self):
 		if not self.case_no.get():

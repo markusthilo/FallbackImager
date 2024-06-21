@@ -3,7 +3,7 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-06-20'
+__version__ = '0.5.3_2024-06-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,7 +13,6 @@ Arch ISO to image (EWF) booted device
 
 from pathlib import Path
 from threading import Thread
-from time import strftime
 from screenlayout.gui import main as display_settings
 from tkinter import Tk, PhotoImage, StringVar
 from lib.linutils import LinUtils
@@ -26,19 +25,12 @@ from lib.guielements import GridSeparator, OutDirSelector, GridBlank, GridButton
 class Gui(Tk, ArchImagerLabels):
 	'''Definitions for the GUI'''
 
-	MAX_SIZE_X = 1920
-	MAX_SIZE_Y = 1080
-	PADDING = 40
-	DEF_SIZE = '40'
+	DEFAULT_SEGMENT_SIZE = '40'
 
 	def __init__(self):
 		'''Build GUI'''
 		Tk.__init__(self)
 		self.title(f'{__app_name__} {__version__}')
-		self.area_x, self.area_y = LinUtils.get_workarea()
-		self.size_x = min(self.area_x-self.PADDING, self.MAX_SIZE_X-self.PADDING)
-		self.size_y = min(self.area_y-self.PADDING, self.MAX_SIZE_Y-self.PADDING)
-		#self.geometry(f'{self.size_x}x{self.size_y}')
 		self.resizable(0, 0)
 		self.appicon = PhotoImage(file='appicon.png')
 		self.iconphoto(True, self.appicon)
@@ -56,15 +48,7 @@ class Gui(Tk, ArchImagerLabels):
 			tip = self.TIP_KEYBOARD
 		)
 		GridSeparator(frame)
-		GridLabel(frame, self.SOURCE)
-		self.source = StringSelector(
-			frame,
-			StringVar(),
-			self.SELECT,
-			command = self._select_source,
-			tip = self.TIP_SOURCE
-		)
-		GridLabel(frame, self.SETTINGS)
+		GridLabel(frame, self.BASIC_METADATA)
 		self.case_no = StringSelector(
 			frame,
 			StringVar(value='CASE NO'),
@@ -77,16 +61,54 @@ class Gui(Tk, ArchImagerLabels):
 			self.EVIDENCE_NO,
 			tip = self.TIP_METADATA
 		)
-		self.description = StringSelector(
-			frame,
-			StringVar(value='DESCRIPTION'),
-			self.DESCRIPTION,
-			tip = self.TIP_METADATA
-		)
 		self.examiner_name = StringSelector(
 			frame,
 			StringVar(value='EXAMINER NAME'),
 			self.EXAMINER_NAME,
+			tip = self.TIP_METADATA
+		)
+		GridSeparator(frame)
+		GridLabel(frame, self.HARDWARE)
+		GridButton(frame, self.SYSTEM_TIME, self._set_realtime, incrow=False, tip=self.TIP_TIME)
+		self.system_time = LinUtils.get_system_time()
+		self.clock = GridLabel(frame, self.system_time, column=2)
+		self.real_time = StringSelector(
+			frame,
+			StringVar(value=self.system_time),
+			self.REAL_TIME,
+			command = self._set_realtime,
+			tip=self.TIP_TIME
+		)
+
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			StringVar(),
+			tip = self.TIP_OUTDIR
+		)
+		self.filename = StringSelector(
+			frame,
+			StringVar(),
+			self.FILENAME,
+			command = self._set_filename,
+			tip = self.TIP_FILENAME
+		)
+
+
+
+		GridSeparator(frame)
+		GridLabel(frame, self.SOURCE)
+		self.source = StringSelector(
+			frame,
+			StringVar(),
+			self.SELECT,
+			command = self._select_source,
+			tip = self.TIP_SOURCE
+		)
+		self.description = StringSelector(
+			frame,
+			StringVar(value='DESCRIPTION'),
+			self.DESCRIPTION,
 			tip = self.TIP_METADATA
 		)
 		self.notes = StringSelector(
@@ -97,7 +119,7 @@ class Gui(Tk, ArchImagerLabels):
 		)
 		self.segment_size = StringSelector(
 			frame,
-			StringVar(value=self.DEF_SIZE),
+			StringVar(value=self.DEFAULT_SEGMENT_SIZE),
 			self.SEGMENT_SIZE,
 			width = GuiConfig.SMALL_FIELD_WIDTH,
 			columnspan = 2,
@@ -144,23 +166,10 @@ class Gui(Tk, ArchImagerLabels):
 			command = self._set_filename,
 			tip = self.TIP_FILENAME
 		)
-		GridSeparator(frame)
-		GridLabel(frame, self.LOGGING)
-		GridLabel(frame, self.SYSTEM_TIME, column=1, incrow=False)
-		self.system_time = LinUtils.get_system_time()
-		self.clock = GridLabel(frame, self.system_time, column=2)
-		self.real_time = StringSelector(
-			frame,
-			StringVar(value=self.system_time),
-			self.REAL_TIME,
-			command = self._set_realtime,
-			tip=self.TIP_REAL_TIME
-		)
 		GridBlank(frame)
 
 	def track(self):
 		'''Track time and block devices'''
-
 		newtime = LinUtils.get_system_time()
 		if newtime != self.system_time:
 			self.system_time = newtime
@@ -177,9 +186,13 @@ class Gui(Tk, ArchImagerLabels):
 		'''Change keyboard layout'''
 		LinUtils.set_xkb_layout(kbd_layout)
 
+	def _acquire_hardware(self):
+		'''Acquire hardware infos'''
+		pass
+
 	def _select_source(self):
 		'''Select source to image'''
-		DiskSelectGui(self, self.source._variable, physical=True)
+		DiskSelectGui(self, self.SELECT_SOURCE, self.source._variable, physical=True, exclude='occupied')
 
 	def _set_filename(self):
 		if not self.filename.get():
@@ -225,6 +238,8 @@ class Gui(Tk, ArchImagerLabels):
 		'''
 
 if __name__ == '__main__':  # start here
+	#LinUtils.set_unoccupied_ro()
+	#LinUtils.get_blockdevs()
 	gui = Gui()
 	gui.track()
 	gui.mainloop()

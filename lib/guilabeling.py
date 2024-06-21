@@ -93,6 +93,7 @@ MiB, GiB or number of segments
 	MISSING_METADATA = 'Case number, evidence number and description are required to generate filename'
 	METADATA_REQUIRED = 'Case number, evidence number and description are required as metadata for the EWF/E01 image'
 	UNDECODEABLE_SEGMENT_SIZE = 'Undecodable segment size'
+	SELECT_TARGET = 'Select target'
 
 class OscdImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source root to build ISO image file from'
@@ -241,7 +242,11 @@ class ArchImagerLabels(EwfImagerLabels):
 	DEFAULT_KBD = 'de'
 	TIP_KEYBOARD = 'Choose keyboard layout'
 	SYSTEM_TIME = 'System time'
-	REAL_TIME = 'Real time'
-	TIP_REAL_TIME = '''The real world time will be written to the
-log file when the imaging process is startet
-(open format, notes/comments are possible)'''
+	REAL_TIME = 'Real world time'
+	TIP_TIME = '''The real world time will be written to the
+hardware file when the system info acquirement is startet
+(unrestricted format, notes/comments are possible)'''
+	ACQUIRE_HARDWARE = 'Acquire hardware'
+	TIP_ACQUIRE_HARDWARE = 'Acquire hardware information including hardware/mother board time'
+	BASIC_METADATA = 'Basic metadata'
+	HARDWARE = 'Hardware'

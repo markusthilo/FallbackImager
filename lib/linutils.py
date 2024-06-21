@@ -90,7 +90,7 @@ class LinUtils:
 		}
 
 	@staticmethod
-	def isdisk(dev):
+	def is_disk(dev):
 		'''Use lsblk with JSON output to check if device is a disk'''
 		try:
 			return loads(run(['lsblk', '--json', '-o', 'TYPE', f'{dev}'],
@@ -121,9 +121,12 @@ class LinUtils:
 				'label': dev['label'],
 				'vendor': dev['vendor'],
 				'model': dev['model'],
+				'rev': dev['rev'],
+				'serial': dev['serial'],
 				'ro': dev['ro'],
 				'mountpoints': dev['mountpoints']
-			} for dev in loads(run(['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,RO,MOUNTPOINTS'],
+			} for dev in loads(run(
+				['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,REV,SERIAL,RO,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
 		}
 		for outer_path in blkdevs:
@@ -140,6 +143,10 @@ class LinUtils:
 						or ( details['type'] == 'part' and details['parent'] and blkdevs[details['parent']]['type'] in ('disk', 'rom') )
 					)
 			}
+		if exclude == 'mounted':
+			exclude = LinUtils.get_mounted()
+		elif exclude == 'occupied':
+			exclude = LinUtils.get_occupied()
 		if exclude:
 			blkdevs = {
 				path: details for path, details in blkdevs.items()
@@ -148,10 +155,21 @@ class LinUtils:
 		return blkdevs
 
 	@staticmethod
+	def get_blockdev(dev):
+		'''Get infos about one block device'''
+		try:
+			return loads(run(
+				['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,REV,SERIAL,RO,MOUNTPOINTS', dev],
+				capture_output=True, text=True).stdout)['blockdevices'][0]
+		except IndexError:
+			return
+
+	@staticmethod
 	def diskdetails(dev):
 		'''Use lsblk with JSON output to get enhanced infos about block devoce'''
 		details = dict()
-		for key, value in loads(run(['lsblk', '--json', '-o', 'LABEL,SIZE,VENDOR,MODEL,REV,SERIAL', f'{dev}'],
+		for key, value in loads(run(
+			['lsblk', '--json', '-o', 'LABEL,SIZE,VENDOR,MODEL,REV,SERIAL', f'{dev}'],
 			capture_output=True, text=True).stdout)['blockdevices'][0].items():
 			if value:
 				details[key] = value.strip()
@@ -243,6 +261,15 @@ class LinUtils:
 		for dev in occopied_physical_blkdevs:
 			LinUtils.set_ro(dev)
 		return occopied_physical_blkdevs
+
+	@staticmethod
+	def dmidecode(*args):
+		'''Run dmidecode'''
+		cmd = ['dmidecode']
+		if args:
+			cmd.extend(args)
+		ret = run(cmd, capture_output=True, text=True)
+		return ret.stdout, ret.stderr
 
 	@staticmethod
 	def get_workarea():

@@ -113,7 +113,7 @@ class EwfImager:
 		if media_flags:
 			self.infos['media_flags'] = media_flags
 		else:
-			if LinUtils.isdisk(self.source):
+			if LinUtils.is_disk(self.source):
 				self.infos['media_flags'] = 'physical (detected/estimated)'
 			else:
 				self.infos['media_flags'] = 'logical (detected/estimated)'
