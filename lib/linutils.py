@@ -11,6 +11,8 @@ from .stringutils import StringUtils
 class LinUtils:
 	'Tools for Linux based systems'
 
+	UDEV_PATH = Path('/etc/udev/rules.d/71-blockdev_setro')
+
 	@staticmethod
 	def find_bin(name, parent_path):
 		'''Find a binary'''
@@ -36,6 +38,26 @@ class LinUtils:
 		'''Set block device to read and write access'''
 		ret = run(['blockdev', '--setrw', f'{dev}'], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
+
+	@staticmethod
+	def udevadm_reload():
+		'''Reload udev rules'''
+		ret = run(['udevadm', 'control', '--reload-rules'], capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	@staticmethod
+	def enable_udev_ro():
+		'''Set udev role to set block devices to ro on plugin'''
+		LinUtils.UDEV_PATH.write_text(
+			'ACTION=="add", SUBSYSTEM=="block", RUN+="blockdev --setro /dev/%k"'
+		)
+		return LinUtils.udevadm_reload()
+
+	@staticmethod
+	def disable_udev_ro():
+		'''Disable udev ro rule'''
+		LinUtils.UDEV_PATH.unlink(missing_ok=True)
+		return LinUtils.udevadm_reload()
 
 	@staticmethod
 	def get_blockdevs():
@@ -112,7 +134,7 @@ class LinUtils:
 		}
 
 	@staticmethod
-	def lsblk(physical=False, exclude=None):
+	def lsblk(physical=False, ro=False, exclude=None):
 		'''Use block devices'''
 		blkdevs = {
 			dev['path']: {
@@ -142,6 +164,11 @@ class LinUtils:
 						details['type'] in ('disk', 'rom')
 						or ( details['type'] == 'part' and details['parent'] and blkdevs[details['parent']]['type'] in ('disk', 'rom') )
 					)
+			}
+		if ro:
+			blkdevs = {
+				path: details for path, details in blkdevs.items()
+					if details['ro'] == '1'
 			}
 		if exclude == 'mounted':
 			exclude = LinUtils.get_mounted()
@@ -224,9 +251,9 @@ class LinUtils:
 		return ret.stdout, ret.stderr
 
 	@staticmethod
-	def mount(dev, target):
+	def mount(part, target):
 		'''Use mount'''
-		ret = run(['mount', f'{dev}', f'{target}'], capture_output=True, text=True)
+		ret = run(['mount', f'{part}', f'{target}'], capture_output=True, text=True)
 		return ret.stdout, ret.stderr
 
 	@staticmethod
@@ -261,6 +288,15 @@ class LinUtils:
 		for dev in occopied_physical_blkdevs:
 			LinUtils.set_ro(dev)
 		return occopied_physical_blkdevs
+
+	@staticmethod
+	def mount_rw(part, target):
+		'''Set partition and root device to rw and mount'''
+		stdout_part, stderr_part = LinUtils.set_rw(part)
+		stdout_root, stderr_root = LinUtils.set_rw(LinUtils.rootdev_of(part))
+		stdout_mount, stderr_mount = LinUtils.mount(part, target)
+		return (f'{stdout_part}\n{stdout_root}\n{stdout_mount}',
+			f'{stderr_part}\n{stderr_root}\n{stderr_mount}')
 
 	@staticmethod
 	def dmidecode(*args):

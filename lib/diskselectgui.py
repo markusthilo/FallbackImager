@@ -44,7 +44,7 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 			width=GuiConfig.LSBLK_NAME_WIDTH,
 			columns=GuiConfig.LSBLK_COLUMNS_WIDTH
 		)
-		for path, details in blkdevs.items():
+		for path, details in LinUtils.lsblk(physical=self.physical, exclude=self.exclude).items():
 			values = (
 				details['type'],
 				details['size'],
@@ -86,7 +86,11 @@ class WriteDestinationGui(ChildWindow, ArchImagerLabels):
 		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
 		self.main_frame = ExpandedFrame(self)
 		frame = ExpandedFrame(self.main_frame)
-		self.tree = Tree(frame, text='name', width=GuiConfig.LSBLK_NAME_WIDTH, columns=GuiConfig.LSBLK_COLUMNS_WIDTH)
+		self.tree = Tree(frame,
+			text = 'name',
+			width = GuiConfig.LSBLK_NAME_WIDTH,
+			columns = GuiConfig.LSBLK_COLUMNS_WIDTH
+		)
 		for path, details in blkdevs.items():
 			values = (
 				details['type'],
