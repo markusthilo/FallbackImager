@@ -26,6 +26,7 @@ class GuiConfig:
 		'label': 80,
 		'vendor': 80,
 		'model': 200,
+		'rev': 80,
 		'mountpoints': 200
 	}
 	HELP_HEIGHT = 40

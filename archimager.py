@@ -3,7 +3,7 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-06-21'
+__version__ = '0.5.3_2024-06-22'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -18,9 +18,9 @@ from tkinter import Tk, PhotoImage, StringVar
 from lib.linutils import LinUtils
 from lib.guilabeling import ArchImagerLabels
 from lib.guiconfig import GuiConfig
-from lib.diskselectgui import DiskSelectGui
+from lib.diskselectgui import DiskSelectGui, WriteDestinationGui
 from lib.guielements import ExpandedFrame, GridLabel, StringSelector, GridMenu
-from lib.guielements import GridSeparator, OutDirSelector, GridBlank, GridButton
+from lib.guielements import GridSeparator, GridBlank, GridButton
 
 class Gui(Tk, ArchImagerLabels):
 	'''Definitions for the GUI'''
@@ -29,6 +29,7 @@ class Gui(Tk, ArchImagerLabels):
 
 	def __init__(self):
 		'''Build GUI'''
+		self.fixed_devs = LinUtils.get_blockdevs()
 		Tk.__init__(self)
 		self.title(f'{__app_name__} {__version__}')
 		self.resizable(0, 0)
@@ -81,9 +82,11 @@ class Gui(Tk, ArchImagerLabels):
 		)
 
 		GridLabel(frame, self.DESTINATION)
-		self.outdir = OutDirSelector(
+		self.outdir = StringSelector(
 			frame,
 			StringVar(),
+			self.DESTINATION,
+			command = self._select_outdir,
 			tip = self.TIP_OUTDIR
 		)
 		self.filename = StringSelector(
@@ -126,7 +129,7 @@ class Gui(Tk, ArchImagerLabels):
 			incrow = False,
 			tip=self.TIP_SEGMENT_SIZE
 		)
-		self.compression_sel = GridMenu(
+		self.compression = GridMenu(
 			frame,
 			StringVar(value='fast'),
 			self.COMPRESSION,
@@ -152,31 +155,29 @@ class Gui(Tk, ArchImagerLabels):
 			column = 7,
 			tip = self.TIP_METADATA
 		)
-		GridSeparator(frame)
-		GridLabel(frame, self.DESTINATION)
-		self.outdir = OutDirSelector(
-			frame,
-			StringVar(),
-			tip = self.TIP_OUTDIR
-		)
-		self.filename = StringSelector(
-			frame,
-			StringVar(),
-			self.FILENAME,
-			command = self._set_filename,
-			tip = self.TIP_FILENAME
-		)
+		#GridSeparator(frame)
+		#GridLabel(frame, self.DESTINATION)
+		#self.outdir = OutDirSelector(
+		#	frame,
+		#	StringVar(),
+		#	tip = self.TIP_OUTDIR
+		#)
+		#self.filename = StringSelector(
+		#	frame,
+		#	StringVar(),
+		#	self.FILENAME,
+		#	command = self._set_filename,
+		#	tip = self.TIP_FILENAME
+		#)
 		GridBlank(frame)
 
 	def track(self):
-		'''Track time and block devices'''
+		'''Track time'''
 		newtime = LinUtils.get_system_time()
 		if newtime != self.system_time:
 			self.system_time = newtime
 		self.clock.config(text=self.system_time)
 		self.clock.after(200, self.track)
-
-
 
 	def _display_settings(self):
 		'''Launch app for display settings'''
@@ -186,13 +187,21 @@ class Gui(Tk, ArchImagerLabels):
 		'''Change keyboard layout'''
 		LinUtils.set_xkb_layout(kbd_layout)
 
+	def _select_outdir(self):
+		'''Open and select write destination'''
+		WriteDestinationGui(self, self.outdir)
+
+
 	def _acquire_hardware(self):
 		'''Acquire hardware infos'''
 		pass
 
 	def _select_source(self):
 		'''Select source to image'''
-		DiskSelectGui(self, self.SELECT_SOURCE, self.source._variable, physical=True, exclude='occupied')
+		DiskSelectGui(self, self.SELECT_SOURCE, self.source._variable,
+			physical = True,
+			exclude = 'occupied'
+		)
 
 	def _set_filename(self):
 		if not self.filename.get():
@@ -239,7 +248,6 @@ class Gui(Tk, ArchImagerLabels):
 
 if __name__ == '__main__':  # start here
 	#LinUtils.set_unoccupied_ro()
-	#LinUtils.get_blockdevs()
 	gui = Gui()
 	gui.track()
 	gui.mainloop()
