@@ -29,5 +29,15 @@ class GuiConfig:
 		'rev': 80,
 		'mountpoints': 200
 	}
+	WRITE_DEST_NAME_WIDTH = 200
+	WRITE_DEST_COLUMNS_WIDTH = {
+		'type': 60,
+		'size': 60,
+		'label': 80,
+		'vendor': 80,
+		'model': 200,
+		'rev': 80,
+		'ro': 40
+	}
 	HELP_HEIGHT = 40
 	HELP_WIDTH = 120

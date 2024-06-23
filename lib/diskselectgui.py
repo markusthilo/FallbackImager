@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
+from .extpath import ExtPath
 from .guilabeling import BasicLabels, ArchImagerLabels
 from .guiconfig import GuiConfig
 from .guielements import ChildWindow, ExpandedFrame, Tree, LeftButton, RightButton
@@ -66,10 +68,10 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 		self.destroy()
 
 class WriteDestinationGui(ChildWindow, ArchImagerLabels):
-	'''GUI to select disk to write(Linux)'''
+	'''GUI to select target to write (Linux)'''
 
 	def __init__(self, root, select):
-		'''Window to select disk'''
+		'''Window to select partition, or directory'''
 		try:
 			if root.child_win_active:
 				return
@@ -83,15 +85,19 @@ class WriteDestinationGui(ChildWindow, ArchImagerLabels):
 		
 	def _main_frame(self):
 		'''Main frame'''
-		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
+		blkdevs = LinUtils.lsblk(physical=True, exclude=self.root.fixed_devs)
 		self.main_frame = ExpandedFrame(self)
 		frame = ExpandedFrame(self.main_frame)
 		self.tree = Tree(frame,
 			text = 'name',
-			width = GuiConfig.LSBLK_NAME_WIDTH,
-			columns = GuiConfig.LSBLK_COLUMNS_WIDTH
+			width = GuiConfig.WRITE_DEST_NAME_WIDTH,
+			columns = GuiConfig.WRITE_DEST_COLUMNS_WIDTH
 		)
-		for path, details in blkdevs.items():
+		for dev, details in blkdevs.items():
+			if details['ro']:
+				ro = self.YES
+			else:
+				ro = self.NO
 			values = (
 				details['type'],
 				details['size'],
@@ -99,9 +105,17 @@ class WriteDestinationGui(ChildWindow, ArchImagerLabels):
 				StringUtils.str(details['vendor']),
 				StringUtils.str(details['model']),
 				StringUtils.str(details['rev']),
-				StringUtils.join(details['mountpoints'], delimiter=', ')
+				ro
 			)
-			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)
+			self.tree.insert(details['parent'], 'end', text=dev, values=values, iid=dev, open=True)
+			if details['type'] == 'part':
+				mountpoint = LinUtils.mountpoint(dev)
+				if mountpoint:
+					for path, parent, name in ExtPath.walk_dirs(mountpoint):
+						if parent == mountpoint:
+							parent = 'dev'
+						print(path, parent, name)
+						self.tree.insert(parent, 'end', text=name, values='dir', iid=path, open=True)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
 		frame = ExpandedFrame(self.main_frame)

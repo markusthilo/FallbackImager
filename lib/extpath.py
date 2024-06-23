@@ -90,6 +90,13 @@ class ExtPath:
 		return len(list(root.rglob('*')))
 
 	@staticmethod
+	def walk_dirs(root):
+		'''Get all (sub-)directories'''
+		for path in root.rglob('*'):
+			if path.is_dir():
+				yield path, path.parent, path.name
+
+	@staticmethod
 	def read_utf_head(path, lines_in=10, lines_out=1):
 		'''Read first lines of TSV/text file while checking UTF encoding'''
 		lines = list()

@@ -276,6 +276,17 @@ class LinUtils:
 		return {LinUtils.rootdev_of(part) for part in mounted} | set(mounted)
 
 	@staticmethod
+	def mountpoint(part):
+		'''Return mountpoint if partition is mounted'''
+		ret = run(['mount'], capture_output=True, text=True)
+		for line in ret.stdout.split('\n'):
+			if line.startswith(part):
+				try:
+					return Path(line.split(' ', 3)[2])
+				except IndexError:
+					return
+
+	@staticmethod
 	def get_ro(dev):
 		'''Get rw/ro of given blockdevice'''
 		return loads(run(['lsblk', '--json', '-o', 'RO', f'{dev}'],
