@@ -111,11 +111,13 @@ class WriteDestinationGui(ChildWindow, ArchImagerLabels):
 			if details['type'] == 'part':
 				mountpoint = LinUtils.mountpoint(dev)
 				if mountpoint:
-					for path, parent, name in ExtPath.walk_dirs(mountpoint):
+					for path, parent, name, is_dir in ExtPath.walk_dirs(mountpoint):
 						if parent == mountpoint:
 							parent = 'dev'
-						print(path, parent, name)
-						self.tree.insert(parent, 'end', text=name, values='dir', iid=path, open=True)
+						if is_dir:
+							self.tree.insert(parent, 'end', text=name, values='dir', iid=path, open=True)
+						else:
+							self.tree.insert(parent, 'end', text=name, values='file', iid=path, open=False)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
 		frame = ExpandedFrame(self.main_frame)

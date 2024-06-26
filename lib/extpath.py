@@ -94,7 +94,9 @@ class ExtPath:
 		'''Get all (sub-)directories'''
 		for path in root.rglob('*'):
 			if path.is_dir():
-				yield path, path.parent, path.name
+				yield path, path.parent, path.name, True
+			elif path.is_file():
+				yield path, path.parent, path.name, False
 
 	@staticmethod
 	def read_utf_head(path, lines_in=10, lines_out=1):
