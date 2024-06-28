@@ -85,7 +85,7 @@ to make sure, source stays untouched'''
 	TIP_NOTE = 'Select this line to put in the image metadata'
 	SEGMENT_SIZE = 'Segment size'
 	TIP_SEGMENT_SIZE = '''Segment size of EWF/E01 image in
-MiB, GiB or number of segments
+MiB, GiB or source size / n
 (e.g. 512m, 4g, 40)'''
 	DEF_SIZE = '40'
 	TIP_COMPRESSION = 'Compression level of the EWF/E01 image'

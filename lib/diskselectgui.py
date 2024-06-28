@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from .extpath import ExtPath
-from .guilabeling import BasicLabels, ArchImagerLabels
+
+from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
 from .guielements import ChildWindow, ExpandedFrame, Tree, LeftButton, RightButton
 from .linutils import LinUtils
@@ -33,8 +33,6 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 		self.lsblk(self.main_frame)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
-		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.SELECT, self._done)
 		RightButton(frame, self.QUIT, self.destroy)
 
 	def lsblk(self, root):
@@ -56,80 +54,15 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 				StringUtils.join(details['mountpoints'], delimiter=', ')
 			)
 			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)
+		self.tree.bind("<Double-1>", self._choose)
+
+	def _choose(self, event):
+		'''Run on double click'''
+		item = self.tree.identify('item', event.x, event.y)
+		self._select.set(self.tree.item(item)['text'])
+		self.destroy()
 
 	def _refresh(self):
 		'''Destroy and reopen Target Window'''
 		self.main_frame.destroy()
 		self._main_frame()
-
-	def _done(self):
-		'''Set variable and quit'''
-		self._select.set(self.tree.focus())
-		self.destroy()
-
-class WriteDestinationGui(ChildWindow, ArchImagerLabels):
-	'''GUI to select target to write (Linux)'''
-
-	def __init__(self, root, select):
-		'''Window to select partition, or directory'''
-		try:
-			if root.child_win_active:
-				return
-		except AttributeError:
-			pass
-		self.root = root
-		self._select = select
-		self.root.child_win_active = True
-		ChildWindow.__init__(self, self.root, self.SELECT_TARGET)
-		self._main_frame()
-		
-	def _main_frame(self):
-		'''Main frame'''
-		blkdevs = LinUtils.lsblk(physical=True, exclude=self.root.fixed_devs)
-		self.main_frame = ExpandedFrame(self)
-		frame = ExpandedFrame(self.main_frame)
-		self.tree = Tree(frame,
-			text = 'name',
-			width = GuiConfig.WRITE_DEST_NAME_WIDTH,
-			columns = GuiConfig.WRITE_DEST_COLUMNS_WIDTH
-		)
-		for dev, details in blkdevs.items():
-			if details['ro']:
-				ro = self.YES
-			else:
-				ro = self.NO
-			values = (
-				details['type'],
-				details['size'],
-				StringUtils.str(details['label']),
-				StringUtils.str(details['vendor']),
-				StringUtils.str(details['model']),
-				StringUtils.str(details['rev']),
-				ro
-			)
-			self.tree.insert(details['parent'], 'end', text=dev, values=values, iid=dev, open=True)
-			if details['type'] == 'part':
-				mountpoint = LinUtils.mountpoint(dev)
-				if mountpoint:
-					for path, parent, name, is_dir in ExtPath.walk_dirs(mountpoint):
-						if parent == mountpoint:
-							parent = 'dev'
-						if is_dir:
-							self.tree.insert(parent, 'end', text=name, values='dir', iid=path, open=True)
-						else:
-							self.tree.insert(parent, 'end', text=name, values='file', iid=path, open=False)
-		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.REFRESH, self._refresh)
-		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.SELECT, self._done)
-		RightButton(frame, self.QUIT, self.destroy)
-
-	def _refresh(self):
-		'''Destroy and reopen Target Window'''
-		self.main_frame.destroy()
-		self._main_frame()
-
-	def _done(self):
-		'''Set variable and quit'''
-		self._select.set(self.tree.focus())
-		self.destroy()

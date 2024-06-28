@@ -15,12 +15,101 @@ from pathlib import Path
 from threading import Thread
 from screenlayout.gui import main as display_settings
 from tkinter import Tk, PhotoImage, StringVar
+from lib.extpath import ExtPath
+from lib.stringutils import StringUtils
 from lib.linutils import LinUtils
 from lib.guilabeling import ArchImagerLabels
 from lib.guiconfig import GuiConfig
-from lib.diskselectgui import DiskSelectGui, WriteDestinationGui
+from lib.diskselectgui import DiskSelectGui
 from lib.guielements import ExpandedFrame, GridLabel, StringSelector, GridMenu
-from lib.guielements import GridSeparator, GridBlank, GridButton
+from lib.guielements import GridSeparator, GridBlank, GridButton, ChildWindow
+from lib.guielements import Tree, LeftButton, RightButton
+
+class WriteDestinationGui(ChildWindow, ArchImagerLabels, GuiConfig):
+	'''GUI to select target to write (Linux)'''
+
+	def __init__(self, root, select):
+		'''Window to select partition, or directory'''
+		try:
+			if root.child_win_active:
+				return
+		except AttributeError:
+			pass
+		self.root = root
+		self._select = select
+		self.root.child_win_active = True
+		ChildWindow.__init__(self, self.root, self.SELECT_TARGET)
+		self._main_frame()
+		
+	def _main_frame(self):
+		'''Main frame'''
+		blkdevs = LinUtils.lsblk(physical=True, exclude=self.root.fixed_devs)
+		self.main_frame = ExpandedFrame(self)
+		frame = ExpandedFrame(self.main_frame)
+		self.tree = Tree(frame,
+			text = 'name',
+			width = GuiConfig.WRITE_DEST_NAME_WIDTH,
+			columns = GuiConfig.WRITE_DEST_COLUMNS_WIDTH
+		)
+		for dev, details in blkdevs.items():
+			if details['ro']:
+				ro = self.YES
+			else:
+				ro = self.NO
+			values = (
+				details['type'],
+				details['size'],
+				StringUtils.str(details['label']),
+				StringUtils.str(details['vendor']),
+				StringUtils.str(details['model']),
+				StringUtils.str(details['rev']),
+				ro
+			)
+			if details['type'] == 'part':
+				self.tree.insert(details['parent'], 'end',
+					text = dev,
+					values = values,
+					iid = f'part:{dev}',
+					open=True
+				)
+				mountpoint = LinUtils.mountpoint(dev)
+
+				#TREE_WALK_DEPTH = 10
+				#TREE_WALK_WIDTH = 100
+
+				for path, parent, name, tp in ExtPath.parented_walk(Path(mountpoint)):
+					if parent == mountpoint:
+						parent_iid = f'part:{dev}:{path}'
+					else:
+						parent_iid = f'dir:{path}'
+					try:
+						if cnt == GuiConfig.TREE_WALK_DEPTH:
+							self.tree.insert(parent_iid, 'end', text='...')
+							break
+						if tp == 'dir':
+							iid = f'dir:{path}'
+							self.tree.insert(parent_iid, 'end', text=name, values='dir', iid=iid)
+						elif tp == 'file':
+							iid = f'other:{path}'
+							self.tree.insert(parent_iid, 'end', text=name, values='file', iid=iid)
+					except:
+						continue
+			else:
+				self.tree.insert(details['parent'], 'end', text=dev, values=values, iid=dev, open=True)
+		self.tree.bind("<Double-1>", self._choose)
+		frame = ExpandedFrame(self.main_frame)
+		LeftButton(frame, self.REFRESH, self._refresh)
+		RightButton(frame, self.QUIT, self.destroy)
+
+	def _choose(self, event):
+		'''Run on double click'''
+		item = self.tree.identify('item', event.x, event.y)
+		print(event, self.tree.item(item))
+
+	def _refresh(self):
+		'''Destroy and reopen Target Window'''
+		self.main_frame.destroy()
+		self._main_frame()
 
 class Gui(Tk, ArchImagerLabels):
 	'''Definitions for the GUI'''
@@ -80,7 +169,6 @@ class Gui(Tk, ArchImagerLabels):
 			command = self._set_realtime,
 			tip=self.TIP_TIME
 		)
-
 		GridLabel(frame, self.DESTINATION)
 		self.outdir = StringSelector(
 			frame,
@@ -96,9 +184,6 @@ class Gui(Tk, ArchImagerLabels):
 			command = self._set_filename,
 			tip = self.TIP_FILENAME
 		)
-
-
-
 		GridSeparator(frame)
 		GridLabel(frame, self.SOURCE)
 		self.source = StringSelector(
