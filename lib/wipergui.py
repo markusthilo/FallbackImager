@@ -35,10 +35,8 @@ class SelectTargetWindow(DiskSelectGui, WipeLabels):
 		self.lsblk(self.main_frame)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
-		#frame = ExpandedFrame(self.main_frame)
-		RightButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
 		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.SELECT, self._select_focus)
+		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
 		RightButton(frame, self.QUIT, self.destroy)
 
 	def _select_focus(self):
