@@ -5,7 +5,7 @@
 mkdir -pv dist-lin/lib
 while read file # copy main scripts to dist-lin
 do
-    cp -uv "${file}" dist-lin
+    cp -ufv "${file}" dist-lin
 done << EOF
 fallbackimager.py
 fallbackimager-root.sh
@@ -22,14 +22,15 @@ help.txt
 LICENSE
 README.md
 wipe-log-head.txt
-reporter-example-template
+reporter-example-template.txt
 EOF
 while read file # copy libraries to dist-lin/lib
 do
-    cp -uv "lib/${file}" dist-lin/lib
+    cp -ufv "lib/${file}" dist-lin/lib
 done << EOF
 extpath.py
 fsreader.py
+diskselectgui.py
 guibase.py
 guiconfig.py
 guilabeling.py

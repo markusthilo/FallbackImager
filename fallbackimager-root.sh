@@ -1,3 +1,3 @@
 #!/usr/bin/bash
 
-sudo -E python fallbackimager.py
+pkexec python3 /opt/FallbackImager/fallbackimager.py

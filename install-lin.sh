@@ -2,5 +2,6 @@
 
 # Copy to /opt
 
-mkdir -pv /opt/FallbackImager
-cp -rv dist-lin/* /opt/FallbackImager
+sudo mkdir -pv /opt/FallbackImager
+sudo cp -rav dist-lin/* /opt/FallbackImager
+sudo cp -av fallbackimager.desktop /usr/share/applications
