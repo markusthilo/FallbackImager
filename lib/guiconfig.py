@@ -5,8 +5,8 @@ class GuiConfig:
 	'''Configurations for the GUI'''
 
 	PAD = 4
-	JOB_HEIGHT = 4
-	INFO_HEIGHT = 8
+	JOB_HEIGHT = 8
+	TEXT_HEIGHT = 40
 	ENTRY_WIDTH = 144
 	MIN_ENTRY_WIDTH = 8
 	MAX_ENTRY_WIDTH = 32
@@ -41,5 +41,3 @@ class GuiConfig:
 		'rev': 80,
 		'ro': 40
 	}
-	HELP_HEIGHT = 40
-	HELP_WIDTH = 120

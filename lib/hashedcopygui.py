@@ -25,7 +25,7 @@ class HashedCopyGui(HashedCopyLabels):
 			frame,
 			font = (font['family'], font['size']),
 			width = GuiConfig.ENTRY_WIDTH,
-			height = GuiConfig.INFO_HEIGHT
+			height = GuiConfig.JOB_HEIGHT
 		)
 		self.sources.grid(row=frame.row, column=2, rowspan=2, columnspan=255)
 		GridButton(frame, self.ADD_FILES, self._add_files, tip=self.TIP_ADD_FILES)

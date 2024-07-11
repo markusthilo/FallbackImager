@@ -8,6 +8,7 @@ from tkinter.scrolledtext import ScrolledText
 from .worker import Worker
 from .guielements import ExpandedNotebook, ExpandedFrame, ExpandedScrolledText
 from .guielements import LeftButton, RightButton, LeftLabel, ChildWindow
+from .guielements import GridScrolledText, GridFrame
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
 try:
@@ -43,7 +44,7 @@ class GuiBase(Tk):
 		self.protocol('WM_DELETE_WINDOW', self._quit_app)
 		frame = ExpandedFrame(self)
 		LeftLabel(frame, BasicLabels.AVAILABLE_MODULES)
-		RightButton(frame, BasicLabels.HELP, self._show_help)	
+		self.help_button = RightButton(frame, BasicLabels.HELP, self._show_help)	
 		self.notebook = ExpandedNotebook(self)
 		self.modules = [(Cli, Gui(self)) for Cli, Gui in modules]
 		try:
@@ -52,22 +53,14 @@ class GuiBase(Tk):
 			pass
 		frame = ExpandedFrame(self)
 		LeftLabel(frame, BasicLabels.JOBS)
+		self.jobs_text = ExpandedScrolledText(self, GuiConfig.JOB_HEIGHT)
 		RightButton(frame, BasicLabels.REMOVE_LAST, self._remove_last_job,
 			tip=BasicLabels.TIP_REMOVE_LAST_JOB)
-		self.jobs_text = ExpandedScrolledText(self, GuiConfig.JOB_HEIGHT)
 		frame = ExpandedFrame(self)
-		LeftLabel(frame, BasicLabels.INFOS)
-		RightButton(frame, BasicLabels.CLEAR_INFOS, self._clear_infos,
-			tip=BasicLabels.TIP_CLEAR_INFOS)
-		self.infos_text = ExpandedScrolledText(self, GuiConfig.INFO_HEIGHT)
-		self.infos_text.bind('<Key>', lambda dummy: 'break')
-		self.infos_text.configure(state='disabled')
-		frame = ExpandedFrame(self)
-		self.start_disabled = False
 		self.start_button = LeftButton(frame, BasicLabels.START_JOBS, self._start_jobs,
 			tip=BasicLabels.TIP_START_JOBS)
 		RightButton(frame, BasicLabels.QUIT, self._quit_app)
-			
+
 	def append_job(self, cmd):
 		'''Append message in info box'''
 		last = self.jobs_text.get('end-2l', 'end').strip(';\n')
@@ -98,11 +91,37 @@ class GuiBase(Tk):
 
 	def _start_jobs(self):
 		'''Start working job list'''
-		if self.start_disabled or (self.worker and self.worker.is_alive()):
-			return
+		self.start_button.configure(text=f'{BasicLabels.RUNNING}...')
 		self.settings.write()
+		self.info_window = ChildWindow(self, BasicLabels.INFOS,
+			button = self.start_button,
+			destroy = self._close_infos
+		)
+		self.infos_text = GridScrolledText(self.info_window, ro=True)
+		frame = GridFrame(self.info_window)
+		self.stop_button = RightButton(frame, BasicLabels.STOP_WORK, self._close_infos)
+		self.info_window.set_minsize()
 		self.worker = Worker(self)
 		self.worker.start()
+
+	def finished_jobs(self):
+		'''This is called from worker when all jobs are done.'''
+		self.worker = None
+		self.stop_button.configure(text=BasicLabels.QUIT)
+
+	def	_close_infos(self):
+		'''Close info window, ask to terminate worker in case it is still running.'''
+		if self.worker:
+			if askyesno(
+				title = f'{BasicLabels.STOP_WORK}?',
+				message = BasicLabels.ARE_YOU_SURE
+			):
+				self.worker.terminate()
+			else:
+				return
+		self.worker = None
+		self.start_button.configure(state='normal', text=BasicLabels.START_JOBS)
+		self.info_window.destroy()
 
 	def append_info(self, *msg, overwrite=False):
 		'''Append message in info box'''
@@ -113,28 +132,12 @@ class GuiBase(Tk):
 		self.infos_text.configure(state='disabled')
 		self.infos_text.yview('end')
 
-	def _clear_infos(self):
-		'''Clear info box'''
-		self.infos_text.configure(state='normal')
-		self.infos_text.delete('1.0', 'end')
-		self.infos_text.configure(state='disabled')
-
-	def enable_start(self):
-		'''Enable start button'''
-		self.start_button.configure(state='normal', text=BasicLabels.START_JOBS)
-		self.start_disabled = False
-
-	def disable_start(self):
-		'''Disable start button'''
-		self.start_button.configure(state='disabled', text=f'{BasicLabels.RUNNING}...')
-		self.start_disabled = True
-
 	def	_quit_app(self):
 		'''Store configuration and quit application'''
-		if askyesno(
-					title = f'{BasicLabels.QUIT} {self.app_name}',
-					message = BasicLabels.ARE_YOU_SURE
-		):
+		msg = BasicLabels.ARE_YOU_SURE
+		if self.worker:
+			msg += f'\n\n{BasicLabels.JOB_RUNNING}'
+		if askyesno(title=f'{BasicLabels.QUIT} {self.app_name}', message=msg):
 			self.settings.set('ActiveTab', self.notebook.select(), section='Base')
 			if err := self.settings.write():
 				try:
@@ -146,11 +149,12 @@ class GuiBase(Tk):
 
 	def _show_help(self):
 		'''Show help window'''
+		self.help_button.configure(state='disabled')
 		help_window = ChildWindow(self, BasicLabels.HELP)
 		font = nametofont('TkTextFont').actual()
 		help_text = ScrolledText(
 			help_window,
-			font = (font['family'], font['size']),
+			font = (self.font['family'], font['size']),
 			width = GuiConfig.HELP_WIDTH,
 			height = GuiConfig.HELP_HEIGHT,
 			wrap = 'word'

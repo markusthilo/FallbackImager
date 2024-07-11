@@ -15,7 +15,6 @@ class Worker(Thread):
 
 	def run(self):
 		'''Start the work'''
-		self.gui.disable_start()
 		echo = self.gui.append_info
 		cmd = None
 		ex_cnt = 0
@@ -58,4 +57,4 @@ class Worker(Thread):
 		else:
 			echo(BasicLabels.NOTHING2DO)
 			echo()
-		self.gui.enable_start()
+		self.gui.finished_jobs()

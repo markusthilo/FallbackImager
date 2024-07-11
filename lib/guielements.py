@@ -27,7 +27,7 @@ class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.pack(fill='both', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
+		self.pack(fill='x', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
 		self.row = 0
 
 class ExpandedNotebook(Notebook):
@@ -40,18 +40,18 @@ class ExpandedLabelFrame(LabelFrame):
 	'''|<- LabelFrame ->|'''
 	def __init__(self, parent, text):
 		super().__init__(parent, text=text)
-		self.pack(fill='both', padx=GuiConfig.PAD, expand=True)
+		self.pack(fill='x', padx=GuiConfig.PAD, expand=True)
 
 class ExpandedSeparator:
 	'''|<--------->|'''
 	def __init__(self, parent):
-		Separator(parent).pack(fill='both', padx=GuiConfig.PAD, expand=True)
+		Separator(parent).pack(fill='x', padx=GuiConfig.PAD, expand=True)
 
 class ExpandedLabel:
 	'''|<- Label ->|'''
 	def __init__(self, parent, text):
 		Label(parent, text=text).pack(
-			fill='both', padx=GuiConfig.PAD, expand=True)
+			fill='x', padx=GuiConfig.PAD, expand=True)
 
 class LeftLabel:
 	'''| Label --->|'''
@@ -60,13 +60,13 @@ class LeftLabel:
 
 class ExpandedScrolledText(ScrolledText):
 	'''|<- ScrolledText ->|'''
-	def __init__(self, parent, height):
+	def __init__(self, parent, height, width=-1):
 		font = nametofont('TkTextFont').actual()
 		super().__init__(parent,
 			font = (font['family'], font['size']),
 			padx = GuiConfig.PAD,
 			pady = GuiConfig.PAD,
-			width = -1,
+			width = width,
 			height = height
 		)
 		self.pack(fill='both', padx=GuiConfig.PAD, expand=True)
@@ -86,6 +86,15 @@ class RightButton(Button):
 		self.pack(padx=GuiConfig.PAD, side='right')
 		if tip:
 			Hovertip(self, tip)
+
+class GridFrame(Frame):
+	'''| Frame |'''
+	def __init__(self, parent, column=0, columnspan=1, incrow=True):
+		super().__init__(parent)
+		self.grid(row=parent.row, column=column, columnspan=columnspan,
+			padx=GuiConfig.PAD, pady=GuiConfig.PAD, sticky='e')
+		if incrow:
+			parent.row += 1
 
 class GridButton(Button):
 	'''| | Button | | |'''
@@ -117,6 +126,32 @@ class GridBlank:
 	'''| |'''
 	def __init__(self, parent, width=2, column=0, incrow=True):
 		Label(parent, width=width).grid(row=parent.row, column=column, padx=GuiConfig.PAD)
+		if incrow:
+			parent.row += 1
+
+class GridScrolledText(ScrolledText):
+	'''| ScrolledText |'''
+	def __init__(self, parent,
+		width = GuiConfig.ENTRY_WIDTH,
+		height = GuiConfig.TEXT_HEIGHT,
+		column = 0,
+		columnspan = 255,
+		ro = False,
+		incrow = True
+	):
+		font = nametofont('TkTextFont').actual()
+		super().__init__(parent,
+			font = (font['family'], font['size']),
+			padx = GuiConfig.PAD,
+			pady = GuiConfig.PAD,
+			width = width,
+			height = height
+		)
+		self.grid(row=parent.row, column=column, columnspan=columnspan,
+			sticky='news', padx=GuiConfig.PAD)
+		if ro:
+			self.bind('<Key>', lambda dummy: 'break')
+			self.configure(state='disabled')
 		if incrow:
 			parent.row += 1
 
@@ -353,17 +388,36 @@ class Tree(Treeview):
 class ChildWindow(Toplevel):
 	'''Child window to main application window'''
 
-	def __init__(self, root, title):
+	def __init__(self, root, title, sizex=False, sizey=False, button=None, destroy=None):
 		'''Open child window'''
 		self.root = root
+		self.button = button
+		if self.button:
+			button.configure(state='disabled')
 		super().__init__(self.root)
 		self.title(title)
-		self.resizable(0, 0)
+		self.resizable(sizex, sizey)
 		self.iconphoto(True, self.root.appicon)
-		self.protocol('WM_DELETE_WINDOW', self.destroy)
+		if destroy:
+			self.protocol('WM_DELETE_WINDOW', destroy)
+		else:
+			self.protocol('WM_DELETE_WINDOW', self._destroy)
 		self.root.child_win_active = True
+		self.row = 0
+		self.rowconfigure(0, weight=1)
+		self.columnconfigure(0, weight=1)
 
-	def destroy(self):
+	def set_minsize(self):
+		self.update_idletasks()
+		self.minsize(self.winfo_width(), self.winfo_height())
+
+	def _destroy(self):
 		'''Destroy the child window'''
-		self.root.child_win_active = False
+		try:
+			self.root.block_child
+			self.root.block_child = False
+		except AttributeError:
+			pass
+		if self.button:
+			self.button.configure(state='normal')
 		super().destroy()
