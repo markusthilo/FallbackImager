@@ -8,7 +8,7 @@ from tkinter.scrolledtext import ScrolledText
 from .worker import Worker
 from .guielements import ExpandedNotebook, ExpandedFrame, ExpandedScrolledText
 from .guielements import LeftButton, RightButton, LeftLabel, ChildWindow
-from .guielements import GridScrolledText, GridFrame
+from .guielements import GridScrolledText, GridFrame, GridButton
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
 try:
@@ -42,9 +42,13 @@ class GuiBase(Tk):
 		self.appicon = PhotoImage(file=self.parent_path/'appicon.png')
 		self.iconphoto(True, self.appicon)
 		self.protocol('WM_DELETE_WINDOW', self._quit_app)
+		font = nametofont('TkTextFont').actual()
+		self.font_family = font['family']
+		self.font_size = font['size']
+		self.padding = int(self.font_size / GuiConfig.PAD)
 		frame = ExpandedFrame(self)
 		LeftLabel(frame, BasicLabels.AVAILABLE_MODULES)
-		self.help_button = RightButton(frame, BasicLabels.HELP, self._show_help)	
+		self.help_button = RightButton(frame, BasicLabels.HELP, self._show_help)
 		self.notebook = ExpandedNotebook(self)
 		self.modules = [(Cli, Gui(self)) for Cli, Gui in modules]
 		try:
@@ -81,25 +85,17 @@ class GuiBase(Tk):
 		self.jobs_text.delete('1.0', '2.0')
 		return line.strip('; \n\t')
 
-	def enable_jobs(self):
-		'''Enable editing in jobs box'''
-		self.jobs_text.configure(state='normal')
-
-	def disable_jobs(self):
-		'''Disable editing in jobs box'''
-		self.jobs_text.configure(state='disabled')
-
 	def _start_jobs(self):
 		'''Start working job list'''
 		self.start_button.configure(text=f'{BasicLabels.RUNNING}...')
 		self.settings.write()
 		self.info_window = ChildWindow(self, BasicLabels.INFOS,
+			resizable = True,
 			button = self.start_button,
 			destroy = self._close_infos
 		)
 		self.infos_text = GridScrolledText(self.info_window, ro=True)
-		frame = GridFrame(self.info_window)
-		self.stop_button = RightButton(frame, BasicLabels.STOP_WORK, self._close_infos)
+		self.stop_button = GridButton(self.info_window, BasicLabels.STOP_WORK, self._close_infos, sticky='e')
 		self.info_window.set_minsize()
 		self.worker = Worker(self)
 		self.worker.start()
@@ -147,28 +143,19 @@ class GuiBase(Tk):
 					pass
 			self.destroy()
 
+	def pixels(self, chars):
+		'''Approximate pixel size from chars'''
+		return self.font_size * chars
+
 	def _show_help(self):
 		'''Show help window'''
-		self.help_button.configure(state='disabled')
-		help_window = ChildWindow(self, BasicLabels.HELP)
-		font = nametofont('TkTextFont').actual()
-		help_text = ScrolledText(
-			help_window,
-			font = (self.font['family'], font['size']),
-			width = GuiConfig.HELP_WIDTH,
-			height = GuiConfig.HELP_HEIGHT,
-			wrap = 'word'
-		)
-		help_text.pack(fill='both', expand=True)
-		help_text.bind('<Key>', lambda dummy: 'break')
-		help_text.insert('end', f'{self.app_name} v{self.version}\n\n')
-		help_text.insert('end', f'{BasicLabels.DESCRIPTION}\n\n\n')
+		help_window = ChildWindow(self, BasicLabels.HELP, resizable=True, button=self.help_button)
+		help_text = GridScrolledText(help_window, width = GuiConfig.HELP_WIDTH, ro=True)
+		utf_text = f'{self.app_name} v{self.version}\n\n{BasicLabels.DESCRIPTION}\n\n\n'
 		try:
-			utf_text = (self.parent_path/'help.txt').read_text(encoding='utf-8')
+			utf_text += (self.parent_path/'help.txt').read_text(encoding='utf-8')
 		except:
-			utf_text = 'Error: Unable to read help.txt'
-		help_text.insert('end', f'{utf_text}\n')
-		help_text.configure(state='disabled')
-		frame = ExpandedFrame(help_window)
-		RightButton(frame, BasicLabels.QUIT, help_window.destroy)
-		help_window.mainloop()
+			utf_text += BasicLabels.HELP_ERROR
+		help_text.echo(f'{utf_text}\n', end=False)
+		GridButton(help_window, BasicLabels.QUIT, help_window.quit, sticky='e')
+		help_window.set_minsize()

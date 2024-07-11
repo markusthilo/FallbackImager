@@ -4,7 +4,7 @@
 from pathlib import Path
 from .guilabeling import SQLiteLabels
 from .guielements import NotebookFrame, GridLabel, FilenameSelector, ExpandedFrame
-from .guielements import GridSeparator, OutDirSelector, FileSelector, Tree
+from .guielements import GridSeparator, OutDirSelector, FileSelector, ExpandedTree
 from .guielements import StringRadiobuttons, StringSelector, GridLabel, LeftButton
 from .guielements import AddJobButton, Error, ChildWindow, MissingEntry, RightButton
 from .sqliteutils import SQLiteReader

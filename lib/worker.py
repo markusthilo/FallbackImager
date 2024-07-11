@@ -15,15 +15,13 @@ class Worker(Thread):
 
 	def run(self):
 		'''Start the work'''
-		echo = self.gui.append_info
+		echo = self.gui.infos_text.echo
 		cmd = None
 		ex_cnt = 0
 		while True:
-			self.gui.enable_jobs()
 			cmd_line = self.gui.pop_first_job()
 			if not cmd_line:
 				break
-			self.gui.disable_jobs()
 			echo(f'{BasicLabels.RUNNING}: {cmd_line}')
 			args = ssplit(cmd_line)
 			if len(args) == 0 or not args[0]:

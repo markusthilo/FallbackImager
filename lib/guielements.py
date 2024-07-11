@@ -3,7 +3,6 @@
 
 from idlelib.tooltip import Hovertip
 from tkinter import Toplevel
-from tkinter.font import nametofont
 from tkinter.ttk import Frame, LabelFrame, Notebook, Separator, Button, Treeview
 from tkinter.ttk import Label, Entry, Radiobutton, Checkbutton, OptionMenu, Scrollbar
 from tkinter.scrolledtext import ScrolledText
@@ -26,56 +25,62 @@ class MissingEntry:
 class ExpandedFrame(Frame):
 	'''|<- Frame ->|'''
 	def __init__(self, parent):
+		try:
+			self.padding = parent.padding
+		except AttributeError:
+			self.padding = parent.root.padding
 		super().__init__(parent)
-		self.pack(fill='x', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
+		self.pack(fill='x', padx=self.padding, pady=self.padding, expand=True)
 		self.row = 0
 
 class ExpandedNotebook(Notebook):
 	'''|<- Notebook ->|'''
 	def __init__(self, parent):
+		self.font_family = parent.font_family
+		self.font_size = parent.font_size
+		self.padding = parent.padding
 		super().__init__(parent)
-		self.pack(fill='both', padx=GuiConfig.PAD, pady=GuiConfig.PAD, expand=True)
+		self.pack(fill='both', padx=self.padding, pady=self.padding, expand=True)
 
 class ExpandedLabelFrame(LabelFrame):
 	'''|<- LabelFrame ->|'''
 	def __init__(self, parent, text):
 		super().__init__(parent, text=text)
-		self.pack(fill='x', padx=GuiConfig.PAD, expand=True)
+		self.pack(fill='x', padx=parent.padding, expand=True)
 
 class ExpandedSeparator:
 	'''|<--------->|'''
 	def __init__(self, parent):
-		Separator(parent).pack(fill='x', padx=GuiConfig.PAD, expand=True)
+		Separator(parent).pack(fill='x', padx=parent.padding, expand=True)
 
 class ExpandedLabel:
 	'''|<- Label ->|'''
 	def __init__(self, parent, text):
 		Label(parent, text=text).pack(
-			fill='x', padx=GuiConfig.PAD, expand=True)
+			fill='x', padx=parent.padding, expand=True)
 
 class LeftLabel:
 	'''| Label --->|'''
 	def __init__(self, parent, text):
-		Label(parent, text=text).pack(padx=GuiConfig.PAD, side='left')
+		Label(parent, text=text).pack(padx=parent.padding, side='left')
 
 class ExpandedScrolledText(ScrolledText):
 	'''|<- ScrolledText ->|'''
 	def __init__(self, parent, height, width=-1):
-		font = nametofont('TkTextFont').actual()
 		super().__init__(parent,
-			font = (font['family'], font['size']),
-			padx = GuiConfig.PAD,
-			pady = GuiConfig.PAD,
+			font = (parent.font_family, parent.font_size),
+			padx = parent.padding,
+			pady = parent.padding,
 			width = width,
 			height = height
 		)
-		self.pack(fill='both', padx=GuiConfig.PAD, expand=True)
+		self.pack(fill='both', padx=parent.padding, expand=True)
 
 class LeftButton(Button):
 	'''| Button ---|'''
 	def __init__(self, parent, text, command, tip=None):
 		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
-		self.pack(padx=GuiConfig.PAD, side='left')
+		self.pack(padx=parent.padding, side='left')
 		if tip:
 			Hovertip(self, tip)
 
@@ -83,24 +88,64 @@ class RightButton(Button):
 	'''|--- Button |'''
 	def __init__(self, parent, text, command, tip=None):
 		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
-		self.pack(padx=GuiConfig.PAD, side='right')
+		self.pack(padx=parent.padding, side='right')
 		if tip:
 			Hovertip(self, tip)
+
+class ExpandedTree(Treeview):
+	'''Treeview with vertical scroll bar'''
+	def __init__(self, parent,
+		selectmode = 'browse',
+		text = None,
+		columns = None,
+		doubleclick = None,
+		width = None,
+		height = None
+	):
+		if not width:
+			width = int(.9 * self.winfo_width())
+		if not height:
+			height = int(.9 * self.winfo_height())
+		if text:
+			show = None
+		else:
+			show = 'tree'
+		if columns:
+			column_names = list(columns.keys())
+		else:
+			column_names = None
+		frame = ExpandedFrame(parent)
+		super().__init__(frame, selectmode=selectmode, height=height, columns=column_names, show=show)
+		self.column('#0', width=width)
+		if text:
+			self.heading('#0', text=text.upper())
+		if columns:
+			for col_text, col_width in columns.items():
+				self.heading(col_text, text=col_text.upper())
+				self.column(col_text, width=col_width)
+		if doubleclick:
+			self.bind('<Double-1>', doubleclick)
+		self.pack(side='left', expand=True)
+		vsb = Scrollbar(frame, orient='vertical', command=self.yview)
+		vsb.pack(side='right', fill='y')
+		self.configure(yscrollcommand=vsb.set)
 
 class GridFrame(Frame):
 	'''| Frame |'''
 	def __init__(self, parent, column=0, columnspan=1, incrow=True):
 		super().__init__(parent)
 		self.grid(row=parent.row, column=column, columnspan=columnspan,
-			padx=GuiConfig.PAD, pady=GuiConfig.PAD, sticky='e')
+			padx=parent.padding, pady=parent.padding, sticky='e')
 		if incrow:
 			parent.row += 1
 
 class GridButton(Button):
 	'''| | Button | | |'''
-	def __init__(self, parent, text, command, column=1, columnspan=1, incrow=True, tip=None):
-		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
-		self.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
+	def __init__(self, parent, text, command, width=GuiConfig.BUTTON_WIDTH,
+		column=1, columnspan=1, sticky='w', incrow=True, tip=None):
+		super().__init__(parent, text=text, command=command, width=width)
+		self.grid(row=parent.row, column=column, columnspan=columnspan, sticky=sticky,
+			padx=parent.padding, pady=parent.padding)
 		if incrow:
 			parent.row += 1
 		if tip:
@@ -110,7 +155,7 @@ class GridSeparator:
 	'''|-------|'''
 	def __init__(self, parent, column=0, columnspan=255, incrow=True):
 		Separator(parent).grid(row=parent.row, column=column, columnspan=columnspan,
-			sticky='w', padx=GuiConfig.PAD, pady=GuiConfig.PAD)
+			sticky='w', padx=parent.padding, pady=parent.padding)
 		if incrow:
 			parent.row += 1
 
@@ -118,42 +163,51 @@ class GridLabel(Label):
 	'''| Label |'''
 	def __init__(self, parent, text, column=0, columnspan=255, incrow=True):
 		super().__init__(parent, text=text)
-		self.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
+		self.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=parent.padding)
 		if incrow:
 			parent.row += 1
 
 class GridBlank:
 	'''| |'''
 	def __init__(self, parent, width=2, column=0, incrow=True):
-		Label(parent, width=width).grid(row=parent.row, column=column, padx=GuiConfig.PAD)
+		Label(parent, width=width).grid(row=parent.row, column=column, padx=parent.padding)
 		if incrow:
 			parent.row += 1
 
 class GridScrolledText(ScrolledText):
 	'''| ScrolledText |'''
 	def __init__(self, parent,
-		width = GuiConfig.ENTRY_WIDTH,
+		width = GuiConfig.TEXT_WIDTH,
 		height = GuiConfig.TEXT_HEIGHT,
 		column = 0,
 		columnspan = 255,
 		ro = False,
 		incrow = True
 	):
-		font = nametofont('TkTextFont').actual()
 		super().__init__(parent,
-			font = (font['family'], font['size']),
-			padx = GuiConfig.PAD,
-			pady = GuiConfig.PAD,
+			font = (parent.font_family, parent.font_size),
+			padx = parent.padding,
+			pady = parent.padding,
 			width = width,
 			height = height
 		)
 		self.grid(row=parent.row, column=column, columnspan=columnspan,
-			sticky='news', padx=GuiConfig.PAD)
+			sticky='news', padx=parent.padding)
 		if ro:
 			self.bind('<Key>', lambda dummy: 'break')
 			self.configure(state='disabled')
 		if incrow:
 			parent.row += 1
+
+	def echo(self, *msg, end=True, overwrite=False):
+		'''Append message in info box'''
+		self.configure(state='normal')
+		if overwrite:
+			self.delete('end-2l', 'end')
+		self.insert('end', ' '.join(f'{string}' for string in msg) + '\n')
+		self.configure(state='disabled')
+		if end:
+			self.yview('end')
 
 class NotebookFrame(ExpandedFrame):
 	'''To start a module'''
@@ -176,9 +230,9 @@ class GridMenu(OptionMenu):
 	def __init__(self, parent, variable, text, values,
 		command=None, width=None, column=1, columnspan=2, incrow=True, tip=None):
 		self._variable = variable
-		Label(parent, text=f'{text}:').grid(sticky='e', row=parent.row, column=column, padx=GuiConfig.PAD)
+		Label(parent, text=f'{text}:').grid(sticky='e', row=parent.row, column=column, padx=parent.padding)
 		super().__init__(parent, self._variable, self._variable.get(), *values, command=command)
-		self.grid(sticky='w', row=parent.row, column=column+1, columnspan=columnspan-1, padx=GuiConfig.PAD)
+		self.grid(sticky='w', row=parent.row, column=column+1, columnspan=columnspan-1, padx=parent.padding)
 		#if command:
 		#	self._variable.trace('w', command)
 		if not width:
@@ -213,7 +267,7 @@ class StringRadiobuttons:
 		self._variable = variable
 		for row, value in enumerate(buttons, parent.row):
 			button = Radiobutton(parent, variable=self._variable, value=value)
-			button.grid(row=row, column=column, sticky='w', padx=GuiConfig.PAD)
+			button.grid(row=row, column=column, sticky='w', padx=parent.padding)
 			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
 	def set(self, value):
 		self._variable.set(value=value)
@@ -224,11 +278,11 @@ class VerticalRadiobuttons:
 	'''| Rabiobutton | Radiobutton | Radiobutton | ... |'''
 	def __init__(self, parent, variable, buttons, column=1, columnspan=255, incrow=True):
 		frame = Frame(parent)
-		frame.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
+		frame.grid(row=parent.row, column=column, columnspan=columnspan, sticky='w', padx=parent.padding)
 		self._variable = variable
 		for value in buttons:
 			button = Radiobutton(frame, variable=self._variable, value=value, text=value)
-			button.pack(side='left', padx=(GuiConfig.PAD, 0))
+			button.pack(side='left', padx=(parent.padding, 0))
 			Hovertip(button, BasicLabels.TIP_RADIO_BUTTONS)
 		if incrow:
 			parent.row += 1
@@ -246,11 +300,11 @@ class StringSelector(Button):
 			command = self._command
 			self.default = default
 		super().__init__(parent, text=text, command=command, width=GuiConfig.BUTTON_WIDTH)
-		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD)
+		self.grid(row=parent.row, column=column, sticky='w', padx=parent.padding)
 		if not width:
 			width = GuiConfig.ENTRY_WIDTH
 		Entry(parent, textvariable=self._variable, width=width).grid(
-			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=GuiConfig.PAD)
+			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=parent.padding)
 		if incrow:
 			parent.row += 1
 		if tip:
@@ -277,9 +331,9 @@ class DirSelector(Button):
 		default=None, command=None, column=1, columnspan=255, incrow=True, tip=None, missing=None):
 		self._variable = variable
 		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
-		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD)
+		self.grid(row=parent.row, column=column, sticky='w', padx=parent.padding)
 		Entry(parent, textvariable=self._variable, width=GuiConfig.ENTRY_WIDTH).grid(
-			row=parent.row, column=column+1, columnspan=columnspan, sticky='w', padx=GuiConfig.PAD)
+			row=parent.row, column=column+1, columnspan=columnspan, sticky='w', padx=parent.padding)
 		self.ask = ask
 		self.command = command
 		self.missing = missing
@@ -319,9 +373,9 @@ class FileSelector(Button):
 		column=1, columnspan=255, incrow=True, tip=None):
 		self._variable = variable
 		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
-		self.grid(row=parent.row, column=column, sticky='w', padx=GuiConfig.PAD, pady=(GuiConfig.PAD, 0))
+		self.grid(row=parent.row, column=column, sticky='w', padx=parent.padding, pady=(parent.padding, 0))
 		Entry(parent, textvariable=self._variable, width=GuiConfig.ENTRY_WIDTH).grid(
-			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=GuiConfig.PAD)
+			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=parent.padding)
 		self.ask = ask
 		self.filetype = filetype
 		self.initialdir = initialdir
@@ -351,67 +405,40 @@ class SourceFileSelector(FileSelector):
 		super().__init__(root, parent, variable, BasicLabels.SOURCE, BasicLabels.SELECT_SOURCE,
 			tip=tip, missing=BasicLabels.SOURCE_REQUIRED)
 
-class Tree(Treeview):
-	'''Treeview with vertical scroll bar'''
-	def __init__(self, parent,
-		selectmode = 'browse',
-		text = None,
-		columns = None,
-		width = None,
-		height = None
-	):
-		if not width:
-			width = GuiConfig.TREE_WIDTH
-		if not height:
-			height = GuiConfig.TREE_HEIGHT
-		if text:
-			show = None
-		else:
-			show = 'tree'
-		if columns:
-			column_names = list(columns.keys())
-		else:
-			column_names = None
-		super().__init__(parent, selectmode=selectmode, height=height, columns=column_names, show=show)
-		self.column('#0', width=width)
-		if text:
-			self.heading('#0', text=text.upper())
-		if columns:
-			for col_text, col_width in columns.items():
-				self.heading(col_text, text=col_text.upper())
-				self.column(col_text, width=col_width)
-		self.pack(side='left', expand=True)
-		vsb = Scrollbar(parent, orient='vertical', command=self.yview)
-		vsb.pack(side='right', fill='y')
-		self.configure(yscrollcommand=vsb.set)
-
 class ChildWindow(Toplevel):
 	'''Child window to main application window'''
 
-	def __init__(self, root, title, sizex=False, sizey=False, button=None, destroy=None):
+	def __init__(self, root, title,
+		resizable = False,
+		button = None,
+		destroy = None
+	):
 		'''Open child window'''
 		self.root = root
+		self.font_family = root.font_family
+		self.font_size = root.font_size
+		self.padding = root.padding
 		self.button = button
 		if self.button:
 			button.configure(state='disabled')
 		super().__init__(self.root)
 		self.title(title)
-		self.resizable(sizex, sizey)
+		self.resizable(resizable, resizable)
 		self.iconphoto(True, self.root.appicon)
 		if destroy:
 			self.protocol('WM_DELETE_WINDOW', destroy)
 		else:
-			self.protocol('WM_DELETE_WINDOW', self._destroy)
+			self.protocol('WM_DELETE_WINDOW', self.quit)
 		self.root.child_win_active = True
 		self.row = 0
 		self.rowconfigure(0, weight=1)
 		self.columnconfigure(0, weight=1)
 
 	def set_minsize(self):
-		self.update_idletasks()
+		self.update()
 		self.minsize(self.winfo_width(), self.winfo_height())
 
-	def _destroy(self):
+	def quit(self):
 		'''Destroy the child window'''
 		try:
 			self.root.block_child

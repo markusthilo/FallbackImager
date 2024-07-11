@@ -11,6 +11,7 @@ class BasicLabels:
 	ERROR = 'Error'
 	ERRORS = 'error(s)'
 	HELP = 'Help'
+	HELP_ERROR = 'Error: Unable to read help.txt'
 	JOBS = 'Jobs'
 	ADD_JOB = 'Add job'
 	TIP_ADD_JOB = 'Add job as configured above to job queue'

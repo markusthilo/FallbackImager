@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
-from .guielements import ChildWindow, ExpandedFrame, Tree, LeftButton, RightButton
+from .guielements import ChildWindow, ExpandedFrame, ExpandedTree, LeftButton, RightButton
 from .linutils import LinUtils
 from .stringutils import StringUtils
 
@@ -39,10 +39,10 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 		'''Frame with of lsblk tree'''
 		frame = ExpandedFrame(root)
 		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
-		self.tree = Tree(frame,
-			text='name',
-			width=GuiConfig.LSBLK_NAME_WIDTH,
-			columns=GuiConfig.LSBLK_COLUMNS_WIDTH
+		self.tree = ExpandedTree(frame,
+			text = 'name',
+			width = GuiConfig.LSBLK_NAME_WIDTH,
+			columns = GuiConfig.LSBLK_COLUMNS_WIDTH
 		)
 		for path, details in LinUtils.lsblk(physical=self.physical, exclude=self.exclude).items():
 			values = (

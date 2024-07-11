@@ -4,8 +4,9 @@
 from os import name as __os_name__
 from tkinter.messagebox import showerror
 from .guilabeling import AxCheckerLabels
-from .guielements import MissingEntry, ChildWindow, Checker, Tree
-from .guielements import ExpandedFrame, GridSeparator, GridLabel
+from .guiconfig import GuiConfig
+from .guielements import MissingEntry, ChildWindow, Checker, ExpandedTree
+from .guielements import ExpandedFrame, GridSeparator, GridLabel, GridFrame
 from .guielements import DirSelector, OutDirSelector, NotebookFrame
 from .guielements import FilenameSelector, StringSelector, StringRadiobuttons
 from .guielements import FileSelector, LeftButton, RightButton, AddJobButton
@@ -85,8 +86,8 @@ class AxCheckerGui(AxCheckerLabels):
 
 	def _select_root(self):
 		'''Select root to compare in the AXIOM case'''
-		if self.root.child_win_active:
-			return
+		#if self.root.child_win_active:
+		#	return
 		mfdb = self.case_file.get()
 		if not mfdb:
 			showerror(
@@ -94,10 +95,20 @@ class AxCheckerGui(AxCheckerLabels):
 				message = self.FIRST_CHOOSE_CASE
 			)
 			return
-		self.child_window = ChildWindow(self.root, self.SELECT_ROOT)
-		self.child_window.resizable(0, 0)
-		frame = ExpandedFrame(self.child_window)
-		self.tree = Tree(frame)
+		self.child_window = ChildWindow(self.root, self.SELECT_ROOT,
+		
+		
+		button=self.root_id)
+		#self.child_window.resizable(0, 0)
+		#frame = GridFrame(self.child_window)
+		#self.tree = Tree(frame)
+		self.tree = ExpandedTree(self.child_window,
+			text = 'source_path',
+			width = GuiConfig.SOURCE_PATH_WIDTH,
+			columns = {'source_id': GuiConfig.INT_WIDTH},
+			double=self._double_click
+		)
+		self.tree.column('source_id', anchor='e')
 		entries = dict()
 		for source_id, parent_id, source_type, friendly_value in MfdbReader(mfdb).tree():
 			if parent_id:
@@ -105,19 +116,28 @@ class AxCheckerGui(AxCheckerLabels):
 					parent = entries[parent_id]
 				except KeyError:
 					continue
-				entries[source_id] = self.tree.insert(parent, 'end', text=friendly_value, iid=source_id)
+				entries[source_id] = self.tree.insert(parent, 'end',
+					text=friendly_value, values=source_id, iid=source_id)
 			else:
-				entries[source_id] = self.tree.insert('', 'end', text=friendly_value, iid=source_id)
+				entries[source_id] = self.tree.insert('', 'end',
+					text=friendly_value, values=source_id, iid=source_id)
 			if source_type == 'Partition':
 				self.tree.see(source_id)
-		frame = ExpandedFrame(self.child_window)
-		LeftButton(frame, self.SELECT, self._get_root)
-		RightButton(frame, self.QUIT, self.child_window.destroy)
+		#frame = ExpandedFrame(self.child_window)
+		frame = GridFrame(self.child_window)
+		#LeftButton(frame, self.SELECT, self._get_root)
+		#RightButton(frame, self.QUIT, self.child_window.quit)
 
 	def _get_root(self):
 		'''Get the selected root'''
 		self.root_id.set(self.tree.focus())
-		self.child_window.destroy()
+		self.child_window.quit()
+
+	def _double_click(self, event):
+		'''Run on double click'''
+		item = self.tree.identify('item', event.x, event.y)
+		self.root_id.set(self.tree.item(item)['values'][0])
+		self.child_window.quit()
 
 	def _select_file_structure(self):
 		'''Select file structure to compare'''
