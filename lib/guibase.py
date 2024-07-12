@@ -64,6 +64,9 @@ class GuiBase(Tk):
 		self.start_button = LeftButton(frame, BasicLabels.START_JOBS, self._start_jobs,
 			tip=BasicLabels.TIP_START_JOBS)
 		RightButton(frame, BasicLabels.QUIT, self._quit_app)
+		self.update()
+		self.root_width = self.winfo_width()
+		self.root_height = self.winfo_height()
 
 	def append_job(self, cmd):
 		'''Append message in info box'''
@@ -94,7 +97,12 @@ class GuiBase(Tk):
 			button = self.start_button,
 			destroy = self._close_infos
 		)
-		self.infos_text = GridScrolledText(self.info_window, ro=True)
+		self.infos_text = GridScrolledText(
+			self.info_window,
+			GuiConfig.ENTRY_WIDTH,
+			int(self.root_height / (2*self.font_size)),
+			ro=True
+		)
 		self.stop_button = GridButton(self.info_window, BasicLabels.STOP_WORK, self._close_infos, sticky='e')
 		self.info_window.set_minsize()
 		self.worker = Worker(self)
@@ -150,7 +158,12 @@ class GuiBase(Tk):
 	def _show_help(self):
 		'''Show help window'''
 		help_window = ChildWindow(self, BasicLabels.HELP, resizable=True, button=self.help_button)
-		help_text = GridScrolledText(help_window, width = GuiConfig.HELP_WIDTH, ro=True)
+		help_text = GridScrolledText(
+			help_window,
+			GuiConfig.HELP_WIDTH,
+			int(self.root_height / (2*self.font_size)),
+			ro=True
+		)
 		utf_text = f'{self.app_name} v{self.version}\n\n{BasicLabels.DESCRIPTION}\n\n\n'
 		try:
 			utf_text += (self.parent_path/'help.txt').read_text(encoding='utf-8')

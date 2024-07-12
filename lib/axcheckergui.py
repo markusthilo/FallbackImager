@@ -86,8 +86,6 @@ class AxCheckerGui(AxCheckerLabels):
 
 	def _select_root(self):
 		'''Select root to compare in the AXIOM case'''
-		#if self.root.child_win_active:
-		#	return
 		mfdb = self.case_file.get()
 		if not mfdb:
 			showerror(
@@ -95,18 +93,14 @@ class AxCheckerGui(AxCheckerLabels):
 				message = self.FIRST_CHOOSE_CASE
 			)
 			return
-		self.child_window = ChildWindow(self.root, self.SELECT_ROOT,
-		
-		
-		button=self.root_id)
-		#self.child_window.resizable(0, 0)
-		#frame = GridFrame(self.child_window)
-		#self.tree = Tree(frame)
-		self.tree = ExpandedTree(self.child_window,
+		self.child_window = ChildWindow(self.root, self.SELECT_ROOT, button=self.root_id)
+		self.tree = ExpandedTree(
+			self.child_window,
+			self.root.font_size * GuiConfig.SOURCE_PATH_WIDTH,
+			int(self.root.root_height / (3*self.root.font_size)),
 			text = 'source_path',
-			width = GuiConfig.SOURCE_PATH_WIDTH,
-			columns = {'source_id': GuiConfig.INT_WIDTH},
-			double=self._double_click
+			columns = {'source_id': self.root.font_size * GuiConfig.SOURCE_ID_WIDTH},
+			doubleclick = self._double_click
 		)
 		self.tree.column('source_id', anchor='e')
 		entries = dict()
@@ -123,10 +117,9 @@ class AxCheckerGui(AxCheckerLabels):
 					text=friendly_value, values=source_id, iid=source_id)
 			if source_type == 'Partition':
 				self.tree.see(source_id)
-		#frame = ExpandedFrame(self.child_window)
-		frame = GridFrame(self.child_window)
-		#LeftButton(frame, self.SELECT, self._get_root)
-		#RightButton(frame, self.QUIT, self.child_window.quit)
+		frame = ExpandedFrame(self.child_window)
+		LeftButton(frame, self.SELECT, self._get_root)
+		RightButton(frame, self.QUIT, self.child_window.quit)
 
 	def _get_root(self):
 		'''Get the selected root'''

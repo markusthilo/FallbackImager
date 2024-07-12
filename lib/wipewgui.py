@@ -155,7 +155,7 @@ class WipeWGui(WipeLabels):
 		frame = ExpandedFrame(self.target_window)
 		GridLabel(frame, self.SELECT_DRIVE_TO_WIPE)
 		for drive_id, drive_info in WinUtils().list_drives():
-			Button(frame, text=drive_id, command=partial(self._put_drive, drive_id)).grid(
+			Button(frame, text=f'DRIVE {drive_id[17:]}', command=partial(self._put_drive, drive_id)).grid(
 				row=frame.row, column=0, sticky='nw', padx=GuiConfig.PAD)
 			text = ScrolledText(frame, width=GuiConfig.ENTRY_WIDTH,
 				height=min(len(drive_info.split('\n')), GuiConfig.MAX_ENTRY_HEIGHT ))

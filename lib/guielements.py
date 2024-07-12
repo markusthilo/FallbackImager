@@ -94,18 +94,12 @@ class RightButton(Button):
 
 class ExpandedTree(Treeview):
 	'''Treeview with vertical scroll bar'''
-	def __init__(self, parent,
+	def __init__(self, parent, width, height,
 		selectmode = 'browse',
 		text = None,
 		columns = None,
 		doubleclick = None,
-		width = None,
-		height = None
 	):
-		if not width:
-			width = int(.9 * self.winfo_width())
-		if not height:
-			height = int(.9 * self.winfo_height())
 		if text:
 			show = None
 		else:
@@ -176,9 +170,7 @@ class GridBlank:
 
 class GridScrolledText(ScrolledText):
 	'''| ScrolledText |'''
-	def __init__(self, parent,
-		width = GuiConfig.TEXT_WIDTH,
-		height = GuiConfig.TEXT_HEIGHT,
+	def __init__(self, parent, width, height,
 		column = 0,
 		columnspan = 255,
 		ro = False,
