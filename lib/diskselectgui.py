@@ -12,19 +12,13 @@ from .stringutils import StringUtils
 class DiskSelectGui(ChildWindow, BasicLabels):
 	'''GUI to select disk (Linux)'''
 
-	def __init__(self, root, title, select, physical=False, exclude=None):
+	def __init__(self, root, title, button, physical=False, exclude=None):
 		'''Window to select disk'''
-		try:
-			if root.child_win_active:
-				return
-		except AttributeError:
-			pass
 		self.root = root
-		self._select = select
+		self.button = button
 		self.physical = physical
 		self.exclude = exclude
-		self.root.child_win_active = True
-		ChildWindow.__init__(self, self.root, title)
+		ChildWindow.__init__(self, self.root, title, button=self.button)
 		self._main_frame()
 
 	def _main_frame(self):
@@ -33,15 +27,17 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 		self.lsblk(self.main_frame)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
-		RightButton(frame, self.QUIT, self.destroy)
+		RightButton(frame, self.QUIT, self.quit)
 
 	def lsblk(self, root):
 		'''Frame with of lsblk tree'''
 		frame = ExpandedFrame(root)
 		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
-		self.tree = ExpandedTree(frame,
+		self.tree = ExpandedTree(
+			frame,
+			GuiConfig.LSBLK_NAME_WIDTH * self.root.font_size,
+			int(self.root.root_height / (3*self.root.font_size)),
 			text = 'name',
-			width = GuiConfig.LSBLK_NAME_WIDTH,
 			columns = GuiConfig.LSBLK_COLUMNS_WIDTH
 		)
 		for path, details in LinUtils.lsblk(physical=self.physical, exclude=self.exclude).items():
@@ -59,8 +55,8 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 	def _choose(self, event):
 		'''Run on double click'''
 		item = self.tree.identify('item', event.x, event.y)
-		self._select.set(self.tree.item(item)['text'])
-		self.destroy()
+		self.button.set(self.tree.item(item)['text'])
+		self.quit()
 
 	def _refresh(self):
 		'''Destroy and reopen Target Window'''

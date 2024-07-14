@@ -20,14 +20,9 @@ from .stringutils import StringUtils
 class SelectTargetWindow(DiskSelectGui, WipeLabels):
 	'''Gui to slect target to wipe'''
 
-	def __init__(self, root, title, select):
+	def __init__(self, root, title, button):
 		'''Window to select disk'''
-		try:
-			if root.child_win_active:
-				return
-		except AttributeError:
-			pass
-		DiskSelectGui.__init__(self, root, self.TARGET, select, physical=True)
+		DiskSelectGui.__init__(self, root, self.TARGET, button, physical=True)
 
 	def _main_frame(self):
 		'''Main frame'''
@@ -37,21 +32,21 @@ class SelectTargetWindow(DiskSelectGui, WipeLabels):
 		LeftButton(frame, self.REFRESH, self._refresh)
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
-		RightButton(frame, self.QUIT, self.destroy)
+		RightButton(frame, self.QUIT, self.quit)
 
 	def _select_focus(self):
 		'''Set target and quit'''
-		self._select.set(self.tree.focus())
-		self.destroy()
+		self.button.set(self.tree.focus())
+		self.quit()
 
 	def _select_files(self):
 		'''Choose file(s) to wipe'''
-		self.destroy()
+		self.quit()
 		filenames = [f'"{filename}"' for filename in askopenfilenames(title=self.SELECT_FILES_TO_WIPE)]
 		if filenames:
-			self._select.set(' '.join(filenames))
+			self.button.set(' '.join(filenames))
 		else:
-			self._select.set('')
+			self.button.set('')
 
 class WipeRGui(WipeLabels):
 	'''Notebook page for WipeR'''
@@ -179,14 +174,13 @@ class WipeRGui(WipeLabels):
 			tip = self.TIP_LOG_HEAD
 		)
 		AddJobButton(frame, 'WipeR', self._add_job)
-		self.root.child_win_active = False
 
 	def _select_target(self):
 		'''Select drive to wipe'''
 		self.select_target = SelectTargetWindow(
 			self.root,
 			self.SELECT_DRIVE_TO_WIPE,
-			self.target._variable
+			self.target
 		)
 
 	def _add_job(self):

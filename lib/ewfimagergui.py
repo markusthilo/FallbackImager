@@ -26,10 +26,9 @@ class EwfImagerGui(EwfImagerLabels):
 		self.root = root
 		frame = NotebookFrame(self)
 		GridLabel(frame, self.SOURCE)
-		self.source_var = self.root.settings.init_stringvar('Source')
 		self.source = StringSelector(
 			frame,
-			self.source_var,
+			self.root.settings.init_stringvar('Source'),
 			self.SELECT,
 			command = self._select_source,
 			tip = self.TIP_SOURCE
@@ -137,7 +136,7 @@ class EwfImagerGui(EwfImagerLabels):
 
 	def _select_source(self):
 		'''Select source to image'''
-		DiskSelectGui(self.root, self.SELECT_TARGET, self.source_var)
+		DiskSelectGui(self.root, self.SELECT_TARGET, self.source)
 
 	def _set_ts_case_no(self):
 		if not self.case_no.get():
