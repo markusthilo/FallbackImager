@@ -38,7 +38,8 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 			GuiConfig.LSBLK_NAME_WIDTH * self.root.font_size,
 			int(self.root.root_height / (3*self.root.font_size)),
 			text = 'name',
-			columns = GuiConfig.LSBLK_COLUMNS_WIDTH
+			columns = { name: width * self.root.font_size for name, width in GuiConfig.LSBLK_COLUMNS}
+			#columns = GuiConfig.LSBLK_COLUMNS_WIDTH
 		)
 		for path, details in LinUtils.lsblk(physical=self.physical, exclude=self.exclude).items():
 			values = (

@@ -26,22 +26,22 @@ class GuiConfig:
 	TREE_WALK_DEPTH = 10
 	TREE_WALK_WIDTH = 100
 	LSBLK_NAME_WIDTH = 16
-	LSBLK_COLUMNS_WIDTH = {
-		'type': 60,
-		'size': 60,
-		'label': 80,
-		'vendor': 80,
-		'model': 200,
-		'rev': 80,
-		'mountpoints': 200
-	}
+	LSBLK_COLUMNS = (
+		('type', 10),
+		('size', 10),
+		('label', 16),
+		('vendor', 12),
+		('model', 12),
+		('rev', 12),
+		('mountpoints', 20)
+	)	
 	WRITE_DEST_NAME_WIDTH = 200
-	WRITE_DEST_COLUMNS_WIDTH = {
-		'type': 60,
-		'size': 60,
-		'label': 80,
-		'vendor': 80,
-		'model': 200,
-		'rev': 80,
-		'ro': 40
-	}
+	WRITE_DEST_COLUMNS = (
+		('type', 10),
+		('size', 10),
+		('label', 16),
+		('vendor', 12),
+		('model', 12),
+		('rev', 12),
+		('ro', 4)
+	)
