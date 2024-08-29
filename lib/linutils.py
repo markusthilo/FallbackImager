@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from subprocess import Popen, PIPE, run
+from subprocess import Popen, PIPE, STDOUT, run
 from json import loads
 from re import findall
 from time import strftime
@@ -26,38 +26,6 @@ class LinUtils:
 			bin_path = parent/name
 			if bin_path.is_file():
 				return bin_path
-
-	@staticmethod
-	def set_ro(dev):
-		'''Set block device to read only'''
-		ret = run(['blockdev', '--setro', f'{dev}'], capture_output=True, text=True)
-		return ret.stdout, ret.stderr
-
-	@staticmethod
-	def set_rw(dev):
-		'''Set block device to read and write access'''
-		ret = run(['blockdev', '--setrw', f'{dev}'], capture_output=True, text=True)
-		return ret.stdout, ret.stderr
-
-	@staticmethod
-	def udevadm_reload():
-		'''Reload udev rules'''
-		ret = run(['udevadm', 'control', '--reload-rules'], capture_output=True, text=True)
-		return ret.stdout, ret.stderr
-
-	@staticmethod
-	def enable_udev_ro():
-		'''Set udev role to set block devices to ro on plugin'''
-		LinUtils.UDEV_PATH.write_text(
-			'ACTION=="add", SUBSYSTEM=="block", RUN+="blockdev --setro /dev/%k"'
-		)
-		return LinUtils.udevadm_reload()
-
-	@staticmethod
-	def disable_udev_ro():
-		'''Disable udev ro rule'''
-		LinUtils.UDEV_PATH.unlink(missing_ok=True)
-		return LinUtils.udevadm_reload()
 
 	@staticmethod
 	def get_blockdevs():
@@ -209,32 +177,6 @@ class LinUtils:
 		'''Use lsblk with JSON output to get disk or partition size'''
 		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
 			capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
-	
-	@staticmethod
-	def fdisk(path):
-		'''Use fdisk -l to read partition table'''
-		ret = run(['fdisk', '-l', f'{path}'], capture_output=True, text=True)
-		return ret.stdout, ret.stderr
-
-	@staticmethod
-	def init_dev(dev, mbr=False, fs='ntfs'):
-		'''Create partition table and one big partition'''
-		if mbr:
-			cmd = 'label: dos\n'
-			if fs.lower() == 'fat32':
-				cmd += ',,0c\n'
-			elif fs.lower() in ('ntfs', 'exfat'):
-				cmd += ',,07\n'
-			else:
-				cmd += ',,83\n'
-		else:
-			cmd = 'label: gpt\n'
-			if fs.lower() in ('ntfs', 'exfat','fat32'):
-				cmd += ',,EBD0A0A2-B9E5-4433-87C0-68B6B72699C7\n'
-			else:
-				cmd += ',,,\n'
-		ret = run(['sfdisk', f'{dev}'], capture_output=True, text=True, input=cmd)
-		return ret.stdout, ret.stderr
 
 	@staticmethod
 	def mkfs(dev, fs='ntfs', label='Volume'):
@@ -346,6 +288,82 @@ class LinUtils:
 	@staticmethod
 	def get_system_time():
 		return strftime('%G-%m-%d %T %Z/%z')
+
+	def __init__(self, sudo=None):
+		'''Generate object to use shell commands that need root privileges'''
+		if sudo:
+			self._base = ['sudo', '-S']
+			self._pw = sudo
+		else:
+			self._base = list()
+			self._pw = None
+
+	def fdisk(self, path):
+		'''Use fdisk -l to read partition table'''
+		ret = run(self._base.extend(['fdisk', '-l', f'{path}']),
+			input=self._pw, capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	def init_dev(self, dev, mbr=False, fs='ntfs', label='Volume'):
+		'''Create partition table and one big partition with filesystem'''
+		cmd = self._base.extend(['parted', f'{dev}', 'mklabel'])
+		if mbr:
+			cmd.append('msdos')
+		else:
+			cmd.append('gpt')
+		ret = run(cmd, input=self._pw, capture_output=True, text=True)
+		if ret.stderr:
+			return ret.stdout, ret.stderr
+		ret = run(self._base.extend(['parted', f'{dev}', 'mkpart', 'primary', fs, '0%', '100%']),
+			input=self._pw, capture_output=True, text=True)
+		if ret.stderr:
+			return ret.stdout, ret.stderr
+		cmd = self._base.extend(['mkfs', '-t'])
+		if fs.lower() == 'fat32':
+			cmd.extend(['vfat', '-n'])
+		elif fs.lower() == 'ntfs':
+			cmd.extend(['ntfs', '-f', '-L'])
+		else:
+			cmd.extend([fs.lower(), '-L'])
+		cmd.extend([f'{label}', f'{dev}'])
+		ret = run(cmd, input=self._pw, capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	def set_ro(self, dev):
+		'''Set block device to read only'''
+		ret = run(self._base.extend(['blockdev', '--setro', f'{dev}']),
+			input=self._pw, capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	def set_rw(self, dev):
+		'''Set block device to read and write access'''
+		ret = run(self._base.extend(['blockdev', '--setrw', f'{dev}']),
+			input=self._pw, capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	def udevadm_reload(self):
+		'''Reload udev rules'''
+		ret = run(self._base.extend(['udevadm', 'control', '--reload-rules']),
+			input=self._pw, capture_output=True, text=True)
+		return ret.stdout, ret.stderr
+
+	def enable_udev_ro(self):
+		'''Set udev role to set block devices to ro on plugin'''
+		self.UDEV_PATH.write_text(
+			'ACTION=="add", SUBSYSTEM=="block", RUN+="blockdev --setro /dev/%k"'
+		)
+		return self.udevadm_reload()
+
+	def disable_udev_ro(self):
+		'''Disable udev ro rule'''
+		self.UDEV_PATH.unlink(missing_ok=True)
+		return self.udevadm_reload()
+
+
+
+
+
+
 
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''

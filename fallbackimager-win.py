@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-08-29'
+__version__ = 'win_0.5.3_2024-08-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -33,31 +33,34 @@ from reporter import Reporter, ReporterCli
 from lib.reportergui import ReporterGui
 from hashedcopy import HashedCopy, HashedCopyCli
 from lib.hashedcopygui import HashedCopyGui
-from ewfimager import EwfImager, EwfImagerCli
-from lib.ewfimagergui import EwfImagerGui
-from ewfchecker import EwfChecker, EwfCheckerCli
-from lib.ewfcheckergui import EwfCheckerGui
-from wiper import WipeR, WipeRCli
-from lib.wipergui import WipeRGui
+from oscdimager import OscdImager, OscdImagerCli
+from lib.oscdimagergui import OscdImagerGui
+from dismimager import DismImager, DismImagerCli
+from lib.dismimagergui import DismImagerGui
+from wipew import WipeW, WipeWCli
+from lib.wipewgui import WipeWGui
 
 class Gui(GuiBase):
 	'''Definitions for the GUI'''
-
+	
 	CANDIDATES = (
-		(EwfImager, EwfImagerCli, EwfImagerGui),
-		(EwfChecker, EwfCheckerCli, EwfCheckerGui),
+		(OscdImager, OscdImagerCli, OscdImagerGui),
+		(DismImager, DismImagerCli, DismImagerGui),
 		(ZipImager, ZipImagerCli, ZipImagerGui),
 		(HashedCopy, HashedCopyCli, HashedCopyGui),
 		(SQLite, SQLiteCli, SQLiteGui),
 		(Reporter, ReporterCli, ReporterGui),
 		(AxChecker, AxCheckerCli, AxCheckerGui),
-		(WipeR, WipeRCli, WipeRGui)
+		(WipeW, WipeWCli, WipeWGui)
 	)
 
 	def __init__(self, config=None, debug=False):
 		'''Build GUI'''
-		parent_path = Path(__file__).parent
-		default_config = Path.home()/'.config/fallbackimager.conf.json'
+		if Path(__executable__).name == 'python.exe':
+			parent_path = Path(__file__).parent
+		else:
+			parent_path = Path(__executable__).parent
+		default_config = parent_path/'config.json'
 		if config:
 			settings = Settings(config)
 		else:
@@ -73,7 +76,7 @@ class Gui(GuiBase):
 
 if __name__ == '__main__':  # start here
 	argp = ArgumentParser(description=__description__.strip())
-	argp.add_argument('-c', '--config', type=Path, help='Config file (default: ~/.config/fallbackimager.conf.json)')
+	argp.add_argument('-c', '--config', type=Path, help='Config file (default: config.son)')
 	argp.add_argument('-d', '--debug', default=False, action='store_true', help='Debug mode')
 	args = argp.parse_args()
 	Gui(debug=args.debug).mainloop()
