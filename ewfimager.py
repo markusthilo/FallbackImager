@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-27'
+__version__ = '0.5.3_2024-08-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -25,17 +25,12 @@ from lib.linutils import LinUtils, OpenProc
 from lib.stringutils import StringUtils
 from ewfchecker import EwfChecker
 
-if Path(__file__).suffix.lower() == '.pyc':
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
-
 class EwfImager:
 	'''Acquire and verify E01/EWF image'''
 
 	def __init__(self):
 		'''Check if ewfacquire and ewfverify are present'''
-		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', __parent_path__)
+		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', Path(__file__).parent)
 		if self.ewfacquire_path and EwfChecker().available:
 			self.available = True
 		else:
