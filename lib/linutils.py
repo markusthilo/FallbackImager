@@ -288,6 +288,11 @@ class LinUtils:
 			return ret.stdout, ''
 		return ret.stdout, ret.stderr
 
+	def not_root(self):
+		'''Return True if no root privileges'''
+		stdout, stderr = self._run('echo', 'test')
+		return stdout != 'test\n'
+
 	def fdisk(self, path):
 		'''Use fdisk -l to read partition table'''
 		return self._run('fdisk', '-l', f'{path}')
