@@ -374,14 +374,16 @@ class LinUtils:
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
 
-	def __init__(self, cmd, stderr=True, log=None):
+	def __init__(self, cmd, sudo=None, log=None):
 		'''Launch process'''
 		self.log = log
-		if stderr:
-			stderr = PIPE
+		if sudo:
+			super().__init__(['sudo', '-S'] + cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, encoding='utf-8')
+			self.stdin.write(sudo)
+			self.stdin.flush()
+			self.stdin.close()
 		else:
-			stderr = STDOUT
-		super().__init__(cmd, stdout=PIPE, stderr=stderr, encoding='utf-8')
+			super().__init__(cmd, stdout=PIPE, stderr=PIPE, encoding='utf-8')
 
 	def echo_output(self, echo=print, cnt=None, skip=0):
 		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''

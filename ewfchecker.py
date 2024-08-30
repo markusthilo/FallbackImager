@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.2_2024-06-12'
+__version__ = '0.5.3_2024-08-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,7 +11,6 @@ __description__ = '''
 Verify EWF/E01 image using ewfinfo, ewfverify and ewfmount.
 '''
 
-from sys import executable as __executable__
 from pathlib import Path
 from subprocess import run
 from re import sub
@@ -21,25 +20,21 @@ from lib.timestamp import TimeStamp
 from lib.linutils import LinUtils, OpenProc
 from lib.logger import Logger
 
-if Path(__file__).suffix.lower() == '.pyc':
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
-
 class EwfChecker:
 	'''Verify E01/EWF image file'''
 
 	def __init__(self):
 		'''Check if the needed binaries are present'''
-		self.ewfverify_path = LinUtils.find_bin('ewfverify', __parent_path__)
-		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', __parent_path__)
-		self.ewfmount_path = LinUtils.find_bin('ewfmount', __parent_path__)
+		parent_path = Path(__file__).parent
+		self.ewfverify_path = LinUtils.find_bin('ewfverify', parent_path)
+		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', parent_path)
+		self.ewfmount_path = LinUtils.find_bin('ewfmount', parent_path)
 		if self.ewfverify_path and self.ewfinfo_path and self.ewfmount_path:
 			self.available = True
 		else:
 			self.available = False
 
-	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None):
+	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None, sudo=None):
 		'''Verify image'''
 		self.image_path = ExtPath.path(image)
 		if not self.image_path.suffix:
@@ -56,7 +51,7 @@ class EwfChecker:
 			self.log = Logger(filename=self.filename, outdir=self.outdir, 
 				head='ewfchecker.EwfChecker', echo=self.echo)
 		self.log.info('Image informations', echo=True)
-		proc = OpenProc([f'{self.ewfinfo_path}', f'{self.image_path}'], log=self.log)
+		proc = OpenProc([f'{self.ewfinfo_path}', f'{self.image_path}'], log=self.log, sudo=sudo)
 		proc.echo_output(skip=2)
 		if proc.returncode != 0:
 			self.log.warning(proc.stderr.read())
@@ -66,7 +61,8 @@ class EwfChecker:
 			self.log.error(proc.stderr.read())
 		info = proc.stdout.read().splitlines()[0]
 		self.log.info(f'Using {info}', echo=True)
-		proc = OpenProc([f'{self.ewfverify_path}', '-d', 'sha256', f'{self.image_path}'], log=self.log)
+		proc = OpenProc([f'{self.ewfverify_path}', '-d', 'sha256', f'{self.image_path}'],
+			log=self.log, sudo=sudo)
 		if proc.echo_output(cnt=8) != 0:
 			self.log.error(f'ewfverify terminated with:\n{proc.stderr.read()}')
 		self.hashes = dict()
@@ -81,15 +77,17 @@ class EwfChecker:
 		except FileExistsError:
 			self.log.warning('Moint point already exists')
 		else:
-			ret = run([f'{self.ewfmount_path}', f'{self.image_path}', f'{mountpoint}'], capture_output=True, text=True)
-			if ret.stderr:
-				self.log.warning(proc.stderr)
+			proc = OpenProc([f'{self.ewfmount_path}', f'{self.image_path}', f'{mountpoint}'],
+				log=self.log, sudo=sudo)
+			if proc.echo_output() != 0:
+				self.log.error(f'ewfmount terminated with:\n{proc.stderr.read()}')
 			else:
 				ewf = mountpoint/'ewf1'
 				xxd = ExtPath.read_bin(ewf)
 				self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
 				self.log.info('Trying to read partition table')
-				stdout, stderr = LinUtils.fdisk(ewf)
+				rrun = LinUtils(sudo=sudo)
+				stdout, stderr = rrun.fdisk(ewf)
 				if stderr:
 					self.log.warning(stderr)
 				else:

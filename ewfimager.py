@@ -11,7 +11,6 @@ __description__ = '''
 Use libewf to create and check an EWF/E01 image of a block device.
 '''
 
-from sys import executable as __executable__
 from os import getlogin
 from pathlib import Path
 from math import ceil
@@ -36,7 +35,7 @@ class EwfImager:
 		else:
 			self.available = False
 
-	def acquire(self, source, case_number, evidence_number, description, size, *args,
+	def acquire(self, source, case_number, evidence_number, description, *args,
 			outdir = None,
 			compression_values = None,
 			examiner_name = None,
@@ -45,8 +44,10 @@ class EwfImager:
 			media_flags = None,
 			notes = None,
 			setro = False,
+			size = None,
 			echo = print,
 			log = None,
+			sudo = None,
 			**kwargs
 		):
 		'''Run ewfacquire'''
@@ -116,18 +117,20 @@ class EwfImager:
 			self.infos['notes'] = notes
 		else:
 			self.infos['notes'] = '-'
-		size = size.replace(' ', '').rstrip('bB')
+		if not size:
+			size = 40
 		try:
+			size = self.segment_size = ceil(self.source_size/int(size)/1073741824) * 1073741824
+		except ValueError:
+			size = size.replace(' ', '').rstrip('bB')
 			if size[-1].lower() == 'm':
 				self.segment_size = int(size[:-1]) * 1048576
 			elif size[-1].lower() == 'g':
 				self.segment_size = int(size[:-1]) * 1073741824
 			else:
-				self.segment_size = ceil(self.source_size/int(size)/1073741824) * 1073741824
-			if self.segment_size < 0:
-				1/0	# throw the following exception on negative segment size
-		except (IndexError, ValueError, ZeroDivisionError):
-			self.log.error(exception='Undecodable segment size')
+				self.log.error(exception='Undecodable segment size')
+			if self.segment_size <= 0:
+				self.log.error(exception='Invalid segment size')
 		self.infos['segment_size'] = StringUtils.bytes(self.segment_size)
 		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
 		cmd.extend(['-C', self.infos['case_number']])
@@ -144,7 +147,7 @@ class EwfImager:
 		for arg, par in kwargs.items():
 			cmd.extend([f'-{arg}', f'{par}'])
 		cmd.append(f'{self.source}')
-		proc = OpenProc(cmd, log=self.log)
+		proc = OpenProc(cmd, sudo=sudo, log=self.log)
 		if proc.echo_output(cnt=9) != 0:
 			self.log.error(f'ewfacquire terminated with:\n{proc.stderr.read()}')
 		self.infos.update(proc.grep_stack(
@@ -244,13 +247,14 @@ class EwfImagerCli(ArgumentParser):
 	def run(self, echo=print):
 		'''Run EwfImager and EwfVerify'''
 		imager = EwfImager()
-		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description, self.size,
+		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
 			compression_values = self.compression_values,
 			examiner_name = self.examiner_name,
 			filename = self.filename,
 			media_type = self.media_type,
 			notes = self.notes,
 			setro = self.setro,
+			size = self.size,
 			outdir = self.outdir,
 			echo = echo
 		)
