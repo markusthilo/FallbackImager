@@ -297,6 +297,10 @@ class LinUtils:
 		'''Use fdisk -l to read partition table'''
 		return self._run('fdisk', '-l', f'{path}')
 
+	def mkdir(self, path):
+		'''Generate directory with root privileges'''
+		return self._run('mkdir', f'{path}')
+
 	def mount(self, part, mountpoint, mkdir=True):
 		'''Use mount'''
 		mp = Path(mountpoint)

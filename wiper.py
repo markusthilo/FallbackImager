@@ -56,6 +56,7 @@ class WipeR:
 			maxretries = None,
 			log = None,
 			outdir = None,
+			sudo = None,
 			echo = print
 		):
 		self.echo = echo

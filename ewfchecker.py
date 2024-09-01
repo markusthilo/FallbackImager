@@ -72,11 +72,12 @@ class EwfChecker:
 			elif line.startswith('SHA256 hash calculated over data:'):
 				self.hashes['sha256'] = line.split(':', 1)[1].strip()
 		mountpoint = Path(f'/mnt/ewfmount_{self.hashes["md5"]}')
-		try:
-			mountpoint.mkdir()
-		except FileExistsError:
-			self.log.warning('Moint point already exists')
+		sudo = LinUtils(sudo=sudo)
+		stdout, stderr = sudo.mkdir(mountpoint)
+		if stderr:
+			self.log.warning(f'Unable to make mount point {mountpoint}\n{stderr}')
 		else:
+			self.log.debug(stdout, echo=True)
 			proc = OpenProc([f'{self.ewfmount_path}', f'{self.image_path}', f'{mountpoint}'],
 				log=self.log, sudo=sudo)
 			if proc.echo_output() != 0:
