@@ -70,6 +70,16 @@ click to auto generate (if empty)'''
 	YES = 'Yes'
 	NO = 'No'
 
+class SettingsLabels(BasicLabels):
+	SUDO = 'Bevome root / sudo'
+	PASSWORD = 'Password'
+	TIP_SUDO = 'Press when password for sudo is set'
+	WRITE_PROTECTION = 'Write protection'
+	SET_NEW_RO = 'Set new attached block devices to read only'
+	TIP_SET_NEW_RO = '''When checked, all newly attached block devices
+will be set to read only while running this app
+(sudo blockdev --setro /dev/...)'''
+
 class EwfImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source to image as EWF/E01'
 	SETRO = 'Set device to read only'

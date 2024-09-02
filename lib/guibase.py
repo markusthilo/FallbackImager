@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from os import name as __os__
+if __os__ == 'nt':
+	from win32com.shell.shell import IsUserAnAdmin
 from tkinter import Tk, PhotoImage, TclError
 from tkinter.messagebox import askyesno, showerror
 from tkinter.font import nametofont
@@ -11,11 +14,8 @@ from .guielements import LeftButton, RightButton, LeftLabel, ChildWindow
 from .guielements import GridScrolledText, GridFrame, GridButton
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
-try:
-	from win32com.shell.shell import IsUserAnAdmin
-	__not_admin__ = not IsUserAnAdmin()
-except ModuleNotFoundError:
-	__not_admin__ = False
+if __os__ == 'posix':
+	from .linsettingsgui import SettingsFrame
 
 class GuiBase(Tk):
 
@@ -35,7 +35,7 @@ class GuiBase(Tk):
 		self.settings = settings
 		super().__init__()
 		title = f'{self.app_name} v{self.version}'
-		if __not_admin__:
+		if __os__ == 'nt' and not IsUserAnAdmin():
 			title += f' ({BasicLabels.NOT_ADMIN})!'
 		self.title(title)
 		self.resizable(0, 0)
@@ -51,6 +51,8 @@ class GuiBase(Tk):
 		self.help_button = RightButton(frame, BasicLabels.HELP, self._show_help)
 		self.notebook = ExpandedNotebook(self)
 		self.modules = [(Cli, Gui(self)) for Cli, Gui in modules]
+		if __os__ == 'posix':
+			self.settings_frame = SettingsFrame(self.notebook)
 		try:
 			self.notebook.select(self.settings.get('ActiveTab', section='Base'))
 		except (KeyError, TclError):

@@ -31,7 +31,7 @@ class GuiConfig:
 		('size', 10),
 		('label', 16),
 		('vendor', 12),
-		('model', 12),
+		('model', 24),
 		('rev', 12),
 		('mountpoints', 20)
 	)	

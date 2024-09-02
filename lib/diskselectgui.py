@@ -48,6 +48,7 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 				StringUtils.str(details['label']),
 				StringUtils.str(details['vendor']),
 				StringUtils.str(details['model']),
+				StringUtils.str(details['rev']),
 				StringUtils.join(details['mountpoints'], delimiter=', ')
 			)
 			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)

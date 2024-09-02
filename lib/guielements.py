@@ -285,7 +285,7 @@ class VerticalRadiobuttons:
 
 class StringSelector(Button):
 	'''Button + Entry to select/write a string'''
-	def __init__(self, parent, variable, text, command=None, default=None, width=None,
+	def __init__(self, parent, variable, text, command=None, default=None, width=None, show='',
 		column=1, columnspan=255, incrow=True, tip=None):
 		self._variable = variable
 		if not command:
@@ -295,7 +295,7 @@ class StringSelector(Button):
 		self.grid(row=parent.row, column=column, sticky='w', padx=parent.padding)
 		if not width:
 			width = GuiConfig.ENTRY_WIDTH
-		Entry(parent, textvariable=self._variable, width=width).grid(
+		Entry(parent, textvariable=self._variable, show=show, width=width).grid(
 			row=parent.row, column=column+1, columnspan=columnspan-1, sticky='w', padx=parent.padding)
 		if incrow:
 			parent.row += 1
