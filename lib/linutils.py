@@ -41,14 +41,14 @@ class LinUtils:
 				capture_output=True, text=True).stdout)['blockdevices']
 		]
 
-	#@staticmethod
-	#def get_disks():
-	#	'''Get type disk except /dev/zram*'''
-	#	return [
-	#		dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
-	#			capture_output=True, text=True).stdout)['blockdevices']
-	#			if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
-	#	]
+	@staticmethod
+	def get_disks():
+		'''Get type disk except /dev/zram*'''
+		return [
+			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
+		]
 
 	@staticmethod
 	def get_physical_devs():
@@ -119,7 +119,7 @@ class LinUtils:
 
 	@staticmethod
 	def lsblk(physical=False, ro=False, exclude=None):
-		'''Use block devices'''
+		'''Use lsblk'''
 		blkdevs = {
 			dev['path']: {
 				'type': dev['type'],

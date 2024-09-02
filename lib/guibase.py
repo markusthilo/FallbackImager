@@ -52,7 +52,7 @@ class GuiBase(Tk):
 		self.notebook = ExpandedNotebook(self)
 		self.modules = [(Cli, Gui(self)) for Cli, Gui in modules]
 		if __os__ == 'posix':
-			self.settings_frame = SettingsFrame(self.notebook)
+			self.settings_frame = SettingsFrame(self)
 		try:
 			self.notebook.select(self.settings.get('ActiveTab', section='Base'))
 		except (KeyError, TclError):
