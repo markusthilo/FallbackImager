@@ -86,7 +86,7 @@ class BlockDevGui(DiskSelectGui, Tk):
 			print('DEBUG', disk)
 		self.root.after(100, self._blockdevs())
 
-class BlockDevWindow(Thread, Tk):
+class BlockDevWindow(Thread):
 	'''Window to set new block devices to ro'''
 
 	def __init__(self, root):

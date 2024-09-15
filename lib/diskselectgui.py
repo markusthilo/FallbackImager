@@ -29,6 +29,12 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 		LeftButton(frame, self.REFRESH, self._refresh)
 		RightButton(frame, self.QUIT, self.quit)
 
+	def _yes_no(self, bool):
+		'''Return Yes for True and No for false'''
+		if bool:
+			return self.YES
+		return self.NO
+
 	def lsblk(self, root):
 		'''Frame with of lsblk tree'''
 		frame = ExpandedFrame(root)
@@ -48,6 +54,7 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 				StringUtils.str(details['vendor']),
 				StringUtils.str(details['model']),
 				StringUtils.str(details['rev']),
+				self._yes_no(details['ro']),
 				StringUtils.join(details['mountpoints'], delimiter=', ')
 			)
 			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)

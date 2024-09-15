@@ -33,6 +33,7 @@ class GuiConfig:
 		('vendor', 12),
 		('model', 24),
 		('rev', 12),
+		('ro', 4),
 		('mountpoints', 20)
 	)	
 	WRITE_DEST_NAME_WIDTH = 200
