@@ -58,25 +58,18 @@ class SettingsFrame(ExpandedFrame):
 
 	def _run_dev_win(self):
 		'''Run Tk mainloop'''
-		BlockDevWindow(self.root).mainloop()
+		BlockDevWindow(self.root, self.open_config_button).mainloop()
 
 class BlockDevWindow(Tk):
 	'''Define GUI for block device monitor'''
 
-	def __init__(self, root):
+	def __init__(self, root, open_config_button):
 		'''Build Window to observe block devices and set rw/ro'''
 		Tk.__init__(self)
-		self.title('''DEBUG''')
+		open_config_button.config(state='disabled')
+		self.title(SettingsLabels.BLOCKDEVS)
 		self.resizable(0, 0)
-
-		print(root.parent_path)
-		appicon = PhotoImage(file=root.parent_path/'appicon.png')
-		#img = ImageTk.PhotoImage(Image.open(root.parent_path/'appicon.png'))
-		self.iconphoto(False, appicon)
-
-
-		#self.iconphoto(True, root.appicon)
-		#self.protocol('WM_DELETE_WINDOW', root._quit_app)
+		#self.iconphoto(True, root.appicon) ### does not work, no idea why!
 
 		#GridLabel(self, SettingsLabels.WRITE_PROTECTION)
 		#self._ro = Checker(
