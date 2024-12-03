@@ -66,15 +66,18 @@ click to auto generate (if empty)'''
 	AUTO = 'auto'
 	MISSING_ENTRY = 'Missing entry'
 	ARE_YOU_ROOT = 'Are you root?'
-	NOT_ADMIN = 'No Admin Privileges'
+	NOT_ADMIN = 'No admin privileges'
 	YES = 'Yes'
 	NO = 'No'
 
 class SettingsLabels(BasicLabels):
-	SUDO = 'Bevome root / sudo'
-	PASSWORD = 'Password'
+	SUDO = 'Get admin privileges'
+	SET_PASSWORD = 'Set sudo password'
 	TIP_SUDO = 'Press when password for sudo is set'
-	WRITE_PROTECTION = 'Write protection'
+	WRITE_PROTECTION = 'Block device write protection'
+	OPEN_CONFIG_WINDOW = 'Open config window'
+	TIP_CONFIG_WINDOW = '''Open a window to enable and disable
+write protection for block devices'''
 	SET_NEW_RO = 'Set new attached block devices to read only'
 	TIP_SET_NEW_RO = '''When checked, all newly attached block devices
 will be set to read only while running this app

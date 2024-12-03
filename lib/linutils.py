@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from os import getuid
+from os import getuid, getenv
 from pathlib import Path
 from subprocess import Popen, PIPE, STDOUT, run
 from json import loads
@@ -263,11 +263,11 @@ class LinUtils:
 
 	### root / sudo required ###
 
-	def __init__(self, sudo=None):
+	def __init__(self, password=None):
 		'''Generate object to use shell commands that need root privileges'''
-		if sudo:
-			self._sudo = ['sudo', '-S']
-			self._pw = sudo
+		if password and not self.i_am_root():
+			self._sudo = ['sudo', '-S', '-k']
+			self._pw = password
 		else:
 			self._sudo = list()
 			self._pw = None
@@ -284,14 +284,13 @@ class LinUtils:
 		else:
 			cmd .extend(args)
 		ret = run(cmd, input=self._pw, capture_output=True, text=True)
-		if ret.stderr.startswith('[sudo]') and ret.stderr.count(':') <= 1:	# [sudo] password for ...: is no error
-			return ret.stdout, ''
 		return ret.stdout, ret.stderr
 
-	def not_root(self):
-		'''Return True if no root privileges'''
-		stdout, stderr = self._run('echo', 'test')
-		return stdout != 'test\n'
+	def i_have_root(self):
+		'''Return True if sudo works'''
+		run(['faillock', '--user', getenv('USER'), '--reset'])
+		stdout, stderr = self._run('whoami')
+		return stdout.strip() == 'root' or self.i_am_root()
 
 	def fdisk(self, path):
 		'''Use fdisk -l to read partition table'''
