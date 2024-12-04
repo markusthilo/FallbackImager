@@ -60,7 +60,7 @@ class SettingsFrame(ExpandedFrame):
 		'''Run Tk mainloop'''
 		BlockDevWindow(self.root, self.open_config_button).mainloop()
 
-class BlockDevWindow(Tk):
+class BlockDevWindow(Tk, DiskSelectGui):
 	'''Define GUI for block device monitor'''
 
 	def __init__(self, root, open_config_button):
@@ -70,24 +70,11 @@ class BlockDevWindow(Tk):
 		self.title(SettingsLabels.BLOCKDEVS)
 		self.resizable(0, 0)
 		#self.iconphoto(True, root.appicon) ### does not work, no idea why!
-
-		#GridLabel(self, SettingsLabels.WRITE_PROTECTION)
-		#self._ro = Checker(
-		#	self,
-		#	BooleanVar(),
-		#	SettingsLabels.SET_NEW_RO,
-		#	command = self._change_rorw,
-		#	tip = SettingsLabels.TIP_SET_NEW_RO,
-		#	columnspan = 3
-		#)
-
+		self.root = root
 		self.button = None
-		self.physical = False
+		self.physical = True
 		self.exclude = None
-
-		#print(f'DEBUG: >{stdout}<, >{stderr}<')
-
-		#self._main_frame()
+		DiskSelectGui._main_frame(self)
 
 
 	def blockdevs(self):
@@ -98,3 +85,51 @@ class BlockDevWindow(Tk):
 		for disk in new_disks:
 			print('DEBUG', disk)
 		self.root.after(100, self._blockdevs())
+
+
+
+
+class CopyOfDiskSelectGui:
+	'''GUI to select disk (Linux)'''
+
+	def _yes_no(self, bool):
+		'''Return Yes for True and No for false'''
+		if bool:
+			return self.YES
+		return self.NO
+
+	def lsblk(self, root):
+		'''Frame with of lsblk tree'''
+		frame = ExpandedFrame(root)
+		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
+		self.tree = ExpandedTree(
+			frame,
+			GuiConfig.LSBLK_NAME_WIDTH * self.root.font_size,
+			int(self.root.root_height / (3*self.root.font_size)),
+			text = 'name',
+			columns = {name: width * self.root.font_size for name, width in GuiConfig.LSBLK_COLUMNS}
+		)
+		for path, details in LinUtils.lsblk(physical=self.physical, exclude=self.exclude).items():
+			values = (
+				details['type'],
+				details['size'],
+				StringUtils.str(details['label']),
+				StringUtils.str(details['vendor']),
+				StringUtils.str(details['model']),
+				StringUtils.str(details['rev']),
+				self._yes_no(details['ro']),
+				StringUtils.join(details['mountpoints'], delimiter=', ')
+			)
+			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)
+		self.tree.bind("<Double-1>", self._choose)
+
+	def _choose(self, event):
+		'''Run on double click'''
+		item = self.tree.identify('item', event.x, event.y)
+		self.button.set(self.tree.item(item)['text'])
+		self.quit()
+
+	def _refresh(self):
+		'''Destroy and reopen Target Window'''
+		self.main_frame.destroy()
+		self._main_frame()
