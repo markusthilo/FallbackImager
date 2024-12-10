@@ -20,6 +20,24 @@ class LinUtils:
 		return getuid == 0
 
 	@staticmethod
+	def gen_cmd(*args, sudo=False, password=None):
+		'''Build a command to run as subprocess from args'''
+		if len(args) == 0:
+			return
+		if password or sudo:
+			cmd = ['sudo']
+			if password:
+					cmd.extend(['-S', '-k'])
+		else:
+			cmd = list()
+		for arg in args:
+			if isinstance(arg, list):
+				cmd.extend(arg)
+			else:
+				cmd.append(arg)
+		return cmd
+
+	@staticmethod
 	def find_bin(name, parent_path):
 		'''Find a binary'''
 		for parent in (
@@ -263,27 +281,22 @@ class LinUtils:
 
 	### root / sudo required ###
 
-	def __init__(self, password=None):
+	def __init__(self, sudo=True, password=None):
 		'''Generate object to use shell commands that need root privileges'''
-		if password and not self.i_am_root():
-			self._sudo = ['sudo', '-S', '-k']
-			self._pw = password
+		if self.i_am_root():
+			self.sudo = False
+			self.password = None
 		else:
-			self._sudo = list()
-			self._pw = None
+			self.password = password
+			self.sudo = True
 
 	def _run(self, *args):
-		'''Run command (given arg after arg) using sudo if password was given'''
-		if len(args) == 0:
-			return '', 'missing command'
-		cmd = self._sudo.copy()
-		if isinstance(args[0], list):
-			if len(args) > 1:
-				return '', f'{args}: unprocessable command'
-			cmd.extend(args[0])
+		'''Run command using sudo if password was given'''
+		cmd = self.gen_cmd(*args, sudo=self.sudo, password=self.password)
+		if self.password:
+			ret = run(cmd, input=self.password, capture_output=True, text=True)
 		else:
-			cmd .extend(args)
-		ret = run(cmd, input=self._pw, capture_output=True, text=True)
+			ret = run(cmd, capture_output=True, text=True)
 		return ret.stdout, ret.stderr
 
 	def i_have_root(self):
@@ -304,8 +317,9 @@ class LinUtils:
 		'''Use mount'''
 		mp = Path(mountpoint)
 		if mp.exists():
-			if not mp.isdir():
+			if not mp.is_dir():
 				return '', f'{mp.absolute()} is not a possible mount point'
+			mkdir_stdout, mkdir_stderr = '', ''
 		else:
 			mkdir_stdout, mkdir_stderr = self._run('mkdir', f'{mountpoint}')
 		mount_stdout, mount_stderr = self._run('mount', f'{part}', f'{mountpoint}')
@@ -326,8 +340,12 @@ class LinUtils:
 		rmdir_stdout, rmdir_stderr = self._run('rmdir', f'{mountpoint}')
 		return umount_stdout + rmdir_stdout, umount_stderr + rmdir_stderr
 
-	def init_blkdev(self, dev, mountpoint, mbr=False, fs='ntfs', label='Volume'):
+	def init_blkdev(self, dev, mountpoint, mbr=False, fs=None, name=None):
 		'''Create partition table, one big partition, filesystem and mount'''
+		if not fs:
+			fs = 'ntfs'
+		if not name:
+			name= ' Volume'
 		if mbr:
 			mklabel_stdout, mklabel_stderr = self._run('parted', '--script', f'{dev}', 'mklabel', 'msdos')
 		else:
@@ -377,16 +395,15 @@ class LinUtils:
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
 
-	def __init__(self, cmd, sudo=None, log=None):
+	def __init__(self, *args, sudo=False, password=None, log=None):
 		'''Launch process'''
 		self.log = log
-		if sudo:
-			super().__init__(['sudo', '-S'] + cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, encoding='utf-8')
-			self.stdin.write(sudo)
-			self.stdin.flush()
-			self.stdin.close()
+		cmd = LinUtils.gen_cmd(*args, sudo=sudo, password=password)
+		if password:
+			super().__init__(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True)
+			self.stdin.write(password)
 		else:
-			super().__init__(cmd, stdout=PIPE, stderr=PIPE, encoding='utf-8')
+			super().__init__(cmd, stdout=PIPE, stderr=PIPE, text=True)
 
 	def echo_output(self, echo=print, cnt=None, skip=0):
 		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''

@@ -18,13 +18,12 @@ Be aware that this module is extremely dangerous as it is designed to erase data
 '''
 
 from sys import executable as __executable__
-from subprocess import Popen, PIPE
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger
-from lib.linutils import LinUtils
+from lib.linutils import LinUtils, OpenProc
 
 if Path(__file__).suffix.lower() == '.pyc':
 	__parent_path__ = Path(__executable__).parent
@@ -56,7 +55,7 @@ class WipeR:
 			maxretries = None,
 			log = None,
 			outdir = None,
-			sudo = None,
+			linutils = None,
 			echo = print
 		):
 		self.echo = echo
@@ -85,12 +84,14 @@ class WipeR:
 				head = 'wiper.WipeR',
 				echo = self.echo
 			)
+		if not linutils:
+			linutils = LinUtils()
 		if ExtPath.path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
 			if not verify:
 				for partition in LinUtils.lspart(targets[0]):
-					stdout, stderr = LinUtils.umount(partition)
+					stdout, stderr = linutils.umount(partition)
 					if stderr:
 						self.log.warning(stderr, echo=True)
 		cmd = [f'{self.zd_path}']
@@ -114,7 +115,7 @@ class WipeR:
 			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		for target in targets:
 			self.echo()
-			proc = Popen(cmd + [target], stdout=PIPE, stderr=PIPE, text=True)
+			proc = OpenProc(cmd + [target], sudo=linutils.sudo, password=linutils.password)
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg.startswith('...'):
@@ -126,8 +127,8 @@ class WipeR:
 			if stderr := proc.stderr.read():
 				self.log.error(f'zd terminated with: {stderr}')
 
-	def mkfs(self, target,
-			fs = 'ntfs',
+	def create(self, target,
+			fs = None,
 			loghead = None,
 			mbr = False,
 			name = None,
@@ -138,47 +139,12 @@ class WipeR:
 			loghead = ExtPath.path(loghead)
 		else:
 			loghead = __parent_path__/'wipe-log-head.txt'
-		if not name:
-			name = 'Volume'
-		stdout, stderr = LinUtils.init_dev(target, mbr=mbr, fs=fs)
+		if not mountpoint:
+			mountpoint = ExtPath.mkdir(self.outdir/'mnt')
+		stdout, stderr = LinUtils.init_dev(target, mountpoint, mbr=mbr, fs=fs, name=name)
 		if stderr:
 			self.log.warning(stderr, echo=True)
-		for retry in range(10):
-			partitions = LinUtils.lspart(target).keys()
-			if partitions:
-				partition = list(partitions)[0]
-				break
-			if retry == 9:
-				self.log.warning('Could not create new partition', echo=True)
-				self.log.close()
-				return
-		stdout, stderr = LinUtils.mkfs(partition, fs=fs, label=name)
-		if stderr:
-			self.log.warning(stderr, echo=True)
-		if mountpoint:
-			mnt = ExtPath.mkdir(mountpoint)
-		else:
-			mnt = ExtPath.mkdir(self.outdir/'mnt')
-		stdout, stderr = LinUtils.mount(partition, mnt)
-		if stderr:
-			self.log.warning(stderr, echo=True)
-			self.log.close()
-			return
-		self.log.info('Disk preparation successful', echo=True)
-		self.log.close()
-		log_path = mnt/'wipe-log.txt'
-		try:
-			head = loghead.read_text()
-		except FileNotFoundError:
-			head = ''
-		with log_path.open('w') as fh:
-			fh.write(head + self.log.path.read_text())
-		if mountpoint:
-			return
-		stdout, stderr = LinUtils.umount(mnt)
-		if stderr:
-			raise RuntimeError(f'{stdout}\n{stderr}')
-		mnt.rmdir()
+
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -264,6 +230,13 @@ class WipeRCli(ArgumentParser):
 			self.name
 		):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
+		if self.targets[0].is_block_device():
+			if len(self.targets) > 1:
+				raise ValueError('Too many arguments: only one block device at a time')
+		else:
+			for file_path in self.targets:
+				if not file_path.is_file():
+					raise ValueError(f'{file_path} is not a regular file')
 		wiper = WipeR()
 		wiper.wipe(self.targets,
 			allbytes = self.allbytes,
@@ -277,7 +250,7 @@ class WipeRCli(ArgumentParser):
 			echo = echo
 		)
 		if self.create:
-			wiper.mkfs(self.targets[0],
+			wiper.create(self.targets[0],
 				fs = self.create,
 				loghead = self.loghead,
 				mbr = self.mbr,
