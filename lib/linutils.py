@@ -20,6 +20,12 @@ class LinUtils:
 		return getuid == 0
 
 	@staticmethod
+	def whoami():
+		'''Set keyboard layout using setxkbmap'''
+		ret = run(['whoami'], capture_output=True, text=True)
+		return ret.stdout.rstrip()
+
+	@staticmethod
 	def gen_cmd(*args, sudo=False, password=None):
 		'''Build a command to run as subprocess from args'''
 		if len(args) == 0:
@@ -102,6 +108,15 @@ class LinUtils:
 					capture_output=True, text=True).stdout)['blockdevices']
 					if dev['type'] == 'part'
 		}
+
+	@staticmethod
+	def get_uuid(dev):
+		'''Return UUID of given device = partition'''
+		try:
+			return loads(run(['lsblk', '--json', '-o', 'UUID', f'{dev}'],
+					capture_output=True, text=True).stdout)['blockdevices'][0]['uuid']
+		except IndexError:
+			return False
 
 	@staticmethod
 	def is_type(dev, tp):
@@ -309,21 +324,33 @@ class LinUtils:
 		'''Use fdisk -l to read partition table'''
 		return self._run('fdisk', '-l', f'{path}')
 
-	def mkdir(self, path):
+	def mkdir(self, path, exists_ok=False):
 		'''Generate directory with root privileges'''
-		return self._run('mkdir', f'{path}')
+		cmd = ['mkdir']
+		if exists_ok:
+			cmd.append('-p')
+		return self._run(cmd, f'{path}')
 
-	def mount(self, part, mountpoint, mkdir=True):
+	def mount(self, dev, mnt=None):
 		'''Use mount'''
-		mp = Path(mountpoint)
-		if mp.exists():
-			if not mp.is_dir():
-				return '', f'{mp.absolute()} is not a possible mount point'
-			mkdir_stdout, mkdir_stderr = '', ''
+		if mnt:
+			mountpoint = mnt
 		else:
-			mkdir_stdout, mkdir_stderr = self._run('mkdir', f'{mountpoint}')
-		mount_stdout, mount_stderr = self._run('mount', f'{part}', f'{mountpoint}')
-		return mkdir_stdout + mount_stdout, mkdir_stderr + mount_stderr
+			parent = f'/run/media/{self.whoami()}'
+			stdout, stderr = self.mkdir(parent, exists_ok=True)
+			if stderr:
+				return stdout, stderr
+			uuid = self.get_uuid(dev)
+			if not uuid:
+				return '', f'Could not determin UUID of {dev}'
+			mountpoint = f'{parent}/{uuid}'
+			stdout, stderr = self.mkdir(mountpoint)
+			if stderr:
+				return stdout, stderr
+			stdout, stderr = self._run('mount', f'{part}', f'{mountpoint}')
+			if stderr:
+				return stdout, stderr
+			return mountpint, ''
 
 	def umount(self, target, rmdir=False):
 		'''Use umount'''
@@ -340,21 +367,23 @@ class LinUtils:
 		rmdir_stdout, rmdir_stderr = self._run('rmdir', f'{mountpoint}')
 		return umount_stdout + rmdir_stdout, umount_stderr + rmdir_stderr
 
-	def init_blkdev(self, dev, mountpoint, mbr=False, fs=None, name=None):
+	def init_blkdev(self, dev, mbr=False, fs=None, name=None, mnt=None):
 		'''Create partition table, one big partition, filesystem and mount'''
+		table = 'msdos' if mbr else 'gpt'
+		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mklabel', table)
+		if stderr:
+			return stdout, stderr
 		if not fs:
 			fs = 'ntfs'
 		if not name:
-			name= ' Volume'
-		if mbr:
-			mklabel_stdout, mklabel_stderr = self._run('parted', '--script', f'{dev}', 'mklabel', 'msdos')
-		else:
-			mklabel_stdout, mklabel_stderr = self._run('parted', '--script', f'{dev}', 'mklabel', 'gpt')
-		mkpart_stdout, mkpart_stderr = self._run('parted', '--script', f'{dev}', 'mkpart', 'primary', fs, '0%', '100%')
-		try:
-			part = list(LinUtils.lspart(dev))[0]
-		except IndexError:
-			return mklabel_stdout + mkpart_stdout + mkfs_stdout, mklabel_stderr + mkpart_stderr + f'\nno partition on {dev}\n'
+			name= 'Volume'
+		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mkpart', 'primary', fs, '0%', '100%')
+		if stderr:
+			return stdout, stderr
+		#try:
+		#	part = list(LinUtils.lspart(dev))[0]
+		#except IndexError:
+		#	return mklabel_stdout + mkpart_stdout + mkfs_stdout, mklabel_stderr + mkpart_stderr + f'\nno partition on {dev}\n'
 		cmd = ['mkfs', '-t']
 		if fs.lower() == 'fat32':
 			cmd.extend(['vfat', '-n'])
@@ -363,8 +392,20 @@ class LinUtils:
 		else:
 			cmd.extend([fs.lower(), '-L'])
 		cmd.extend([f'{label}', f'{part}'])
-		mkfs_stdout, mkfs_stderr = self._run(cmd)
-		mount_stdout, mount_stderr = self.mount(part, mountpoint)
+		stdout, stderr = self._run(cmd)
+		if stderr:
+			return stdout, stderr
+		if mnt:
+			mountpoint = mnt
+		else:
+			parent = f'/run/media/{LinUtils.whoami()}'
+			#mountpoint = f'{parent}/{}'
+			LinUtils.mkdir(f'/run/media/{LinUtils.whoami()}', exists_ok=True)
+
+			mountpoint = ExtPath.mkdir(self.outdir/'mnt')
+
+
+		mount_stdout, mount_stderr = self.mount(part, mnt)
 		return (
 			mklabel_stdout + mkpart_stdout + mkfs_stdout + mount_stdout, 
 			mklabel_stderr + mkpart_stderr + mkfs_stderr + mount_stderr

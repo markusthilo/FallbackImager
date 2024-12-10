@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-06-21'
+__version__ = '0.5.3_2024-12-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,18 +17,15 @@ Whe the target is a physical drive, you can create a partition where (after a su
 Be aware that this module is extremely dangerous as it is designed to erase data!
 '''
 
-from sys import executable as __executable__
 from pathlib import Path
 from argparse import ArgumentParser
+from getpass import getpass
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger
 from lib.linutils import LinUtils, OpenProc
 
-if Path(__file__).suffix.lower() == '.pyc':
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
+__parent_path__ = Path(__file__).parent
 
 class WipeR:
 	'''Frontend and Python wrapper for zd'''
@@ -75,17 +72,13 @@ class WipeR:
 			if int(value, 16) < 0 or int(value, 16) > 0xff:
 				raise ValueError('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
 		self.outdir = ExtPath.mkdir(outdir)
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(
-				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
-				outdir = self.outdir, 
-				head = 'wiper.WipeR',
-				echo = self.echo
-			)
-		if not linutils:
-			linutils = LinUtils()
+		self.log = log if log else Logger(
+			filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
+			outdir = self.outdir, 
+			head = 'wiper.WipeR',
+			echo = self.echo
+		)
+		self.linutils = linutils if linutils else LinUtils()
 		if ExtPath.path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
@@ -94,57 +87,90 @@ class WipeR:
 					stdout, stderr = linutils.umount(partition)
 					if stderr:
 						self.log.warning(stderr, echo=True)
-		cmd = [f'{self.zd_path}']
+		self.cmd = [f'{self.zd_path}']
 		if blocksize:
-			cmd.extend(['-b', f'{blocksize}'])
+			self.cmd.extend(['-b', f'{blocksize}'])
 		if value:
-			cmd.extend(['-f', f'{value}'])
+			self.cmd.extend(['-f', f'{value}'])
 		if maxbadblocks:
-			cmd.extend(['-m', f'{maxbadblocks}'])
+			self.cmd.extend(['-m', f'{maxbadblocks}'])
 		if maxretries:
-			cmd.extend(['-r', f'{maxretries}'])
+			self.cmd.extend(['-r', f'{maxretries}'])
 		if verify:
 			cmd.append('-v')
 		elif allbytes:
-			cmd.append('-a')
+			self.cmd.append('-a')
 		elif extra:
-			cmd.append('-x')
+			self.cmd.append('-x')
 		if self.echo == print:
-			echo = lambda msg: print(f'\r{msg}', end='')
+			self.show_progress = lambda msg: print(f'\r{msg}', end='')
 		else:
-			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
+			self.show_progress = lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		for target in targets:
-			self.echo()
-			proc = OpenProc(cmd + [target], sudo=linutils.sudo, password=linutils.password)
-			for line in proc.stdout:
-				msg = line.strip()
-				if msg.startswith('...'):
-					echo(msg)
-				elif msg == '':
-					self.echo('')
+			if stderr := self._zd_proc(target):
+				msg = f'Unable to wipe {target}, zd terminated with: {stderr}'
+				if not self.linutils.i_have_root() and self.echo == print:
+					print(f'{msg}\n\nMaybe sudo could help?!')
+					password = getpass()
+					print('DEBUG', password)
+					self.linutils = LinUtils(sudo=True, password=password)
+					stderr = self._zd_proc(target)
+					if not stderr:
+						continue
+					print(f'sudo did not help')
+					msg = f'Unable to wipe {target}, zd terminated with: {stderr}'
+				if target == targets[-1]:
+					self.log.error(msg)
 				else:
-					self.log.info(msg, echo=True)
-			if stderr := proc.stderr.read():
-				self.log.error(f'zd terminated with: {stderr}')
+					self.log.warning(msg)
+
+	def _zd_proc(self, target):
+		'''Run zd using Popen/OpenProc'''
+		self.echo()
+		proc = OpenProc(self.cmd, target, sudo=self.linutils.sudo, password=self.linutils.password)
+		for line in proc.stdout:
+			msg = line.strip()
+			if msg.startswith('...'):
+				self.show_progress(msg)
+			elif msg == '':
+				self.echo('')
+			else:
+				self.log.info(msg, echo=True)
+		return proc.stderr.read()
 
 	def create(self, target,
 			fs = None,
 			loghead = None,
 			mbr = False,
 			name = None,
-			mountpoint = None
+			mnt = None
 		):
 		'''Generate partition and file system'''
 		if loghead:
 			loghead = ExtPath.path(loghead)
 		else:
 			loghead = __parent_path__/'wipe-log-head.txt'
-		if not mountpoint:
-			mountpoint = ExtPath.mkdir(self.outdir/'mnt')
-		stdout, stderr = LinUtils.init_dev(target, mountpoint, mbr=mbr, fs=fs, name=name)
+		stdout, stderr = LinUtils.init_dev(target, mbr=mbr, fs=fs, name=name, mnt=mnt)
 		if stderr:
-			self.log.warning(stderr, echo=True)
+			self.log.warning(stderr)
+			return
+		self.log.info('Disk preparation successful', echo=True)
 
+
+
+
+
+		self.log.close()
+		log_path = mnt/'wipe-log.txt'
+		try:
+			head = loghead.read_text()
+		except FileNotFoundError:
+			head = ''
+		with log_path.open('w') as fh:
+			fh.write(head + self.log.path.read_text())
+		if mnt:
+			return
+		
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
