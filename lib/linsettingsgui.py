@@ -76,6 +76,10 @@ class BlockDevWindow(Tk, DiskSelectGui):
 		self.exclude = None
 		DiskSelectGui._main_frame(self)
 
+	def _choose(self, event):
+		'''Run on double click'''
+		item = self.tree.identify('item', event.x, event.y)
+		print(item)
 
 	def blockdevs(self):
 		'''Handle blockdevs'''

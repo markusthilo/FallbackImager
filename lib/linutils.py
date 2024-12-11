@@ -395,7 +395,7 @@ class LinUtils:
 		if mnt:
 			mountpoint = mnt
 		else:
-			mountpoint = f'/run/media/{LinUtils.get_uuid(part)}''
+			mountpoint = f'/run/media/{LinUtils.get_uuid(part)}'
 		return self.mount(part, mnt)
 
 	def set_ro(self, dev):
