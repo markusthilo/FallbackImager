@@ -155,22 +155,14 @@ class WipeR:
 			self.log.warning(stderr)
 			return
 		self.log.info('Disk preparation successful', echo=True)
-
-
-
-
-
 		self.log.close()
-		log_path = mnt/'wipe-log.txt'
+		log_path = mountpoint/'wipe-log.txt'
 		try:
 			head = loghead.read_text()
 		except FileNotFoundError:
 			head = ''
 		with log_path.open('w') as fh:
 			fh.write(head + self.log.path.read_text())
-		if mnt:
-			return
-		
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''

@@ -380,10 +380,6 @@ class LinUtils:
 		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mkpart', 'primary', fs, '0%', '100%')
 		if stderr:
 			return stdout, stderr
-		#try:
-		#	part = list(LinUtils.lspart(dev))[0]
-		#except IndexError:
-		#	return mklabel_stdout + mkpart_stdout + mkfs_stdout, mklabel_stderr + mkpart_stderr + f'\nno partition on {dev}\n'
 		cmd = ['mkfs', '-t']
 		if fs.lower() == 'fat32':
 			cmd.extend(['vfat', '-n'])
@@ -391,6 +387,7 @@ class LinUtils:
 			cmd.extend(['ntfs', '-f', '-L'])
 		else:
 			cmd.extend([fs.lower(), '-L'])
+		part = f'{dev}p1'
 		cmd.extend([f'{label}', f'{part}'])
 		stdout, stderr = self._run(cmd)
 		if stderr:
@@ -398,18 +395,8 @@ class LinUtils:
 		if mnt:
 			mountpoint = mnt
 		else:
-			parent = f'/run/media/{LinUtils.whoami()}'
-			#mountpoint = f'{parent}/{}'
-			LinUtils.mkdir(f'/run/media/{LinUtils.whoami()}', exists_ok=True)
-
-			mountpoint = ExtPath.mkdir(self.outdir/'mnt')
-
-
-		mount_stdout, mount_stderr = self.mount(part, mnt)
-		return (
-			mklabel_stdout + mkpart_stdout + mkfs_stdout + mount_stdout, 
-			mklabel_stderr + mkpart_stderr + mkfs_stderr + mount_stderr
-		)
+			mountpoint = f'/run/media/{LinUtils.get_uuid(part)}''
+		return self.mount(part, mnt)
 
 	def set_ro(self, dev):
 		'''Set block device to read only'''
