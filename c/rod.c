@@ -7,7 +7,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 const int STRLEN = 256;
 const int LISTLEN = 256;
@@ -24,18 +23,23 @@ int main() {
 			else { olddevs[old++][i] = 0; break; }
 	pclose(fp);
 
-	for (int i=0; i<old; i++) printf("%s ", olddevs[i]);
+		fp = popen(LSBLK, "r"); if (fp == NULL) exit(1);
+		new = 0;
+		while (fgets(raw, sizeof(raw), fp) != NULL)
+			for (int i=0; i<sizeof(raw); i++) {
+				if (raw[i] != '\n') dev[i] = raw[i];
+				else {
+					for (int j=0; j<old; j++) {
+						if (strcmp(dev, olddevs[j]) == 0)  break;
+						printf("%d, %d, %s\n", i, j, olddevs[j]);
 
-	fp = popen(LSBLK, "r"); if (fp == NULL) exit(1);
-	new = 0;
-	while (fgets(raw, sizeof(raw), fp) != NULL)
-		for (int i=0; i<sizeof(raw); i++) {
-			if (raw[i] != '\n') newdevs[new][i] = raw[i];
-			else { newdevs[new++][i] = 0; break; }
-		}
-	pclose(fp);
 
-	for (int i=0; i<new; i++) printf("%s ", newdevs[i]);
+					}
+					newdevs[new++][i] = 0; break; }
+			}
+		pclose(fp);
+
+	//for (int i=0; i<new; i++) printf("%s ", newdevs[i]);
 
 	exit(0);
 }
