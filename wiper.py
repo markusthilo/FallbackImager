@@ -82,9 +82,12 @@ class WipeR:
 		if ExtPath.path(targets[0]).is_block_device():
 			if len(targets) != 1:
 				raise RuntimeError('Only one physical drive at a time')
+			if not self.linutils.i_have_root() and self.echo == print:
+				print('\n\nGive passweord for sudo')
+				self.linutils = LinUtils(sudo=True, password=getpass())
 			if not verify:
 				for partition in LinUtils.lspart(targets[0]):
-					stdout, stderr = linutils.umount(partition)
+					stdout, stderr = self.linutils.umount(partition)
 					if stderr:
 						self.log.warning(stderr, echo=True)
 		self.cmd = [f'{self.zd_path}']
@@ -111,9 +114,7 @@ class WipeR:
 				msg = f'Unable to wipe {target}, zd terminated with: {stderr}'
 				if not self.linutils.i_have_root() and self.echo == print:
 					print(f'{msg}\n\nMaybe sudo could help?!')
-					password = getpass()
-					print('DEBUG', password)
-					self.linutils = LinUtils(sudo=True, password=password)
+					self.linutils = LinUtils(sudo=True, password=getpass())
 					stderr = self._zd_proc(target)
 					if not stderr:
 						continue
