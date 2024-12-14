@@ -7,39 +7,61 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 const int STRLEN = 256;
 const int LISTLEN = 256;
 const char *LSBLK = "lsblk -lno name";
 const char *SETRO = "blockdev --setro ";
+const int SLEEP = 10000;
+
+int lsblk(char devs[LISTLEN][STRLEN]) {
+	FILE *fp;
+	char dev[STRLEN];
+	int n = 0;
+	fp = popen(LSBLK, "r"); if (fp == NULL) exit(1);
+	while (fgets(dev, sizeof(dev), fp) != NULL)
+		for (int i=0; i<sizeof(dev); i++)
+			if ( dev[i] == '\n' ) { devs[n++][i] = 0; break; } else devs[n][i] = dev[i];
+	pclose(fp);
+	return n;
+}
+
+int arraycopy(char target[LISTLEN][STRLEN], char source[LISTLEN][STRLEN], int n) {
+	for (int i=0; i<n; i++) strcpy(target[i], source[i]);
+	return n;
+}
+
+int arrayswap(char *target, *source, int n) {
+	char *tmp = *target;
+	*target = *source;
+	*source = *tmp;
+	return n;
+}
 
 int main() {
 	FILE *fp;
-	char raw[STRLEN], dev[STRLEN], olddevs[LISTLEN][STRLEN], newdevs[LISTLEN][STRLEN];
-	int old = 0, new;
-	fp = popen(LSBLK, "r"); if (fp == NULL) exit(1);
-	while (fgets(raw, sizeof(raw), fp) != NULL)
-		for (int i=0; i<sizeof(raw); i++) if (raw[i] != '\n') olddevs[old][i] = raw[i];
-			else { olddevs[old++][i] = 0; break; }
-	pclose(fp);
+	char olddevs[LISTLEN][STRLEN], devs[LISTLEN][STRLEN], newdevs[LISTLEN][STRLEN];
+	char **ptr;
+	int old, n, new;
+	old = lsblk(olddevs);
+	printf("\nold = %d: ", old); for (int i=0; i<old; i++) printf("%s ", olddevs[i]); fflush(stdout);
 
-		fp = popen(LSBLK, "r"); if (fp == NULL) exit(1);
-		new = 0;
-		while (fgets(raw, sizeof(raw), fp) != NULL)
-			for (int i=0; i<sizeof(raw); i++) {
-				if (raw[i] != '\n') dev[i] = raw[i];
-				else {
-					for (int j=0; j<old; j++) {
-						if (strcmp(dev, olddevs[j]) == 0)  break;
-						printf("%d, %d, %s\n", i, j, olddevs[j]);
-
-
-					}
-					newdevs[new++][i] = 0; break; }
+	while ( 1 ) {
+		n = lsblk(devs);
+		if ( n < old ) old = arrayswap(olddevs, devs, n);
+		else if ( n > old ) {
+			for (int i=0; i<n; i++) {
+				new = 0;
+				for (int j=0; j<old; j++) if ( strcmp(devs[i], olddevs[j]) == 0 ) strcpy(newdevs[new++], devs[i]);
+				printf("\nnew = %d: ", new); for (int i=0; i<new; i++) printf("%s ", newdevs[i]); fflush(stdout);
 			}
-		pclose(fp);
+			old = n;
 
-	//for (int i=0; i<new; i++) printf("%s ", newdevs[i]);
+		}
+		
+		usleep(SLEEP);
 
-	exit(0);
+	}
 }
