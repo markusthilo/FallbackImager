@@ -33,10 +33,10 @@ int arraycopy(char target[LISTLEN][STRLEN], char source[LISTLEN][STRLEN], int n)
 	return n;
 }
 
-int arrayswap(char *target, *source, int n) {
+int arrayswap(char target[LISTLEN][STRLEN], char source[LISTLEN][STRLEN], int n) {
 	char *tmp = *target;
-	*target = *source;
-	*source = *tmp;
+	target = source;
+	source = *tmp;
 	return n;
 }
 
