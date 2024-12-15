@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from threading import Thread
-from tkinter import Tk, PhotoImage, StringVar, BooleanVar
-from tkinter.messagebox import askyesno
-from .linutils import LinUtils
+from pathlib import Path
+from tkinter import StringVar
+from .linutils import LinUtils, OpenProc
 from .guielements import ExpandedFrame, GridSeparator, StringSelector, GridLabel
 from .guielements import Checker, LeftButton, RightButton, LeftLabel, ChildWindow
 from .guielements import GridScrolledText, GridFrame, GridButton, Error
@@ -16,6 +15,7 @@ class SettingsFrame(ExpandedFrame):
 
 	def __init__(self, root):
 		'''Settings Notebook for Linux'''
+		root.settings.this_section = SettingsLabels.SETTINGS
 		super().__init__(root.notebook)
 		root.notebook.add(self, text=SettingsLabels.SETTINGS)
 		GridSeparator(self)
@@ -33,11 +33,22 @@ class SettingsFrame(ExpandedFrame):
 				tip = SettingsLabels.TIP_SUDO
 			)
 			GridSeparator(self)
+		
+		self.rod_path = LinUtils.find_bin('rod', Path(__file__).parent.parent)
+		self.rod_proc = None
+
+		self.set_ro = Checker(
+			self,
+			root.settings.init_boolvar('RUNROD'),
+			'Run rod',
+			tip = 'DEBUG'
+		)
+
 		GridLabel(self, SettingsLabels.WRITE_PROTECTION)
 		self.open_config_button = GridButton(self, SettingsLabels.OPEN_CONFIG_WINDOW, self._launch_dev_win,
 			tip=SettingsLabels.TIP_CONFIG_WINDOW)
-		#if not LinUtils.i_am_root():
-		#	self.open_config_button.config(state='disabled')	### DEBUG ####
+		if not LinUtils.i_am_root() and not LinUtils.no_pw_sudo():
+			self.open_config_button.config(state='disabled')
 		root.linutils = LinUtils()
 		self.root = root
 
@@ -50,90 +61,65 @@ class SettingsFrame(ExpandedFrame):
 		else:
 			self.sudo.set('')
 			Error(SettingsLabels.NOT_ADMIN)
-		
-	def _launch_dev_win(self):
-		'''Launch new window for RO/RW control'''
-		thread = Thread(target=self._run_dev_win)
-		thread.start()
 
-	def _run_dev_win(self):
-		'''Run Tk mainloop'''
-		BlockDevWindow(self.root, self.open_config_button).mainloop()
-
-class BlockDevWindow(Tk, DiskSelectGui):
-	'''Define GUI for block device monitor'''
-
-	def __init__(self, root, open_config_button):
-		'''Build Window to observe block devices and set rw/ro'''
-		Tk.__init__(self)
-		open_config_button.config(state='disabled')
-		self.title(SettingsLabels.BLOCKDEVS)
-		self.resizable(0, 0)
-		#self.iconphoto(True, root.appicon) ### does not work, no idea why!
-		self.root = root
-		self.button = None
-		self.physical = True
-		self.exclude = None
-		DiskSelectGui._main_frame(self)
-
-	def _choose(self, event):
-		'''Run on double click'''
-		item = self.tree.identify('item', event.x, event.y)
-		print(item)
-
-	def blockdevs(self):
-		'''Handle blockdevs'''
-		old_disks = self._disks
-		self._disks = set(LinUtils.get_disks())
-		new_disks = self._disks - old_disks
-		for disk in new_disks:
-			print('DEBUG', disk)
-		self.root.after(100, self._blockdevs())
-
-
-
-
-class CopyOfDiskSelectGui:
-	'''GUI to select disk (Linux)'''
-
-	def _yes_no(self, bool):
-		'''Return Yes for True and No for false'''
-		if bool:
-			return self.YES
-		return self.NO
-
-	def lsblk(self, root):
-		'''Frame with of lsblk tree'''
-		frame = ExpandedFrame(root)
-		blkdevs = LinUtils.lsblk(physical=self.physical, exclude=self.exclude)
-		self.tree = ExpandedTree(
-			frame,
-			GuiConfig.LSBLK_NAME_WIDTH * self.root.font_size,
-			int(self.root.root_height / (3*self.root.font_size)),
-			text = 'name',
-			columns = {name: width * self.root.font_size for name, width in GuiConfig.LSBLK_COLUMNS}
+	def _start_rod(self):
+		'''Launch rod process'''
+		self.rod_proc = OpenProc(self.rod_path,
+			sudo = self.root.linutils.sudo,
+			password = self.root.linutils.password,
+			indie = True
 		)
-		for path, details in LinUtils.lsblk(physical=self.physical, exclude=self.exclude).items():
-			values = (
-				details['type'],
-				details['size'],
-				StringUtils.str(details['label']),
-				StringUtils.str(details['vendor']),
-				StringUtils.str(details['model']),
-				StringUtils.str(details['rev']),
-				self._yes_no(details['ro']),
-				StringUtils.join(details['mountpoints'], delimiter=', ')
-			)
-			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)
-		self.tree.bind("<Double-1>", self._choose)
+
+	def _stop_rod(self):
+		'''Kill rod process'''
+		if self.rod_proc:
+			self.rod_proc.kill()
+			self.rod_proc = None
+
+	def _launch_dev_win(self):
+		'''Launch child window for RO/RW control'''
+		BlockDevGui(self.root, SettingsLabels.BLOCKDEVS, self.open_config_button)
+
+class BlockDevGui(DiskSelectGui):
+	'''Child window for RO/RW control'''
+
+	def __init__(self, root, title, button, physical=False, exclude=None):
+		'''Window to select disk'''
+		self.root = root
+		self.button = button
+		self.physical = physical
+		self.exclude = exclude
+		ChildWindow.__init__(self, self.root, title, button=self.button)
+		self._main_frame()
+
+	def _main_frame(self):
+		'''Main frame'''
+		self.main_frame = ExpandedFrame(self)
+		self.lsblk(self.main_frame)
+		frame = ExpandedFrame(self.main_frame)
+		LeftButton(frame, self.REFRESH, self._refresh)
+		LeftButton(frame, SettingsLabels.SET_RW, self._set_rw)
+		LeftButton(frame, SettingsLabels.SET_RO, self._set_ro)
+		RightButton(frame, self.QUIT, self.quit)
+
+	def _set_rw(self):
+		'''Set block device to rw'''
+		item = self.tree.focus()
+		self.root.linutils.set_rw(self.tree.item(item)['text'])
+		self.tree.focus(item)
+		self._refresh()
+
+	def _set_ro(self):
+		'''Set block device to ro'''
+		item = self.tree.focus()
+		self.root.linutils.set_ro(self.tree.item(item)['text'])
+		self.tree.focus(item)
+		self._refresh()
 
 	def _choose(self, event):
 		'''Run on double click'''
 		item = self.tree.identify('item', event.x, event.y)
-		self.button.set(self.tree.item(item)['text'])
-		self.quit()
-
-	def _refresh(self):
-		'''Destroy and reopen Target Window'''
-		self.main_frame.destroy()
-		self._main_frame()
+		self.root.linutils.set_ro(self.tree.item(item)['text'])
+		self.tree.see(item)
+		self.tree.focus(item)
+		self._refresh()

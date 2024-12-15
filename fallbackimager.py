@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-11'
+__version__ = '0.5.3_2024-12-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -18,8 +18,6 @@ are provided alongside. This is work in progress.
 '''
 
 from pathlib import Path
-from sys import executable as __executable__
-from os import name as __os_name__
 from argparse import ArgumentParser
 from lib.settings import Settings
 from lib.guibase import GuiBase

@@ -79,7 +79,8 @@ class SettingsLabels(BasicLabels):
 	TIP_CONFIG_WINDOW = '''Open a window to enable and disable
 write protection for block devices'''
 	BLOCKDEVS = 'Block devices'
-
+	SET_RO = 'Set read only'
+	SET_RW = 'Set writable'
 	SET_NEW_RO = 'Set new attached block devices to read only'
 	TIP_SET_NEW_RO = '''When checked, all newly attached block devices
 will be set to read only while running this app

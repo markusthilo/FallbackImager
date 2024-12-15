@@ -16,14 +16,20 @@ class LinUtils:
 
 	@staticmethod
 	def i_am_root():
-		'''Return Tru if python is run as root'''
+		'''Return True if python is run as root'''
 		return getuid == 0
 
 	@staticmethod
 	def whoami():
-		'''Set keyboard layout using setxkbmap'''
+		'''Get username'''
 		ret = run(['whoami'], capture_output=True, text=True)
 		return ret.stdout.rstrip()
+
+	@staticmethod
+	def no_pw_sudo():
+		'''Return True if sudo does not need password'''
+		ret = run(['sudo', '-n', 'blockdev', '--report'], capture_output=True, text=True)
+		return ret.stderr == '' and len(ret.stdout.split('\n')) > 2
 
 	@staticmethod
 	def gen_cmd(*args, sudo=False, password=None):
@@ -423,15 +429,15 @@ class LinUtils:
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''
 
-	def __init__(self, *args, sudo=False, password=None, log=None):
+	def __init__(self, *args, sudo=False, password=None, indie=False, log=None):
 		'''Launch process'''
 		self.log = log
 		cmd = LinUtils.gen_cmd(*args, sudo=sudo, password=password)
 		if password:
-			super().__init__(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True)
+			super().__init__(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True, start_new_session=indie)
 			self.stdin.write(password)
 		else:
-			super().__init__(cmd, stdout=PIPE, stderr=PIPE, text=True)
+			super().__init__(cmd, stdout=PIPE, stderr=PIPE, text=True, start_new_session=indie)
 
 	def echo_output(self, echo=print, cnt=None, skip=0):
 		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''
