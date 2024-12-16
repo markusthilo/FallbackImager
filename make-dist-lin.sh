@@ -54,3 +54,4 @@ axcheckergui.py
 wipergui.py
 EOF
 ./make-zd.sh
+./make-rod.sh

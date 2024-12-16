@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
+from time import sleep
 from tkinter import StringVar
 from .linutils import LinUtils, OpenProc
-from .guielements import ExpandedFrame, GridSeparator, StringSelector, GridLabel
-from .guielements import Checker, LeftButton, RightButton, LeftLabel, ChildWindow
+from .guielements import ExpandedFrame, GridSeparator, StringSelector, GridLabel, ExpandedLabelFrame
+from .guielements import Checker, LeftButton, RightButton, LeftLabel, ChildWindow, GridBlank
 from .guielements import GridScrolledText, GridFrame, GridButton, Error
 from .diskselectgui import DiskSelectGui
 from .guilabeling import SettingsLabels
@@ -13,9 +14,13 @@ from .guilabeling import SettingsLabels
 class SettingsFrame(ExpandedFrame):
 	'''Notebook tab'''
 
+	ROD = 'readonlydaemon'
+	SLEEP = .1
+
 	def __init__(self, root):
 		'''Settings Notebook for Linux'''
-		root.settings.this_section = SettingsLabels.SETTINGS
+		root.linutils = LinUtils()
+		self.root = root
 		super().__init__(root.notebook)
 		root.notebook.add(self, text=SettingsLabels.SETTINGS)
 		GridSeparator(self)
@@ -33,24 +38,23 @@ class SettingsFrame(ExpandedFrame):
 				tip = SettingsLabels.TIP_SUDO
 			)
 			GridSeparator(self)
-		
-		self.rod_path = LinUtils.find_bin('rod', Path(__file__).parent.parent)
-		self.rod_proc = None
-
-		self.set_ro = Checker(
-			self,
-			root.settings.init_boolvar('RUNROD'),
-			'Run rod',
-			tip = 'DEBUG'
-		)
-
 		GridLabel(self, SettingsLabels.WRITE_PROTECTION)
 		self.open_config_button = GridButton(self, SettingsLabels.OPEN_CONFIG_WINDOW, self._launch_dev_win,
 			tip=SettingsLabels.TIP_CONFIG_WINDOW)
 		if not LinUtils.i_am_root() and not LinUtils.no_pw_sudo():
 			self.open_config_button.config(state='disabled')
-		root.linutils = LinUtils()
-		self.root = root
+		GridSeparator(self)
+		GridButton(self, SettingsLabels.CHECK_ROD, self._check_rod, tip=SettingsLabels.TIP_ROD, incrow=False)
+		GridButton(self, SettingsLabels.START_ROD, self._start_rod, tip=SettingsLabels.TIP_ROD, column=2, incrow=False)
+		GridButton(self, SettingsLabels.STOP_ROD, self._stop_rod, tip=SettingsLabels.TIP_ROD, column=3)
+		GridBlank(self)
+		self.rod_var = root.settings.init_boolvar(self.ROD, section=SettingsLabels.SETTINGS, default=False)
+		self.rod_path = LinUtils.find_bin(self.ROD, Path(__file__).parent.parent)
+		self.rod_label = GridLabel(self, '', column=1)
+		if root.settings.get(self.ROD, section=SettingsLabels.SETTINGS):
+			self._start_rod()
+		else:
+			self._check_rod()
 
 	def _become_root(self):
 		'''Executet to use root privileges'''
@@ -62,19 +66,32 @@ class SettingsFrame(ExpandedFrame):
 			self.sudo.set('')
 			Error(SettingsLabels.NOT_ADMIN)
 
+	def	_rod_text(self):
+		'''Return text for rod label'''
+		return SettingsLabels.ROD_RUNNING if LinUtils.get_pid(self.ROD) else SettingsLabels.ROD_NOT_RUNNING
+
+	def _check_rod(self):
+		'''Checkif rod is running'''
+		self.rod_label.config(text=self._rod_text())
+
 	def _start_rod(self):
 		'''Launch rod process'''
-		self.rod_proc = OpenProc(self.rod_path,
-			sudo = self.root.linutils.sudo,
-			password = self.root.linutils.password,
-			indie = True
-		)
+		if not LinUtils.get_pid(self.ROD):
+			OpenProc(self.rod_path,
+				sudo = self.root.linutils.sudo,
+				password = self.root.linutils.password,
+				indie = True
+			)
+			self.root.settings.set(self.ROD, True, section=SettingsLabels.SETTINGS)
+			sleep(self.SLEEP)
+		self._check_rod()
 
 	def _stop_rod(self):
 		'''Kill rod process'''
-		if self.rod_proc:
-			self.rod_proc.kill()
-			self.rod_proc = None
+		self.root.linutils.killall(self.ROD)
+		self.root.settings.set(self.ROD, False, section=SettingsLabels.SETTINGS)
+		sleep(self.SLEEP)
+		self._check_rod()
 
 	def _launch_dev_win(self):
 		'''Launch child window for RO/RW control'''

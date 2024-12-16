@@ -17,7 +17,7 @@ class LinUtils:
 	@staticmethod
 	def i_am_root():
 		'''Return True if python is run as root'''
-		return getuid == 0
+		return getuid() == 0
 
 	@staticmethod
 	def whoami():
@@ -62,6 +62,13 @@ class LinUtils:
 			bin_path = parent/name
 			if bin_path.is_file():
 				return bin_path
+
+	@staticmethod
+	def get_pid(name):
+		'''Find process id to given program name'''
+		ret = run(['ps', '-C', name, '-o', 'pid='], capture_output=True, text=True)
+		return [int(line.strip()) for line in ret.stdout.split('\n') if line]
+
 
 	@staticmethod
 	def get_blockdevs():
@@ -425,6 +432,10 @@ class LinUtils:
 		part_stdout, part_stderr = self.set_rw(part)
 		mount_stdout, mount_stderr = self.mount(part, target)
 		return root_stdout + part_stdout + mount_stdout, root_stderr + part_stderr + mount_stderr
+
+	def killall(self, name):
+		'''Use killall to terminate process'''
+		return self._run('killall', name)
 
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''

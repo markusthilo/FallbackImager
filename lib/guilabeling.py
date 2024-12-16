@@ -81,10 +81,15 @@ write protection for block devices'''
 	BLOCKDEVS = 'Block devices'
 	SET_RO = 'Set read only'
 	SET_RW = 'Set writable'
-	SET_NEW_RO = 'Set new attached block devices to read only'
-	TIP_SET_NEW_RO = '''When checked, all newly attached block devices
-will be set to read only while running this app
-(sudo blockdev --setro /dev/...)'''
+	ROD_RUNNING = '    Daemon to set new block devices to read only is running'
+	ROD_NOT_RUNNING = '\u26a0   Daemon to set new block devices to read only is NOT running!   \u26a0'
+	CHECK_ROD = 'Check read only daemon'
+	START_ROD = 'Start read only daemon'
+	STOP_ROD = 'Stop read only daemon'
+	TIP_ROD = '''The read only daemon sets block devices to read only
+the moment they are plugged in. In addition to use
+this as write protection, you should disable all automounting
+functionality as provided e.g. by graphical file managers.'''
 
 class EwfImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source to image as EWF/E01'
