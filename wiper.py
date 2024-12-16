@@ -19,7 +19,6 @@ Be aware that this module is extremely dangerous as it is designed to erase data
 
 from pathlib import Path
 from argparse import ArgumentParser
-from getpass import getpass
 from lib.timestamp import TimeStamp
 from lib.extpath import ExtPath
 from lib.logger import Logger

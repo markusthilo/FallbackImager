@@ -12,6 +12,10 @@ class Worker(Thread):
 		'''Give job list and info handler to Worker object'''
 		super().__init__()
 		self.gui = gui
+		try:
+			self.linutils = gui.linutils
+		except AttributeError:
+			self.linutils = None
 
 	def run(self):
 		'''Start the work'''
@@ -37,12 +41,18 @@ class Worker(Thread):
 			if self.gui.debug:
 				module = Cli()
 				module.parse(args[1:])
-				module.run(echo=echo)
+				if self.linutils:
+					module.run(echo=echo, linutils=self.linutils)
+				else:
+					module.run(echo=echo)
 			else:
 				try:
 					module = Cli()
 					module.parse(args[1:])
-					module.run(echo=echo)
+					if self.linutils:
+						module.run(echo=echo, linutils=self.linutils)
+					else:
+						module.run(echo=echo)
 				except Exception as ex:
 					echo(ex)
 					ex_cnt += 1

@@ -30,10 +30,7 @@ class EwfImager:
 	def __init__(self):
 		'''Check if ewfacquire and ewfverify are present'''
 		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', Path(__file__).parent)
-		if self.ewfacquire_path and EwfChecker().available:
-			self.available = True
-		else:
-			self.available = False
+		self.available = self.ewfacquire_path and EwfChecker().available
 
 	def acquire(self, source, case_number, evidence_number, description, *args,
 			outdir = None,
@@ -46,6 +43,7 @@ class EwfImager:
 			setro = False,
 			size = None,
 			echo = print,
+			linutils = None,
 			log = None,
 			sudo = None,
 			**kwargs
@@ -58,6 +56,7 @@ class EwfImager:
 			self.filename = ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}')
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
+
 		if log:
 			self.log = log
 		else:
@@ -244,7 +243,7 @@ class EwfImagerCli(ArgumentParser):
 		self.size = args.size
 		self.setro = args.setro
 
-	def run(self, echo=print):
+	def run(self, echo=print, linutils=None):
 		'''Run EwfImager and EwfVerify'''
 		imager = EwfImager()
 		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
@@ -256,7 +255,8 @@ class EwfImagerCli(ArgumentParser):
 			setro = self.setro,
 			size = self.size,
 			outdir = self.outdir,
-			echo = echo
+			echo = echo,
+			linutils = linutils
 		)
 		EwfChecker().check(imager.image_path,
 			outdir = self.outdir,

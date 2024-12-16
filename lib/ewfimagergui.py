@@ -33,12 +33,7 @@ class EwfImagerGui(EwfImagerLabels):
 			command = self._select_source,
 			tip = self.TIP_SOURCE
 		)
-		self.set_ro = Checker(
-			frame,
-			self.root.settings.init_boolvar('SetReadOnly'),
-			self.SETRO,
-			tip = self.TIP_SETRO
-		)
+		GridSeparator(frame)
 		GridLabel(frame, self.SETTINGS)
 		self.case_no = StringSelector(
 			frame,
@@ -213,7 +208,5 @@ class EwfImagerGui(EwfImagerLabels):
 		cmd += f' -c {compression} -m {media_type} -M {media_flag}'
 		if filename:
 			cmd += f' --filename "{filename}"'
-		if setro:
-			cmd += ' --setro'
 		cmd += f' "{source}"'
 		self.root.append_job(cmd)

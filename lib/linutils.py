@@ -7,6 +7,7 @@ from subprocess import Popen, PIPE, STDOUT, run
 from json import loads
 from re import findall
 from time import strftime
+from getpass import getpass
 from .stringutils import StringUtils
 
 class LinUtils:
@@ -68,7 +69,6 @@ class LinUtils:
 		'''Find process id to given program name'''
 		ret = run(['ps', '-C', name, '-o', 'pid='], capture_output=True, text=True)
 		return [int(line.strip()) for line in ret.stdout.split('\n') if line]
-
 
 	@staticmethod
 	def get_blockdevs():
@@ -309,7 +309,7 @@ class LinUtils:
 
 	### root / sudo required ###
 
-	def __init__(self, sudo=True, password=None):
+	def __init__(self, sudo=True, password=None, cli=False):
 		'''Generate object to use shell commands that need root privileges'''
 		if self.i_am_root():
 			self.sudo = False
@@ -317,6 +317,9 @@ class LinUtils:
 		else:
 			self.password = password
 			self.sudo = True
+			if not self.i_have_root() and cli:
+				print('\n\nGive passweord for sudo')
+				self.password=getpass()
 
 	def _run(self, *args):
 		'''Run command using sudo if password was given'''
