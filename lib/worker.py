@@ -13,9 +13,9 @@ class Worker(Thread):
 		super().__init__()
 		self.gui = gui
 		try:
-			self.linutils = gui.linutils
+			self.utils = gui.utils
 		except AttributeError:
-			self.linutils = None
+			self.utils = None
 
 	def run(self):
 		'''Start the work'''
@@ -38,21 +38,17 @@ class Worker(Thread):
 				echo(BasicLabels.UNDETECTED)
 				echo()
 				continue
+			if self.linutils:
+				module = Cli(echo=echo, utils=self.utils)
+			else:
+				module = Cli(echo=echo)
 			if self.gui.debug:
-				module = Cli()
 				module.parse(args[1:])
-				if self.linutils:
-					module.run(echo=echo, linutils=self.linutils)
-				else:
-					module.run(echo=echo)
+				module.run()
 			else:
 				try:
-					module = Cli()
 					module.parse(args[1:])
-					if self.linutils:
-						module.run(echo=echo, linutils=self.linutils)
-					else:
-						module.run(echo=echo)
+					module.run()
 				except Exception as ex:
 					echo(ex)
 					ex_cnt += 1

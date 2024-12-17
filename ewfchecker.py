@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-08-30'
+__version__ = '0.5.3_2024-12-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -23,33 +23,25 @@ from lib.logger import Logger
 class EwfChecker:
 	'''Verify E01/EWF image file'''
 
-	def __init__(self):
+	def __init__(self, echo=print, utils=None):
 		'''Check if the needed binaries are present'''
 		parent_path = Path(__file__).parent
 		self.ewfverify_path = LinUtils.find_bin('ewfverify', parent_path)
 		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', parent_path)
 		self.ewfmount_path = LinUtils.find_bin('ewfmount', parent_path)
-		if self.ewfverify_path and self.ewfinfo_path and self.ewfmount_path:
-			self.available = True
-		else:
-			self.available = False
+		self.available = True if self.ewfverify_path and self.ewfinfo_path and self.ewfmount_path else False
+		self.echo = echo
+		self.utils = utils
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None, sudo=None):
 		'''Verify image'''
 		self.image_path = ExtPath.path(image)
 		if not self.image_path.suffix:
 			self.image_path = self.image_path.with_suffix('.E01')
-		self.echo = echo
 		self.outdir = ExtPath.mkdir(outdir)
-		if filename:
-			self.filename = filename
-		else:
-			self.filename = self.image_path.name
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(filename=self.filename, outdir=self.outdir, 
-				head='ewfchecker.EwfChecker', echo=self.echo)
+		self.filename = filename if filename else self.image_path.name
+		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir, 
+			head='ewfchecker.EwfChecker', echo=self.echo)
 		self.log.info('Image informations', echo=True)
 		proc = OpenProc([f'{self.ewfinfo_path}', f'{self.image_path}'], log=self.log, sudo=sudo)
 		proc.echo_output(skip=2)
@@ -71,15 +63,22 @@ class EwfChecker:
 				self.hashes['md5'] = line.split(':', 1)[1].strip()
 			elif line.startswith('SHA256 hash calculated over data:'):
 				self.hashes['sha256'] = line.split(':', 1)[1].strip()
-		mountpoint = Path(f'/mnt/ewfmount_{self.hashes["md5"]}')
-		sudo = LinUtils(sudo=sudo)
-		stdout, stderr = sudo.mkdir(mountpoint)
+		if hashes:
+			for alg, hash in self.hashes.items():
+				if hash.lower() != hashes[alg].lower():
+					selg.log.error('Mismatching hashes')
+		parent = f'/run/media/{LinUtils.whoami()}'
+		stdout, stderr = self.utils.mkdir(parent, exists_ok=True)
 		if stderr:
-			self.log.warning(f'Unable to make mount point {mountpoint}\n{stderr}')
+			self.log.warning(f'Unable to create directory {parent}\n{stderr}')
+		mountpoint = f'{parent}/{self.hashes["md5"]}'
+		stdout, stderr = self.utils.mkdir(mountpoint, exists_ok=True)
+		if stderr:
+			self.log.warning(f'Unable to create directory {mountpoint} to mount image\n{stderr}')
 		else:
 			self.log.debug(stdout, echo=True)
 			proc = OpenProc([f'{self.ewfmount_path}', f'{self.image_path}', f'{mountpoint}'],
-				log=self.log, sudo=sudo)
+				sudo=self.utils.sudo, password=self.utils.password, log=self.log)
 			if proc.echo_output() != 0:
 				self.log.error(f'ewfmount terminated with:\n{proc.stderr.read()}')
 			else:
@@ -100,21 +99,15 @@ class EwfChecker:
 						if line.startswith(f'Disk {ewf}:'):
 							msg += f'This might be a disk image\nDisk size:{line.split(":", 1)[1]}\n'
 						elif line.startswith(f'{ewf}'):
-							msg += f'Part{line[len(f"{ewf}"):]}\n'
+							msg += f'Part{line[len(f"{ewf}p"):]}\n'
 						else:
 							msg += f'{line}\n'
 					self.log.info(msg, echo=True)
-				stdout, stderr = LinUtils.umount(mountpoint)
 				if ret.stderr:
 					self.log.warning(proc.stderr)
-				try:
-					mountpoint.rmdir()
-				except Exception as ex:
-					self.log.warning(ex)
-		if hashes:
-			for alg, hash in self.hashes.items():
-				if hash.lower() != hashes[alg].lower():
-					selg.log.error('Mismatching hashes')
+				stdout, stderr = self.utils.umount(mountpoint, rmdir=True)
+				if stderr:
+					self.log.warning(f'Something went wrong while unmounting and deleting {mountpoint}\n{stderr}')
 		
 class EwfCheckerCli(ArgumentParser):
 	'''CLI for EwfVerify'''

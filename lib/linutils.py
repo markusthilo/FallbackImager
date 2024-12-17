@@ -318,7 +318,7 @@ class LinUtils:
 			self.password = password
 			self.sudo = True
 			if not self.i_have_root() and cli:
-				print('\n\nGive passweord for sudo')
+				print('\n\nGive password for sudo')
 				self.password=getpass()
 
 	def _run(self, *args):
@@ -347,8 +347,8 @@ class LinUtils:
 			cmd.append('-p')
 		return self._run(cmd, f'{path}')
 
-	def mount(self, dev, mnt=None):
-		'''Use mount'''
+	def mount(self, part, mnt=None):
+		'''Create dir to mount and mount given partition'''
 		if mnt:
 			mountpoint = mnt
 		else:
@@ -356,17 +356,17 @@ class LinUtils:
 			stdout, stderr = self.mkdir(parent, exists_ok=True)
 			if stderr:
 				return stdout, stderr
-			uuid = self.get_uuid(dev)
+			uuid = self.get_uuid(part)
 			if not uuid:
-				return '', f'Could not determin UUID of {dev}'
+				return '', f'Could not determin UUID of {part}'
 			mountpoint = f'{parent}/{uuid}'
-			stdout, stderr = self.mkdir(mountpoint)
-			if stderr:
-				return stdout, stderr
-			stdout, stderr = self._run('mount', f'{part}', f'{mountpoint}')
-			if stderr:
-				return stdout, stderr
-			return mountpint, ''
+		stdout, stderr = self.mkdir(mountpoint, exists_ok=True)
+		if stderr:
+			return stdout, stderr
+		stdout, stderr = self._run('mount', f'{part}', f'{mountpoint}')
+		if stderr:
+			return stdout, stderr
+		return mountpoint, ''
 
 	def umount(self, target, rmdir=False):
 		'''Use umount'''
@@ -435,6 +435,10 @@ class LinUtils:
 		part_stdout, part_stderr = self.set_rw(part)
 		mount_stdout, mount_stderr = self.mount(part, target)
 		return root_stdout + part_stdout + mount_stdout, root_stderr + part_stderr + mount_stderr
+
+	def chown(self, user, group, path):
+		'''Set user and group of given file or directory'''
+		return self._run('chown', f'{user}:{group}', f'{path}')
 
 	def killall(self, name):
 		'''Use killall to terminate process'''

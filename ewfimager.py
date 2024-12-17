@@ -3,7 +3,7 @@
 
 __app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-08-30'
+__version__ = '0.5.3_2024-12-17'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -27,10 +27,12 @@ from ewfchecker import EwfChecker
 class EwfImager:
 	'''Acquire and verify E01/EWF image'''
 
-	def __init__(self):
+	def __init__(self, echo=print, utils=None):
 		'''Check if ewfacquire and ewfverify are present'''
 		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', Path(__file__).parent)
 		self.available = self.ewfacquire_path and EwfChecker().available
+		self.echo = echo
+		self.utils = utils
 
 	def acquire(self, source, case_number, evidence_number, description, *args,
 			outdir = None,
@@ -42,36 +44,25 @@ class EwfImager:
 			notes = None,
 			setro = False,
 			size = None,
-			echo = print,
-			linutils = None,
 			log = None,
-			sudo = None,
-			**kwargs
+			sudo = None
 		):
 		'''Run ewfacquire'''
 		self.source = ExtPath.path(source)
-		if filename:
-			self.filename = filename
-		else:
-			self.filename = ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}')
+		self.filename = filename if filename else ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}')
 		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
-
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(filename=self.filename, outdir=self.outdir,
-				head='ewfimager.EwfImager', echo=self.echo)
+		if not self.utils:
+			self.utils = LinUtils()
+		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir,
+			head='ewfimager.EwfImager', echo=self.echo)
 		now = datetime.now()
 		self.infos = {'year': f'{now.year:04d}', 'month': f'{now.month:02d}', 'day': f'{now.day:02d}'}
 		if setro:
 			stdout, stderr = LinUtils.set_ro(self.source)
 			if stderr:
 				self.log.warning(stderr)
-		if self.source.is_block_device():
-			self.source_size = LinUtils.blkdevsize(self.source)
-		else:
-			self.source_size = ExtPath.get_size(self.source)
+		self.source_size = LinUtils.blkdevsize(self.source) if self.source.is_block_device() else ExtPath.get_size(self.source)
 		if not self.source_size:
 			selg.log.error(f'Unable to get size of {self.source}')
 		self.infos['source_size'] = StringUtils.bytes(self.source_size, format_k='{iec} ({b} bytes)')
@@ -85,15 +76,9 @@ class EwfImager:
 		self.log.info(f'Using {proc.stdout.read().splitlines()[0]}')
 		self.image_path = self.outdir/self.filename
 		self.infos['case_number'] = case_number
-		if examiner_name:
-			self.infos['examiner_name'] = examiner_name
-		else:
-			self.infos['examiner_name'] = getlogin().upper()
+		self.infos['examiner_name'] = examiner_name if examiner_name else getlogin().upper()
 		self.infos['evidence_number'] = evidence_number
-		if compression_values:
-			self.infos['compression_values'] = compression_values
-		else:
-			self.infos['compression_values'] = 'fast'
+		self.infos['compression_values'] = compression_values if compression_values else 'fast'
 		self.infos['description'] = description
 		if media_type:
 			self.media_type = media_type
@@ -108,14 +93,8 @@ class EwfImager:
 		if media_flags:
 			self.infos['media_flags'] = media_flags
 		else:
-			if LinUtils.is_disk(self.source):
-				self.infos['media_flags'] = 'physical (detected/estimated)'
-			else:
-				self.infos['media_flags'] = 'logical (detected/estimated)'
-		if notes:
-			self.infos['notes'] = notes
-		else:
-			self.infos['notes'] = '-'
+			self.infos['media_flags'] = 'physical (detected/estimated)' if LinUtils.is_disk(self.source) else 'logical (detected/estimated)'
+		self.infos['notes'] = notes if notes else '-'
 		if not size:
 			size = 40
 		try:
@@ -142,9 +121,7 @@ class EwfImager:
 		cmd.extend(['-N', self.infos['notes']])
 		cmd.extend(['-S', f'{self.segment_size}'])
 		for arg in args:
-			cmd.append(f'-{arg}')
-		for arg, par in kwargs.items():
-			cmd.extend([f'-{arg}', f'{par}'])
+			cmd.append(arg)
 		cmd.append(f'{self.source}')
 		proc = OpenProc(cmd, sudo=sudo, log=self.log)
 		if proc.echo_output(cnt=9) != 0:
@@ -165,6 +142,9 @@ class EwfImager:
 				dump(self.infos, fh)
 		except Exception as err:
 			self.log.warning(f'Unable to create JSON file:\n{err}')
+		user, group = self.log.path.owner(), self.log.path.group()
+		for path in self.outdir.glob(f'{self.filename}.*'):
+			self.utils.chown(user, group, path)
 		return self.infos
 
 class EwfImagerCli(ArgumentParser):
@@ -243,7 +223,7 @@ class EwfImagerCli(ArgumentParser):
 		self.size = args.size
 		self.setro = args.setro
 
-	def run(self, echo=print, linutils=None):
+	def run(self):
 		'''Run EwfImager and EwfVerify'''
 		imager = EwfImager()
 		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
@@ -255,8 +235,6 @@ class EwfImagerCli(ArgumentParser):
 			setro = self.setro,
 			size = self.size,
 			outdir = self.outdir,
-			echo = echo,
-			linutils = linutils
 		)
 		EwfChecker().check(imager.image_path,
 			outdir = self.outdir,

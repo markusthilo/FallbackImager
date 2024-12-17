@@ -19,7 +19,7 @@ class SettingsFrame(ExpandedFrame):
 
 	def __init__(self, root):
 		'''Settings Notebook for Linux'''
-		root.linutils = LinUtils()
+		root.utils = LinUtils()
 		self.root = root
 		super().__init__(root.notebook)
 		root.notebook.add(self, text=SettingsLabels.SETTINGS)
@@ -58,8 +58,8 @@ class SettingsFrame(ExpandedFrame):
 
 	def _become_root(self):
 		'''Executet to use root privileges'''
-		self.root.linutils = LinUtils(password=self.sudo.get())
-		if self.root.linutils.i_have_root():
+		self.root.utils = LinUtils(password=self.sudo.get())
+		if self.root.utils.i_have_root():
 			self.sudo.config(state='disabled')
 			self.open_config_button.config(state='normal')
 		else:
@@ -78,8 +78,8 @@ class SettingsFrame(ExpandedFrame):
 		'''Launch rod process'''
 		if not LinUtils.get_pid(self.ROD):
 			OpenProc(self.rod_path,
-				sudo = self.root.linutils.sudo,
-				password = self.root.linutils.password,
+				sudo = self.root.utils.sudo,
+				password = self.root.utils.password,
 				indie = True
 			)
 			self.root.settings.set(self.ROD, True, section=SettingsLabels.SETTINGS)
@@ -88,7 +88,7 @@ class SettingsFrame(ExpandedFrame):
 
 	def _stop_rod(self):
 		'''Kill rod process'''
-		self.root.linutils.killall(self.ROD)
+		self.root.utils.killall(self.ROD)
 		self.root.settings.set(self.ROD, False, section=SettingsLabels.SETTINGS)
 		sleep(self.SLEEP)
 		self._check_rod()
@@ -122,21 +122,21 @@ class BlockDevGui(DiskSelectGui):
 	def _set_rw(self):
 		'''Set block device to rw'''
 		item = self.tree.focus()
-		self.root.linutils.set_rw(self.tree.item(item)['text'])
+		self.root.utils.set_rw(self.tree.item(item)['text'])
 		self.tree.focus(item)
 		self._refresh()
 
 	def _set_ro(self):
 		'''Set block device to ro'''
 		item = self.tree.focus()
-		self.root.linutils.set_ro(self.tree.item(item)['text'])
+		self.root.utils.set_ro(self.tree.item(item)['text'])
 		self.tree.focus(item)
 		self._refresh()
 
 	def _choose(self, event):
 		'''Run on double click'''
 		item = self.tree.identify('item', event.x, event.y)
-		self.root.linutils.set_ro(self.tree.item(item)['text'])
+		self.root.utils.set_ro(self.tree.item(item)['text'])
 		self.tree.see(item)
 		self.tree.focus(item)
 		self._refresh()
