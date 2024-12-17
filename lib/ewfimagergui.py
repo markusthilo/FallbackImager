@@ -4,7 +4,7 @@
 from tkinter.ttk import Button
 from tkinter import Text
 from functools import partial
-from os import getlogin, access, R_OK
+from os import getlogin
 from .guilabeling import EwfImagerLabels
 from .guiconfig import GuiConfig
 from .diskselectgui import DiskSelectGui
@@ -169,7 +169,6 @@ class EwfImagerGui(EwfImagerLabels):
 	def _add_job(self):
 		'''Generate command line'''
 		source = self.source.get()
-		setro = self.set_ro.get()
 		outdir = self.outdir.get()
 		case_no = self.case_no.get()
 		evidence_number = self.evidence_no.get()
@@ -181,7 +180,7 @@ class EwfImagerGui(EwfImagerLabels):
 		media_flag = self.media_flag.get()
 		segment_size = self.segment_size.get().replace(' ', '')
 		filename = self.filename.get()
-		if not access(source, R_OK):
+		if not self.root.utils.i_have_root():
 			Error(self.ARE_YOU_ROOT)
 			return
 		if not source:

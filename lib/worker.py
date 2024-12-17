@@ -38,9 +38,9 @@ class Worker(Thread):
 				echo(BasicLabels.UNDETECTED)
 				echo()
 				continue
-			if self.linutils:
+			try:
 				module = Cli(echo=echo, utils=self.utils)
-			else:
+			except TypeError:
 				module = Cli(echo=echo)
 			if self.gui.debug:
 				module.parse(args[1:])

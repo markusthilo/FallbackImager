@@ -51,7 +51,6 @@ class EwfImager:
 		self.source = ExtPath.path(source)
 		self.filename = filename if filename else ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}')
 		self.outdir = ExtPath.mkdir(outdir)
-		self.echo = echo
 		if not self.utils:
 			self.utils = LinUtils()
 		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir,
@@ -64,7 +63,7 @@ class EwfImager:
 				self.log.warning(stderr)
 		self.source_size = LinUtils.blkdevsize(self.source) if self.source.is_block_device() else ExtPath.get_size(self.source)
 		if not self.source_size:
-			selg.log.error(f'Unable to get size of {self.source}')
+			self.log.error(f'Unable to get size of {self.source}')
 		self.infos['source_size'] = StringUtils.bytes(self.source_size, format_k='{iec} ({b} bytes)')
 		self.source_details = LinUtils.diskdetails(self.source)
 		self.infos.update(self.source_details)
@@ -123,7 +122,7 @@ class EwfImager:
 		for arg in args:
 			cmd.append(arg)
 		cmd.append(f'{self.source}')
-		proc = OpenProc(cmd, sudo=sudo, log=self.log)
+		proc = OpenProc(cmd, sudo=self.utils.sudo, log=self.log)
 		if proc.echo_output(cnt=9) != 0:
 			self.log.error(f'ewfacquire terminated with:\n{proc.stderr.read()}')
 		self.infos.update(proc.grep_stack(
@@ -142,16 +141,19 @@ class EwfImager:
 				dump(self.infos, fh)
 		except Exception as err:
 			self.log.warning(f'Unable to create JSON file:\n{err}')
-		user, group = self.log.path.owner(), self.log.path.group()
-		for path in self.outdir.glob(f'{self.filename}.*'):
-			self.utils.chown(user, group, path)
+		if not LinUtils.i_am_root():
+			user, group = self.log.path.owner(), self.log.path.group()
+			for path in self.outdir.glob(f'{self.filename}.*'):
+				self.utils.chown(user, group, path)
 		return self.infos
 
 class EwfImagerCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self, echo=print, utils=None, **kwargs):
 		'''Define CLI using argparser'''
+		self.echo = echo
+		self.utils = utils
 		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-c', '--compression_values', type=str,
 			help='Compression level options: none, empty-block, fast (default) or best',
@@ -225,7 +227,7 @@ class EwfImagerCli(ArgumentParser):
 
 	def run(self):
 		'''Run EwfImager and EwfVerify'''
-		imager = EwfImager()
+		imager = EwfImager(echo=self.echo, utils=self.utils)
 		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
 			compression_values = self.compression_values,
 			examiner_name = self.examiner_name,
@@ -236,9 +238,8 @@ class EwfImagerCli(ArgumentParser):
 			size = self.size,
 			outdir = self.outdir,
 		)
-		EwfChecker().check(imager.image_path,
+		EwfChecker(echo=self.echo).check(imager.image_path,
 			outdir = self.outdir,
-			echo = echo,
 			log = imager.log,
 			hashes = hashes
 		)

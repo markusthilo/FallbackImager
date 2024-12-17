@@ -23,7 +23,7 @@ from lib.logger import Logger
 class EwfChecker:
 	'''Verify E01/EWF image file'''
 
-	def __init__(self, echo=print, utils=None):
+	def __init__(self, echo=print):
 		'''Check if the needed binaries are present'''
 		parent_path = Path(__file__).parent
 		self.ewfverify_path = LinUtils.find_bin('ewfverify', parent_path)
@@ -31,7 +31,6 @@ class EwfChecker:
 		self.ewfmount_path = LinUtils.find_bin('ewfmount', parent_path)
 		self.available = True if self.ewfverify_path and self.ewfinfo_path and self.ewfmount_path else False
 		self.echo = echo
-		self.utils = utils
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None, sudo=None):
 		'''Verify image'''
@@ -39,7 +38,7 @@ class EwfChecker:
 		if not self.image_path.suffix:
 			self.image_path = self.image_path.with_suffix('.E01')
 		self.outdir = ExtPath.mkdir(outdir)
-		self.filename = filename if filename else self.image_path.name
+		self.filename = filename if filename else self.image_path.stem
 		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir, 
 			head='ewfchecker.EwfChecker', echo=self.echo)
 		self.log.info('Image informations', echo=True)
@@ -67,53 +66,47 @@ class EwfChecker:
 			for alg, hash in self.hashes.items():
 				if hash.lower() != hashes[alg].lower():
 					selg.log.error('Mismatching hashes')
-		parent = f'/run/media/{LinUtils.whoami()}'
-		stdout, stderr = self.utils.mkdir(parent, exists_ok=True)
-		if stderr:
-			self.log.warning(f'Unable to create directory {parent}\n{stderr}')
-		mountpoint = f'{parent}/{self.hashes["md5"]}'
-		stdout, stderr = self.utils.mkdir(mountpoint, exists_ok=True)
-		if stderr:
-			self.log.warning(f'Unable to create directory {mountpoint} to mount image\n{stderr}')
+		mount_path = Path(f'/tmp/{self.image_path.stem}_{self.hashes["md5"]}')
+		try:
+			mount_path.mkdir(exist_ok=True)
+		except Exception as ex:
+			self.log.warning(f'Unable to create directory {mount_path}\n{ex}')
+			return
+		proc = OpenProc([f'{self.ewfmount_path}', f'{self.image_path}', f'{mount_path}'], log=self.log)
+		if proc.echo_output() != 0:
+			self.log.error(f'ewfmount terminated with:\n{proc.stderr.read()}')
 		else:
-			self.log.debug(stdout, echo=True)
-			proc = OpenProc([f'{self.ewfmount_path}', f'{self.image_path}', f'{mountpoint}'],
-				sudo=self.utils.sudo, password=self.utils.password, log=self.log)
-			if proc.echo_output() != 0:
-				self.log.error(f'ewfmount terminated with:\n{proc.stderr.read()}')
+			ewf_path = mount_path.joinpath(next(mount_path.iterdir()))
+			xxd = ExtPath.read_bin(ewf_path)
+			self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
+			self.log.info('Trying to read partition table')
+			ret = run(['fdisk', '-l', f'{ewf_path}'], capture_output=True, text=True)
+			if ret.stderr:
+				self.log.warning(ret.stderr)
 			else:
-				ewf = mountpoint/'ewf1'
-				xxd = ExtPath.read_bin(ewf)
-				self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
-				self.log.info('Trying to read partition table')
-				rrun = LinUtils(sudo=sudo)
-				stdout, stderr = rrun.fdisk(ewf)
-				if stderr:
-					self.log.warning(stderr)
-				else:
-					msg = ''
-					for line in stdout.split('\n'):
-						if not line:
-							continue
-						line = sub(' {2,}', ' ', line)
-						if line.startswith(f'Disk {ewf}:'):
-							msg += f'This might be a disk image\nDisk size:{line.split(":", 1)[1]}\n'
-						elif line.startswith(f'{ewf}'):
-							msg += f'Part{line[len(f"{ewf}p"):]}\n'
-						else:
-							msg += f'{line}\n'
-					self.log.info(msg, echo=True)
-				if ret.stderr:
-					self.log.warning(proc.stderr)
-				stdout, stderr = self.utils.umount(mountpoint, rmdir=True)
-				if stderr:
-					self.log.warning(f'Something went wrong while unmounting and deleting {mountpoint}\n{stderr}')
+				msg = ''
+				for line in ret.stdout.split('\n'):
+					if not line:
+						continue
+					line = sub(' {2,}', ' ', line)
+					if line.startswith(f'Disk {ewf_path}:'):
+						msg += f'This might be a disk image\nDisk size:{line.split(":", 1)[1]}\n'
+					elif line.startswith(f'{ewf_path}'):
+						msg += f'Part{line[len(f"{ewf_path}p"):]}\n'
+					else:
+						msg += f'{line}\n'
+				self.log.info(msg, echo=True)
+			ret = run(['umount', f'{mount_path}'], capture_output=True, text=True)
+			if ret.stderr:
+				self.log.warning(ret.stderr)
+			mount_path.rmdir()
 		
 class EwfCheckerCli(ArgumentParser):
 	'''CLI for EwfVerify'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
+		self.echo = echo
 		super().__init__(description=__description__, prog=__app_name__.lower())
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
@@ -132,13 +125,12 @@ class EwfCheckerCli(ArgumentParser):
 		self.filename = args.filename
 		self.outdir = args.outdir
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the verification'''
-		checker = EwfChecker()
+		checker = EwfChecker(echo=self.echo)
 		checker.check(self.image,
 			filename = self.filename,
-			outdir = self.outdir,
-			echo = echo
+			outdir = self.outdir
 		)
 		checker.log.close()
 
