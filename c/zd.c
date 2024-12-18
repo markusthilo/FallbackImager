@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "1.0.0_2024-05-30";
+const char *VERSION = "1.0.0_2024-12-18";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,17 +19,17 @@ const char *VERSION = "1.0.0_2024-05-30";
 /* Parameters to the target (file or device) */
 typedef struct target_t {
 	char *path;	// string with path to device or file
-    int file;	// file descriptor
-	off_t size;	// the full size to work
-	off_t ptr; // pointer to position in file
-	off_t blocks;	// number of full blocks
-	size_t leftbytes;	// number of bytes afte last full block
+    FILE *file;	// file handler
+	size_t size;	// the full size to work
+	size_t ptr; // pointer to position in file
+	int64_t blocks;	// number of full blocks
+	int64_t leftbytes;	// number of bytes afte last full block
 } target_t;
 
 /* Options for the wiping process */
 typedef struct config_t {
-	size_t bs;	// size of blocks in bytes
-	int bs64;	// size of blocks in 64 bit chunks (=bs/8)
+	int64_t bs;	// size of blocks in bytes
+	int64_t bs64;	// size of blocks in 64 bit chunks (=bs/8)
 	uint8_t value;	// value to write and/or verify
 	uint64_t value64;	// value expanded to 64 bits = 8 bytes
 	uint8_t *block;	// block to write
@@ -40,7 +40,7 @@ typedef struct badblocks_t {
 	int cnt;	// counter for bad blocks
 	int max;	// abort after
 	int retry;	// limit retries
-	off_t *offsets;	// offsets
+	int64_t *offsets;	// offsets
 	char *errors;	// type of error
 } badblocks_t;
 
@@ -86,8 +86,8 @@ void help(const int r) {
 }
 
 /* Open file/device */
-void open_target(target_t *target, mode_t mode) {
-	target->file = open(target->path, mode);
+void open_target(target_t *target, char *mode) {
+	target->file = fopen(target->path, mode);
 	if ( target->file < 0 ) {
 		fprintf(stderr, "Error: could not open %s\n", target->path);
 		exit(1);
@@ -95,23 +95,28 @@ void open_target(target_t *target, mode_t mode) {
 	target->ptr = 0;
 }
 
-/* Set file pointer */
-void set_pointer(target_t *target, const off_t offset) {
-	off_t ptr = target->ptr + offset;
-	if ( lseek(target->file, ptr, SEEK_SET) != ptr ) {
-		fprintf(stderr, "Error: could not point to position %ld in %s\n", ptr, target->path);
-		close(target->file);
+/* Set file pointer to given offset */
+void set_pointer(target_t *target, const size_t offset) {
+	const size_t position = target->ptr + offset;
+	if ( fseek(target->file, position, SEEK_SET) != 0 ) {
+		fprintf(stderr, "Error: could not point to position %ld in %s\n", position, target->path);
+		fclose(target->file);
 		exit(1);
 	}
 }
 
-/* Set file pointer to 0 = beginning*/
-void reset_pointer(target_t *target) {
-	if ( lseek(target->file, 0, SEEK_SET) != 0 ) {
-		fprintf(stderr, "Error: could not point to beginning of %s\n", target->path);
-		close(target->file);
+/* Move file pointer by given offset*/
+void move_pointer(target_t *target, const size_t offset) {
+	if ( fseek(target->file, offset, SEEK_CUR) != 0 ) {
+		fprintf(stderr, "Error: could not move pointer to position %ld in %s\n", target->ptr + offset, target->path);
+		fclose(target->file);
 		exit(1);
 	}
+}
+
+/* Set file pointer to 0 = beginning */
+void reset_pointer(target_t *target) {
+	rewind(target->file);
 	target->ptr = 0;
 }
 
@@ -142,7 +147,7 @@ void print_bad_blocks(const badblocks_t *badblocks) {
 /* Check for too many bad blocks */
 void check_max_bad_blocks(const target_t *target, badblocks_t *badblocks) {
 	if ( badblocks->max > badblocks->cnt++ ) return;
-	close(target->file);
+	fclose(target->file);
 	printf("\n\n");
 	print_bad_blocks(badblocks);
 	fprintf(stderr, "Error: aborting because of too many bad blocks\n");
@@ -162,7 +167,7 @@ int read_error(target_t *target, const config_t *conf, badblocks_t *badblocks, c
 	uint8_t *block = malloc(bs);
 	for (int pass=0; pass<badblocks->retry; pass++) {	// loop retries
 		set_pointer(target, 0);
-		if ( read(target->file, block, bs) == bs ) return 0;
+		if ( fread(block, bs, 1, target->file) == 1 ) return 0;
 	}
 	badblocks->offsets[badblocks->cnt] = target->ptr;	// add this bad block
 	badblocks->errors[badblocks->cnt] = 'r';	// mark as read error
@@ -177,7 +182,7 @@ void write_error(target_t *target, const config_t *conf, badblocks_t *badblocks,
 	uint8_t *block = malloc(bs);
 	for (int pass=0; pass<badblocks->retry; pass++) {	// loop retries
 		set_pointer(target, 0);
-		if ( write(target->file, conf->block, bs) == bs ) return;
+		if ( fwrite(conf->block, bs, 1, target->file) == 1 ) return;
 	}
 	badblocks->offsets[badblocks->cnt] = target->ptr;	// add this bad block
 	badblocks->errors[badblocks->cnt] = 'w';	// mark as read error
@@ -198,14 +203,14 @@ void wipe_all(target_t *target, const config_t *conf, badblocks_t *badblocks) {
 	if ( target->size >= conf->bs ) {
 		clock_t now = print_progress(target);
 		for (off_t bc=0; bc<target->blocks; bc++) {
-			if ( write(target->file, conf->block, conf->bs ) != conf->bs )
+			if ( fwrite(conf->block, conf->bs, 1, target->file) != 1 )
 				write_error(target, conf, badblocks, conf->bs);
 			if ( time(NULL) > now ) now = print_progress(target);
 			target->ptr += conf->bs;
 		}
 	}
 	if ( target->leftbytes > 0 )
-		if ( write(target->file, conf->block, target->leftbytes ) != target->leftbytes )
+		if ( fwrite(conf->block, target->leftbytes, 1, target->file) != 1 )
 				write_error(target, conf, badblocks, target->leftbytes);
 	target->ptr = target->size;
 	print_progress(target);
@@ -297,33 +302,33 @@ int main(int argc, char **argv) {
 	if ( badblocks.max == -1 ) badblocks.max = 200;	// default
 	badblocks.retry = uint_arg(rarg, 'r');
 	if ( badblocks.retry == -1 ) badblocks.retry = 200;	// default
-	if ( todo == 3 ) open_target(&target, O_RDONLY | O_RSYNC);	// open device/file to verify
-	else open_target(&target, O_RDWR | O_SYNC | O_DSYNC | O_RSYNC);	// open device/file to wipe
-	target.size = lseek(target.file, 0, SEEK_END);
+	struct stat filestat;
+	stat(target.path, &filestat);
+	target.size = filestat.st_size;
 	if ( target.size <= 0 ) {
 		if ( target.size == 0 ) fprintf(stderr, "Error: size of target seems to be 0\n");
 		else fprintf(stderr, "Error: could not determin size of target\n");
-		close(target.file);
 		exit(1);
 	}
 	target.blocks = target.size / conf.bs;	// full blocks
 	target.leftbytes = target.size % conf.bs;
-	reset_pointer(&target);
 	badblocks.cnt = 0;
-	badblocks.offsets = malloc(sizeof(off_t) * badblocks.max);
+	badblocks.offsets = malloc(sizeof(size_t) * badblocks.max);
 	badblocks.errors = malloc(sizeof(char) * badblocks.max);
 	time(&start_time);
 	switch (todo) {
 		case 0:	// normal/selective wipe
 			memset(conf.block, conf.value, conf.bs);
-			printf("Wiping, pass 1 of 2\n");
+			size_t negbs = -1 * conf.bs;
+			printf("Pass 1 of 2, wiping %s\n", target.path);
+			open_target(&target, "rb+");
 			if ( target.size >= conf.bs ) {
 				uint64_t *block = malloc(conf.bs);
 				clock_t now = print_progress(&target);
 				for (size_t bc=0; bc<target.blocks; bc++) {
-					if ( read(target.file, block, conf.bs) != conf.bs || check_block(block, &conf) == -1 ) {
-						set_pointer(&target, 0);	// overwrite block/page
-						if ( write(target.file, conf.block, conf.bs ) != conf.bs )
+					if ( fread(block, conf.bs, 1, target.file) != conf.bs || check_block(block, &conf) == -1 ) {
+						move_pointer(&target, negbs);	// overwrite block/page
+						if ( fwrite(conf.block, conf.bs, 1, target.file) != 1 )
 							write_error(&target, &conf, &badblocks, conf.bs);
 					}
 					if ( time(NULL) > now ) now = print_progress(&target);
@@ -331,10 +336,10 @@ int main(int argc, char **argv) {
 				}
 				if ( target.leftbytes > 0 ) {
 					uint8_t *block = malloc(target.leftbytes);
-					if ( read(target.file, block, target.leftbytes) != target.leftbytes
+					if ( fread(block, target.leftbytes, 1, target.file) != target.leftbytes
 						|| check_bytes(block, &conf, target.leftbytes) == -1 ) {
-							set_pointer(&target, 0);	// overwrite block/page
-							if ( write(target.file, conf.block, target.leftbytes ) != target.leftbytes )
+							move_pointer(&target, negbs);	// overwrite block/page
+							if ( fwrite(conf.block, target.leftbytes, 1, target.file) != 1)
 								write_error(&target, &conf, &badblocks, target.leftbytes);
 					}
 				}
@@ -344,12 +349,14 @@ int main(int argc, char **argv) {
 			break;
 		case 1:	// wipe all blocks
 			memset(conf.block, conf.value, conf.bs);
-			printf("Wiping, pass 1 of 2\n");
+			printf("Pass 1 of 2, wiping %s\n", target.path);
+			open_target(&target, "wb");
 			wipe_all(&target, &conf, &badblocks);
 			break;
 		case 2:	// 2pass wipe
 			for (int i=0; i<conf.bs; i++) conf.block[i] = (uint8_t)rand();
-			printf("Wiping, pass 1 of 3\n");
+			printf("Pass 1 of 3, wiping %s \n", target.path);
+			open_target(&target, "wb");
 			wipe_all(&target, &conf, &badblocks);
 			print_time(start_time);
 			if ( badblocks.cnt > 0 ) {
@@ -360,33 +367,32 @@ int main(int argc, char **argv) {
 			reset_pointer(&target);
 			time(&start_time);
 			memset(conf.block, conf.value, conf.bs);
-			printf("Wiping, pass 2 of 3\n");
+			printf("Pass 2 of 3, wiping %s \n, target.path");
 			wipe_all(&target, &conf, &badblocks);
 			break;
 		case 3:	// verify
 			memset(conf.block, conf.value, conf.bs);
 	}
-	if ( todo == 3 ) printf("Verifying\n");
+	if ( todo == 3 ) printf("Verifying %s\n", target.path);
 	else {
 		print_time(start_time);
-		close(target.file);
 		if ( badblocks.cnt > 0 ) {
 			printf("Warning: finished wiping but found bad blocks\n");
 			print_bad_blocks(&badblocks);
 		}
-		sync();
-		open_target(&target, O_RDONLY | O_RSYNC);	// open device/file to verify
+		fclose(target.file);
 		time(&start_time);
-		printf("Verifying, pass ");
-		if ( todo == 2 ) printf("3 of 3\n");
-		else printf("2 of 2\n");
+		if ( todo == 2 ) printf("Pass 3 of 3"); else printf("Pass 2 of 2");
+		printf(", verifying %s\n", target.path);
 	}
 	badblocks.cnt = 0;	// verification pass
+	sync();
+	open_target(&target, "rb");
 	if ( target.size >= conf.bs ) {
 		uint64_t *block = malloc(conf.bs);
 		clock_t now = print_progress(&target);
 		for (off_t bc=0; bc<target.blocks; bc++) {
-			if ( read(target.file, block, conf.bs) != conf.bs
+			if ( fread(block, conf.bs, 1, target.file) != 1
 				&& read_error(&target, &conf, &badblocks, conf.bs) == -1 ) {
 				target.ptr += conf.bs;
 				continue;
@@ -398,7 +404,7 @@ int main(int argc, char **argv) {
 	}
 	if ( target.leftbytes > 0 ) {
 		uint8_t *block = malloc(target.leftbytes);
-		if ( read(target.file, block, target.leftbytes) != target.leftbytes
+		if ( fread(block, target.leftbytes, 1, target.file) != 1
 			&& read_error(&target, &conf, &badblocks, target.leftbytes) == 0
 			&& check_bytes(block, &conf, target.leftbytes) == -1
 		) wipe_error(&target, &badblocks, target.leftbytes);
@@ -406,7 +412,7 @@ int main(int argc, char **argv) {
 	}
 	print_progress(&target);
 	print_time(start_time);
-	close(target.file);
+	fclose(target.file);
 	if ( badblocks.cnt > 0 ) {
 		printf("Warning: all done but found bad blocks\n");
 		print_bad_blocks(&badblocks);

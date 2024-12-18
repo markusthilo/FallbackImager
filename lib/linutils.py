@@ -252,16 +252,9 @@ class LinUtils:
 		mounted = LinUtils.get_mounted()
 		return {LinUtils.rootdev_of(part) for part in mounted} | set(mounted)
 
-	@staticmethod
-	def mountpoint(part):
-		'''Return mountpoint if partition is mounted'''
-		ret = run(['mount'], capture_output=True, text=True)
-		for line in ret.stdout.split('\n'):
-			if line.startswith(part):
-				try:
-					return Path(line.split(' ', 3)[2])
-				except IndexError:
-					return
+	#@staticmethod
+	#def mountpoint(part):
+	#	'''Return mountpoint if partition is mounted'''
 
 	@staticmethod
 	def get_ro(dev):
