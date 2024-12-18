@@ -76,9 +76,10 @@ class WipeR:
 				raise RuntimeError('Only one physical drive at a time')
 			if not verify:
 				for partition in LinUtils.lspart(targets[0]):
-					stdout, stderr = self.utils.umount(partition)
-					if stderr:
-						raise RuntimeError(stderr)
+					if LinUtils.get_mountpoints(partition):
+						stdout, stderr = self.utils.umount(partition)
+						if stderr:
+							raise RuntimeError(stderr)
 		elif not extra and not verify:
 			allbytes = True
 		self.outdir = ExtPath.mkdir(outdir)
@@ -103,13 +104,17 @@ class WipeR:
 			self.cmd.append('-a')
 		elif extra:
 			self.cmd.append('-x')
-		self.show_progress = lambda msg: print(f'\r{msg}', end='') if self.echo == print else lambda msg: self.echo(f'\n{msg}', overwrite=True)
+
+
+		return
+
+		show_progress = lambda msg: print(f'\r{msg}', end='') if self.echo == print else lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		for target in targets:
 			proc = OpenProc(self.cmd, target, sudo=self.utils.sudo, password=self.utils.password)
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg.startswith('...'):
-					self.show_progress(msg)
+					show_progress(msg)
 				elif msg == '':
 					self.echo('')
 				else:
@@ -133,13 +138,19 @@ class WipeR:
 			loghead = ExtPath.path(loghead)
 		else:
 			loghead = __parent_path__/'wipe-log-head.txt'
-		stdout, stderr = LinUtils.init_dev(target, mbr=mbr, fs=fs, name=name, mnt=mnt)
+		partition, stderr = self.utils.init_blkdev(target, mbr=mbr, fs=fs, name=name)
+		if stderr:
+			self.log.warning(stderr)
+			return
+
+		mountpoint, stderr = self.utils.mount(partition, mnt=mnt)
+
 		if stderr:
 			self.log.warning(stderr)
 			return
 		self.log.info('Disk preparation successful', echo=True)
 		self.log.close()
-		log_path = mountpoint/'wipe-log.txt'
+		log_path = Path(mountpoint)/'wipe-log.txt'
 		try:
 			head = loghead.read_text()
 		except FileNotFoundError:
@@ -236,8 +247,12 @@ class WipeRCli(ArgumentParser):
 		if self.targets[0].is_block_device():
 			if len(self.targets) > 1:
 				raise ValueError('Too many arguments: only one block device at a time')
+			if LinUtils.is_part(self.targets[0]) and self.create:
+				raise ValueError(f'{self.targets[0]} is a partition but parameter to generate one was given)')
 		else:
 			for file_path in self.targets:
+				if not file_path.exists():
+					raise FileNotFoundError(f'{file_path} does not exist')
 				if not file_path.is_file():
 					raise ValueError(f'{file_path} is not a regular file')
 		wiper = WipeR(echo=self.echo, utils=self.utils)
@@ -257,7 +272,7 @@ class WipeRCli(ArgumentParser):
 				loghead = self.loghead,
 				mbr = self.mbr,
 				name = self.name,
-				mountpoint = self.mountpoint
+				mnt = self.mountpoint
 			)
 		wiper.log.close()
 

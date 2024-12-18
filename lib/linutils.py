@@ -132,6 +132,26 @@ class LinUtils:
 			return False
 
 	@staticmethod
+	def get_partitions(dev):
+		'''Use lsblk with JSON output to get partitions of device'''
+		try:
+			children = loads(run(['lsblk', '--json', '-o', 'NAME,TYPE', f'{dev}'],
+					capture_output=True, text=True).stdout)['blockdevices'][0]['children']
+		except IndexError:
+			return False
+		return [f'/dev/{child["name"]}' for child in children if child['type'] == 'part']
+
+	@staticmethod
+	def get_mountpoints(dev):
+		'''Use lsblk with JSON output to check if device is a mounted partition and return mountpoint'''
+		try:
+			mps = loads(run(['lsblk', '--json', '-o', 'MOUNTPOINTS', f'{dev}'],
+					capture_output=True, text=True).stdout)['blockdevices'][0]['mountpoints']
+		except IndexError:
+			return False
+		return mps if mps and mps != [None] else False
+
+	@staticmethod
 	def is_type(dev, tp):
 		'''Use lsblk with JSON output to check if device is of given type'''
 		try:
@@ -240,21 +260,17 @@ class LinUtils:
 		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
 			capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
 
-	@staticmethod
-	def get_mounted():
-		'''Get mounted partitions'''
-		ret = run(['mount'], capture_output=True, text=True)
-		return [line.split(' ', 1)[0] for line in ret.stdout.split('\n') if line.startswith('/dev/')]
+	#@staticmethod
+	#def get_mounted():
+	#	'''Get mounted partitions'''
+	#	ret = run(['mount'], capture_output=True, text=True)
+	#	return [line.split(' ', 1)[0] for line in ret.stdout.split('\n') if line.startswith('/dev/')]
 
 	@staticmethod
 	def get_occupied():
 		'''Get mounted partition and their root devices'''
 		mounted = LinUtils.get_mounted()
 		return {LinUtils.rootdev_of(part) for part in mounted} | set(mounted)
-
-	#@staticmethod
-	#def mountpoint(part):
-	#	'''Return mountpoint if partition is mounted'''
 
 	@staticmethod
 	def get_ro(dev):
@@ -356,7 +372,7 @@ class LinUtils:
 		stdout, stderr = self.mkdir(mountpoint, exists_ok=True)
 		if stderr:
 			return stdout, stderr
-		stdout, stderr = self._run('mount', f'{part}', f'{mountpoint}')
+		stdout, stderr = self._run('mount', '-a', f'{part}', f'{mountpoint}')
 		if stderr:
 			return stdout, stderr
 		return mountpoint, ''
@@ -376,19 +392,20 @@ class LinUtils:
 		rmdir_stdout, rmdir_stderr = self._run('rmdir', f'{mountpoint}')
 		return umount_stdout + rmdir_stdout, umount_stderr + rmdir_stderr
 
-	def init_blkdev(self, dev, mbr=False, fs=None, name=None, mnt=None):
+	def init_blkdev(self, dev, mbr=False, fs=None, name=None):
 		'''Create partition table, one big partition, filesystem and mount'''
 		table = 'msdos' if mbr else 'gpt'
-		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mklabel', table)
-		if stderr:
-			return stdout, stderr
 		if not fs:
 			fs = 'ntfs'
 		if not name:
-			name= 'Volume'
+			name = 'Volume'
+		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mklabel', table)
+		if stderr:
+			return stdout, stderr
 		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mkpart', 'primary', fs, '0%', '100%')
 		if stderr:
 			return stdout, stderr
+		part = self.get_partitions(dev)[0]
 		cmd = ['mkfs', '-t']
 		if fs.lower() == 'fat32':
 			cmd.extend(['vfat', '-n'])
@@ -396,16 +413,11 @@ class LinUtils:
 			cmd.extend(['ntfs', '-f', '-L'])
 		else:
 			cmd.extend([fs.lower(), '-L'])
-		part = f'{dev}p1'
-		cmd.extend([f'{label}', f'{part}'])
+		cmd.extend([name, part])
 		stdout, stderr = self._run(cmd)
-		if stderr:
+		if stderr and not ' lowercase labels ' in stderr:
 			return stdout, stderr
-		if mnt:
-			mountpoint = mnt
-		else:
-			mountpoint = f'/run/media/{LinUtils.get_uuid(part)}'
-		return self.mount(part, mnt)
+		return part, ''
 
 	def set_ro(self, dev):
 		'''Set block device to read only'''

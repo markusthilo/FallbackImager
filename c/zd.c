@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "1.0.0_2024-12-18";
+const char *VERSION = "1.0.1_2024-12-18";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -302,11 +302,12 @@ int main(int argc, char **argv) {
 	if ( badblocks.max == -1 ) badblocks.max = 200;	// default
 	badblocks.retry = uint_arg(rarg, 'r');
 	if ( badblocks.retry == -1 ) badblocks.retry = 200;	// default
-	struct stat filestat;
-	stat(target.path, &filestat);
-	target.size = filestat.st_size;
+	open_target(&target, "rb");	// determin size
+	fseek(target.file, 0, SEEK_END);
+	target.size = ftell(target.file);
+	fclose(target.file);
 	if ( target.size <= 0 ) {
-		if ( target.size == 0 ) fprintf(stderr, "Error: size of target seems to be 0\n");
+		if ( target.size == 0 ) fprintf(stderr, "Error: size of target seems to be 0 or you have no access\n");
 		else fprintf(stderr, "Error: could not determin size of target\n");
 		exit(1);
 	}
@@ -382,11 +383,14 @@ int main(int argc, char **argv) {
 		}
 		fclose(target.file);
 		time(&start_time);
+		printf("Running sync, this might take some minutes...");
+		sync();
+		print_time(start_time);
+		time(&start_time);
 		if ( todo == 2 ) printf("Pass 3 of 3"); else printf("Pass 2 of 2");
 		printf(", verifying %s\n", target.path);
 	}
 	badblocks.cnt = 0;	// verification pass
-	sync();
 	open_target(&target, "rb");
 	if ( target.size >= conf.bs ) {
 		uint64_t *block = malloc(conf.bs);
