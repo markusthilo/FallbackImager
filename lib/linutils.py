@@ -372,7 +372,7 @@ class LinUtils:
 		stdout, stderr = self.mkdir(mountpoint, exists_ok=True)
 		if stderr:
 			return stdout, stderr
-		stdout, stderr = self._run('mount', '-a', f'{part}', f'{mountpoint}')
+		stdout, stderr = self._run('mount', '-o', 'user', part, mountpoint)
 		if stderr:
 			return stdout, stderr
 		return mountpoint, ''
