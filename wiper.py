@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-18'
+__version__ = '0.5.3_2024-12-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -104,10 +104,6 @@ class WipeR:
 			self.cmd.append('-a')
 		elif extra:
 			self.cmd.append('-x')
-
-
-		return
-
 		show_progress = lambda msg: print(f'\r{msg}', end='') if self.echo == print else lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		for target in targets:
 			proc = OpenProc(self.cmd, target, sudo=self.utils.sudo, password=self.utils.password)
@@ -142,9 +138,7 @@ class WipeR:
 		if stderr:
 			self.log.warning(stderr)
 			return
-
 		mountpoint, stderr = self.utils.mount(partition, mnt=mnt)
-
 		if stderr:
 			self.log.warning(stderr)
 			return
@@ -157,6 +151,8 @@ class WipeR:
 			head = ''
 		with log_path.open('w') as fh:
 			fh.write(head + self.log.path.read_text())
+		if not mnt:
+			self.utils.umount(mountpoint, rmdir=True)
 
 class WipeRCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''

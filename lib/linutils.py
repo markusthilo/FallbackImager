@@ -7,6 +7,7 @@ from subprocess import Popen, PIPE, STDOUT, run
 from json import loads
 from re import findall
 from time import strftime
+from hashlib import md5
 from getpass import getpass
 from .stringutils import StringUtils
 
@@ -365,14 +366,14 @@ class LinUtils:
 			stdout, stderr = self.mkdir(parent, exists_ok=True)
 			if stderr:
 				return stdout, stderr
-			uuid = self.get_uuid(part)
-			if not uuid:
-				return '', f'Could not determin UUID of {part}'
-			mountpoint = f'{parent}/{uuid}'
+			name = self.get_uuid(part)
+			if not name:
+				name = md5(strftime('%s').encode()).hexdigest().upper()
+			mountpoint = f'{parent}/{name}'
 		stdout, stderr = self.mkdir(mountpoint, exists_ok=True)
 		if stderr:
 			return stdout, stderr
-		stdout, stderr = self._run('mount', '-o', 'user', part, mountpoint)
+		stdout, stderr = self._run('mount', '-o', 'rw,umask=0000', part, mountpoint)
 		if stderr:
 			return stdout, stderr
 		return mountpoint, ''
@@ -396,20 +397,26 @@ class LinUtils:
 		'''Create partition table, one big partition, filesystem and mount'''
 		table = 'msdos' if mbr else 'gpt'
 		if not fs:
-			fs = 'ntfs'
+			tp = fs = 'ntfs'
+		elif fs == 'exfat':
+			tp = 'ntfs'
+		else:
+			tp = fs = fs.lower()
 		if not name:
 			name = 'Volume'
 		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mklabel', table)
 		if stderr:
 			return stdout, stderr
-		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mkpart', 'primary', fs, '0%', '100%')
+		stdout, stderr = self._run('parted', '--script', f'{dev}', 'mkpart', 'primary', tp, '0%', '100%')
 		if stderr:
 			return stdout, stderr
 		part = self.get_partitions(dev)[0]
 		cmd = ['mkfs', '-t']
-		if fs.lower() == 'fat32':
+		if fs == 'fat32':
 			cmd.extend(['vfat', '-n'])
-		elif fs.lower() == 'ntfs':
+		elif fs == 'exfat':
+			cmd.extend(['exfat', '-n'])
+		elif fs == 'ntfs':
 			cmd.extend(['ntfs', '-f', '-L'])
 		else:
 			cmd.extend([fs.lower(), '-L'])
