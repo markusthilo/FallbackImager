@@ -5,7 +5,7 @@
 /* License: GPL-3 */
 
 /* Version */
-const char *VERSION = "1.0.1_2024-12-18";
+const char *VERSION = "1.0.1_2024-12-22";
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,6 +43,8 @@ typedef struct badblocks_t {
 	int64_t *offsets;	// offsets
 	char *errors;	// type of error
 } badblocks_t;
+
+time_t glob_time;	// global variable to messure time zd ran
 
 /* Print help text */
 void help(const int r) {
@@ -85,12 +87,41 @@ void help(const int r) {
 	exit(r);
 }
 
+/* Print time delta in hours, minutes and seconds */
+void print_hms(const time_t start_time) {
+	int delta = time(NULL) - start_time;
+	int hours = delta / 3600;
+	delta -= hours * 3600;
+	int minutes = delta / 60;
+	delta -= minutes * 60;
+	if ( hours == 1 ) printf("1 hour, ");
+	else if ( hours > 1 ) printf("%d hours, ", hours);
+	if ( minutes == 1 ) printf("1 minute, ");
+	else if ( minutes > 1 ) printf("%d minutes, ", minutes);
+	if ( delta == 1 ) printf("1 second\n");
+	else printf ("%d seconds\n", delta);
+}
+
+/* Print time running the app took and exit by given returncode */
+void sysexit(const int r) {
+	printf("\n\nThe application ran ");
+	print_hms(glob_time);
+	printf("\n");
+	exit(r);
+}
+
+/* Print time a process took */
+void print_time(const time_t start_time) {
+	printf("\n\nProcess took ");
+	print_hms(start_time);
+}
+
 /* Open file/device */
 void open_target(target_t *target, char *mode) {
 	target->file = fopen(target->path, mode);
-	if ( target->file < 0 ) {
+	if ( target->file == NULL ) {
 		fprintf(stderr, "Error: could not open %s\n", target->path);
-		exit(1);
+		sysexit(1);
 	}
 	target->ptr = 0;
 }
@@ -101,7 +132,7 @@ void set_pointer(target_t *target, const size_t offset) {
 	if ( fseek(target->file, position, SEEK_SET) != 0 ) {
 		fprintf(stderr, "Error: could not point to position %ld in %s\n", position, target->path);
 		fclose(target->file);
-		exit(1);
+		sysexit(1);
 	}
 }
 
@@ -110,7 +141,7 @@ void move_pointer(target_t *target, const size_t offset) {
 	if ( fseek(target->file, offset, SEEK_CUR) != 0 ) {
 		fprintf(stderr, "Error: could not move pointer to position %ld in %s\n", target->ptr + offset, target->path);
 		fclose(target->file);
-		exit(1);
+		sysexit(1);
 	}
 }
 
@@ -151,7 +182,7 @@ void check_max_bad_blocks(const target_t *target, badblocks_t *badblocks) {
 	printf("\n\n");
 	print_bad_blocks(badblocks);
 	fprintf(stderr, "Error: aborting because of too many bad blocks\n");
-	exit(1);
+	sysexit(1);
 }
 
 /* Handle unwiped block */
@@ -223,23 +254,7 @@ int uint_arg(const char *value, const char arg) {
 	if ( res >= 1 ) return res;
 	if ( strcmp(value, "0") == 0 ) return 0;
 	fprintf(stderr, "Error: -%c needs an unsigned integer value\n", arg);
-	exit(1);
-}
-
-/* Print time delta */
-void print_time(const time_t start_time) {
-	int delta = time(NULL) - start_time;
-	int hours = delta / 3600;
-	delta -= hours * 3600;
-	int minutes = delta / 60;
-	delta -= minutes * 60;
-	printf("\n\nProcess took ");
-	if ( hours == 1 ) printf("1 hour, ");
-	else if ( hours > 1 ) printf("%d hours, ", hours);
-	if ( minutes == 1 ) printf("1 minute, ");
-	else if ( minutes > 1 ) printf("%d minutes, ", minutes);
-	if ( delta == 1 ) printf("1 second\n");
-	else printf ("%d seconds\n", delta);
+	sysexit(1);
 }
 
 /* Main function - program starts here */
@@ -248,12 +263,13 @@ int main(int argc, char **argv) {
 	&& ( ( ( argv[1][0] == '-' ) && ( argv[1][1] == '-' ) && ( argv[1][2] == 'h' ) )
 	|| ( ( argv[1][0] == '-' ) && ( argv[1][1] == 'h' ) ) ) ) help(0);
 	else if ( argc < 2 ) help(1);	// also show help if no argument is given but return with exit(1)
+	time(&glob_time);	// start messsuring time
 	char opt;	// command line options
 	target_t target;	// drive or file
 	config_t conf;	// options for wipe process
 	badblocks_t badblocks;	// to abort after n bad blocks
+	time_t start_time;	// to measure time
 	int todo = 0;	// 0 = selective wipe, 1 = all blocks, 2 = 2pass, 3 = verify
-	time_t start_time;	// to measure
 	char *barg = NULL, *farg = NULL, *marg = NULL, *rarg = NULL;	// pointer to command line args
 	while ((opt = getopt(argc, argv, "avxb:f:m:r:")) != -1)	// command line arguments
 		switch (opt) {
@@ -356,7 +372,7 @@ int main(int argc, char **argv) {
 			break;
 		case 2:	// 2pass wipe
 			for (int i=0; i<conf.bs; i++) conf.block[i] = (uint8_t)rand();
-			printf("Pass 1 of 3, wiping %s \n", target.path);
+			printf("Pass 1 of 3, wiping %s\n", target.path);
 			open_target(&target, "wb");
 			wipe_all(&target, &conf, &badblocks);
 			print_time(start_time);
@@ -364,11 +380,15 @@ int main(int argc, char **argv) {
 				printf("Warning: finished 1st pass but found bad blocks\n");
 				print_bad_blocks(&badblocks);
 			}
+			printf("Running sync, this might take some minutes...\n");
+			time(&start_time);
+			sync();
+			print_time(start_time);
 			badblocks.cnt = 0;
 			reset_pointer(&target);
 			time(&start_time);
 			memset(conf.block, conf.value, conf.bs);
-			printf("Pass 2 of 3, wiping %s \n, target.path");
+			printf("Pass 2 of 3, wiping %s\n", target.path);
 			wipe_all(&target, &conf, &badblocks);
 			break;
 		case 3:	// verify
@@ -381,9 +401,9 @@ int main(int argc, char **argv) {
 			printf("Warning: finished wiping but found bad blocks\n");
 			print_bad_blocks(&badblocks);
 		}
-		fclose(target.file);
+		printf("Running fclose and sync, this might take some minutes...\n");
 		time(&start_time);
-		printf("Running sync, this might take some minutes...");
+		fclose(target.file);
 		sync();
 		print_time(start_time);
 		time(&start_time);
@@ -421,8 +441,8 @@ int main(int argc, char **argv) {
 		printf("Warning: all done but found bad blocks\n");
 		print_bad_blocks(&badblocks);
 		fprintf(stderr, "Error: %d bad blocks in %s\n", badblocks.cnt, target.path);
-		exit(1);
+		sysexit(1);
 	}
-	printf("Verification was succesful, all done\n\n");
-	exit(0);
+	printf("Verification was succesful, all done\n");
+	sysexit(0);
 }

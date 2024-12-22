@@ -256,6 +256,10 @@ new partition after wipe (None: do not create)'''
 	TARGET_REQUIRED = 'Target (drive/files) is required)'
 	SELECT_DRIVE_TO_WIPE = 'Select drive to wipe'
 	SELECT_FILES_TO_WIPE = 'Select file(s) to wipe'
+	TIP_FILES_TO_WIPE = '''Instead of wiping an entire device
+files can be overwritten. This will
+only write into the file. No file system
+artefacts or journaling will be affected.'''
 
 class ArchImagerLabels(EwfImagerLabels):
 	SYSTEM_SETTINGS = 'System settings'

@@ -20,9 +20,9 @@ from .stringutils import StringUtils
 class SelectTargetWindow(DiskSelectGui, WipeLabels):
 	'''Gui to slect target to wipe'''
 
-	def __init__(self, root, title, button):
+	def __init__(self, root, button):
 		'''Window to select disk'''
-		DiskSelectGui.__init__(self, root, self.TARGET, button, physical=True)
+		DiskSelectGui.__init__(self, root, self.SELECT_DRIVE_TO_WIPE, button, physical=True)
 
 	def _main_frame(self):
 		'''Main frame'''
@@ -31,7 +31,8 @@ class SelectTargetWindow(DiskSelectGui, WipeLabels):
 		frame = ExpandedFrame(self.main_frame)
 		LeftButton(frame, self.REFRESH, self._refresh)
 		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files)
+
+		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files, tip=self.TIP_FILES_TO_WIPE )
 		RightButton(frame, self.QUIT, self.quit)
 
 	def _select_focus(self):
@@ -177,11 +178,7 @@ class WipeRGui(WipeLabels):
 
 	def _select_target(self):
 		'''Select drive to wipe'''
-		self.select_target = SelectTargetWindow(
-			self.root,
-			self.SELECT_DRIVE_TO_WIPE,
-			self.target
-		)
+		self.select_target = SelectTargetWindow(self.root, self.target)
 
 	def _add_job(self):
 		'''Generate command line'''
