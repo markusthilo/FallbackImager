@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 
 class FsReader:
 	'''Get the mounted/local file system'''
@@ -16,7 +16,7 @@ class FsReader:
 		self.dirs_path = []
 		self.others_posix = []
 		self.others_path = []
-		for path, posix, tp in ExtPath.walk_posix(self.root_path):
+		for path, posix, tp in PathUtils.walk_posix(self.root_path):
 			if tp == 'file':
 				self.files_posix.append(posix)
 				self.files_path.append(path)

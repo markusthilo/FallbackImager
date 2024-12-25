@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.2_2024-06-12'
+__version__ = '0.5.3_2024-12-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,6 +11,7 @@ __description__ = '''
 Safe copy with log and hashes.
 '''
 
+from pathlib import Path
 from argparse import ArgumentParser
 from hashlib import md5, sha256
 from time import time, sleep
@@ -29,48 +30,62 @@ class HashedCopy:
 
 	MIN_COPY_SEC = 10
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Create object'''
 		self.available = True
+		self.echo = echo
 
-	def cp(self, sources, destination, filename=None, outdir=None, echo=print, log=None):
+	def cp(self, sources, destination, filename=None, outdir=None, log=None):
 		'''Copy multiple sources'''
 		self.dst_root_path = ExtPath.path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = ExtPath.mkdir(outdir)
-		self.echo = echo
 		self.tsv_path = ExtPath.child(f'{self.filename}_files.tsv', parent=self.outdir)
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(filename=self.filename, outdir=self.outdir,
-				head='hashedcopy.HashedCopy', echo=echo)
+		self.log = log if log else Logger(
+			filename=self.filename, outdir=self.outdir, head='hashedcopy.HashedCopy', echo=self.echo)
 		if self.dst_root_path.exists():
 			if not self.dst_root_path.is_dir():
 				self.log.error('Destination is not a directory')
 		else:
 			self.dst_root_path.mkdir()
+		dirs = set()
 		files = set()
-		self.echo('Reading source and creating destination directories')
+		self.echo('Reading source')
 		for source in sources:
-			source_path = ExtPath.path(source)
+			source_path = Path.path(source)
 			if source_path.is_dir():
+				dirs.add((source_path, self.dst_root_path/source_path.name))
+				for abs_path, rel_path, tp in ExtPath.walk(source_path):
+					if tp == 'Dir':
+						dirs.add((rel_path, abs_path, self.dst_root_path/source_path.name/rel_path))
+					else:
+						files.add((rel_path, abs_path, self.dst_root_path/source_path.name/rel_path))
+			else:
+				files.add((, source_path, self.dst_root_path/source_path.name))
+
+		print(dirs)
+		print(files)
+		self.echo('Creating directories')
+		
+		'''
 				source_path.mkdir(parents=True, exist_ok=True)
 				for abs_path, rel_path, tp in ExtPath.walk(source_path):
 					if tp == 'Dir':
 						(self.dst_root_path/source_path.name/rel_path).mkdir(parents=True, exist_ok=True)
 					else:
 						files.add((abs_path, self.dst_root_path/source_path.name/rel_path))
-			else:
-				files.add((source_path, self.dst_root_path/source_path.name))
+
 		self.echo('Copying files')
 		hashed_files = list()
 		progress = Progressor(len(files), echo=self.echo)
-		start_time = time()
+
 		for src_path, dst_path in files: 
 			src_hashes = CopyFile(src_path, dst_path)
 			hashed_files.append((src_path, dst_path, src_hashes))
 			progress.inc()
+
+		print('DEBUG', start_time, time())
+
 		sync()
 		sleep_time = start_time + self.MIN_COPY_SEC - time()
 		if sleep_time > 0:
@@ -91,11 +106,12 @@ class HashedCopy:
 		self.log.info(f'Copied {len(hashed_files)-error_cnt} file(s), check {self.tsv_path}', echo=True)
 		if error_cnt > 0:
 			self.log.error(f'{error_cnt} missing file(s)')
+		'''
 
 class HashedCopyCli(ArgumentParser):
 	'''CLI for the copy tool'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
 		self.add_argument('-d', '--destination', type=ExtPath.path, required=True,
@@ -110,6 +126,7 @@ class HashedCopyCli(ArgumentParser):
 		self.add_argument('sources', nargs='+', type=ExtPath.path,
 			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
 		)
+		self.echo = echo
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
@@ -119,13 +136,12 @@ class HashedCopyCli(ArgumentParser):
 		self.filename = args.filename
 		self.outdir = args.outdir
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the tool'''
-		copy = HashedCopy()
+		copy = HashedCopy(echo=self.echo)
 		copy.cp(self.sources, self.destination,
 			filename = self.filename,
-			outdir = self.outdir,
-			echo = echo
+			outdir = self.outdir
 		)
 		copy.log.close()
 

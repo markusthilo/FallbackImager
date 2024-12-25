@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-15'
+__version__ = '0.5.3_2024-12-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,55 +17,98 @@ This is the GUI but I would recommand the CLI tools that
 are provided alongside. This is work in progress.
 '''
 
+from os import name as __os_name__
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.settings import Settings
 from lib.guibase import GuiBase
-from zipimager import ZipImager, ZipImagerCli
-from lib.zipimagergui import ZipImagerGui
-from axchecker import AxChecker, AxCheckerCli
-from lib.axcheckergui import AxCheckerGui
-from sqlite import SQLite, SQLiteCli
-from lib.sqlitegui import SQLiteGui
-from reporter import Reporter, ReporterCli
-from lib.reportergui import ReporterGui
-from hashedcopy import HashedCopy, HashedCopyCli
-from lib.hashedcopygui import HashedCopyGui
-from ewfimager import EwfImager, EwfImagerCli
-from lib.ewfimagergui import EwfImagerGui
-from ewfchecker import EwfChecker, EwfCheckerCli
-from lib.ewfcheckergui import EwfCheckerGui
-from wiper import WipeR, WipeRCli
-from lib.wipergui import WipeRGui
+__candidates__ = list()
+try:
+	from ewfimager import EwfImager, EwfImagerCli
+	from lib.ewfimagergui import EwfImagerGui
+	__candidates__.append((EwfImager, EwfImagerCli, EwfImagerGui))
+except Exception as ex:
+	print(ex)
+try:
+	from ewfchecker import EwfChecker, EwfCheckerCli
+	from lib.ewfcheckergui import EwfCheckerGui
+	__candidates__.append((EwfChecker, EwfCheckerCli, EwfCheckerGui))
+except Exception as ex:
+	print(ex)
+try:
+	from oscdimager import OscdImager, OscdImagerCli
+	from lib.oscdimagergui import OscdImagerGui
+	__candidates__.append((OscdImager, OscdImagerCli, OscdImagerGui))
+except Exception as ex:
+	print(ex)
+try:
+	from dismimager import DismImager, DismImagerCli
+	from lib.dismimagergui import DismImagerGui
+	__candidates__.append((DismImager, DismImagerCli, DismImagerGui))
+except Exception as ex:
+	print(ex)
+try:
+	from zipimager import ZipImager, ZipImagerCli
+	from lib.zipimagergui import ZipImagerGui
+	__candidates__.append((ZipImager, ZipImagerCli, ZipImagerGui))
+except Exception as ex:
+	print(ex)
+try:
+	from hashedcopy import HashedCopy, HashedCopyCli
+	from lib.hashedcopygui import HashedCopyGui
+	__candidates__.append((HashedCopy, HashedCopyCli, HashedCopyGui))
+except Exception as ex:
+	print(ex)
+try:
+	from sqlite import SQLite, SQLiteCli
+	from lib.sqlitegui import SQLiteGui
+	__candidates__.append((SQLite, SQLiteCli, SQLiteGui))
+except Exception as ex:
+	print(ex)
+try:
+	from reporter import Reporter, ReporterCli
+	from lib.reportergui import ReporterGui
+	__candidates__.append((Reporter, ReporterCli, ReporterGui))
+except Exception as ex:
+	print(ex)
+try:
+	from axchecker import AxChecker, AxCheckerCli
+	from lib.axcheckergui import AxCheckerGui
+	__candidates__.append((AxChecker, AxCheckerCli, AxCheckerGui))
+except Exception as ex:
+	print(ex)
+try:
+	from wiper import WipeR, WipeRCli
+	from lib.wipergui import WipeRGui
+	__candidates__.append((WipeR, WipeRCli, WipeRGui))
+except Exception as ex:
+	print(ex)	
+try:
+	from wipew import WipeW, WipeWCli
+	from lib.wipewgui import WipeWGui
+	__candidates__.append((WipeW, WipeWCli, WipeWGui))
+except Exception as ex:
+	print(ex)
+if __os_name__ == 'posix':
+	__parent_path__ = Path(__file__).parent
+	__def_conf_path__ = Path.home() / '.config/fallbackimager.conf.json'
+else:
+	from sys import executable as __exe__
+	__exe_path__ = Path(__exe__)
+	__parent_path__ = Path(__file__).parent if __exe_path__.name == 'python.exe' else __exe_path__.parent
+	__def_conf_path__ = __parent_path__ / 'config.json'
 
 class Gui(GuiBase):
-	'''Definitions for the GUI'''
-
-	CANDIDATES = (
-		(EwfImager, EwfImagerCli, EwfImagerGui),
-		(EwfChecker, EwfCheckerCli, EwfCheckerGui),
-		(ZipImager, ZipImagerCli, ZipImagerGui),
-		(HashedCopy, HashedCopyCli, HashedCopyGui),
-		(SQLite, SQLiteCli, SQLiteGui),
-		(Reporter, ReporterCli, ReporterGui),
-		(AxChecker, AxCheckerCli, AxCheckerGui),
-		(WipeR, WipeRCli, WipeRGui)
-	)
+	'''Define the GUI'''
 
 	def __init__(self, config=None, debug=False):
 		'''Build GUI'''
-		parent_path = Path(__file__).parent
-		default_config = Path.home()/'.config/fallbackimager.conf.json'
-		if config:
-			settings = Settings(config)
-		else:
-			settings = Settings(default_config)
 		super().__init__(
 			__app_name__,
 			__version__,
-			parent_path,
-			[(Cli, Gui) for Module, Cli, Gui in self.CANDIDATES if Module().available],
-			settings,
+			__parent_path__,
+			[(Cli, Gui) for Module, Cli, Gui in __candidates__ if Module().available],
+			Settings(config) if config else Settings(__def_conf_path__ ),
 			debug = debug
 		)
 

@@ -7,8 +7,7 @@ from win32api import GetCurrentProcessId, GetLogicalDriveStrings
 from subprocess import Popen, PIPE, STDOUT, STARTUPINFO, STARTF_USESHOWWINDOW, TimeoutExpired
 from time import sleep
 from pathlib import Path
-from lib.extpath import ExtPath, Progressor
-from lib.stringutils import StringUtils
+from .stringutils import StringUtils
 
 class WinUtils:
 	'Needed Windows functions'

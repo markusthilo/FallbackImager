@@ -11,6 +11,7 @@ __description__ = '''
 Use libewf to create and check an EWF/E01 image of a block device.
 '''
 
+from os import name as __os_name__
 from os import getlogin
 from pathlib import Path
 from math import ceil
@@ -18,7 +19,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from json import dump
 from lib.timestamp import TimeStamp
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 from lib.logger import Logger
 from lib.linutils import LinUtils, OpenProc
 from lib.stringutils import StringUtils
@@ -29,10 +30,13 @@ class EwfImager:
 
 	def __init__(self, echo=print, utils=None):
 		'''Check if ewfacquire and ewfverify are present'''
-		self.ewfacquire_path = LinUtils.find_bin('ewfacquire', Path(__file__).parent)
-		self.available = self.ewfacquire_path and EwfChecker().available
-		self.echo = echo
-		self.utils = utils
+		self.available = False
+		if __os_name__ == 'posix' and EwfChecker().available:
+			self.ewfacquire_path = LinUtils.find_bin('ewfacquire', Path(__file__).parent)
+			if self.ewfacquire_path:
+				self.echo = echo
+				self.utils = utils
+				self.available = True
 
 	def acquire(self, source, case_number, evidence_number, description, *args,
 			outdir = None,
@@ -48,9 +52,9 @@ class EwfImager:
 			sudo = None
 		):
 		'''Run ewfacquire'''
-		self.source = ExtPath.path(source)
-		self.filename = filename if filename else ExtPath.mkfname(f'{case_number}_{evidence_number}_{description}')
-		self.outdir = ExtPath.mkdir(outdir)
+		self.source = Path(source)
+		self.filename = filename if filename else PathUtils.mkfname(f'{case_number}_{evidence_number}_{description}')
+		self.outdir = PathUtils.mkdir(outdir)
 		if not self.utils:
 			self.utils = LinUtils()
 		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir,
@@ -61,7 +65,7 @@ class EwfImager:
 			stdout, stderr = LinUtils.set_ro(self.source)
 			if stderr:
 				self.log.warning(stderr)
-		self.source_size = LinUtils.blkdevsize(self.source) if self.source.is_block_device() else ExtPath.get_size(self.source)
+		self.source_size = LinUtils.blkdevsize(self.source) if self.source.is_block_device() else PathUtils.get_size(self.source)
 		if not self.source_size:
 			self.log.error(f'Unable to get size of {self.source}')
 		self.infos['source_size'] = StringUtils.bytes(self.source_size, format_k='{iec} ({b} bytes)')
@@ -193,7 +197,7 @@ class EwfImagerCli(ArgumentParser):
 			help='Notes, e.g. used write blocker (default is "-")',
 			metavar='STRING'
 		)
-		self.add_argument('-O', '--outdir', type=ExtPath.path,
+		self.add_argument('-O', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)',
 			metavar='DIRECTORY'
 		)
@@ -204,7 +208,7 @@ class EwfImagerCli(ArgumentParser):
 		self.add_argument('--setro', action='store_true',
 			help='Set target block device to read only'
 		)
-		self.add_argument('source', nargs=1, type=ExtPath.path,
+		self.add_argument('source', nargs=1, type=Path,
 			help='The source device, partition or anything else that works with ewfacquire',
 			metavar='BLOCKDEVICE/PARTITON/FILE'
 		)

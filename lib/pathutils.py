@@ -7,30 +7,8 @@ from string import ascii_letters, digits
 
 __utf__ = 'utf-16-le', 'utf-16-be', 'utf-16', 'utf-8'
 
-class ExtPath:
-	'''Add some methods to pathlib´s Path Class'''
-
-	@staticmethod
-	def path(arg):
-		'''Generate Path object'''
-		if isinstance(arg, str):
-			return Path(arg.strip('"'))
-		else:
-			return Path(arg)
-
-	@staticmethod
-	def child(name, parent=None):
-		'''Generate full path'''
-		if not name and not parent:
-			return Path.cwd()
-		if parent:
-			parent = Path(parent)
-		else:
-			parent = Path.cwd()
-		if name:
-			return parent/name
-		else:
-			return parent
+class PathUtils:
+	'''Additional abilities for pathlib'''
 
 	@staticmethod
 	def mkdir(path):

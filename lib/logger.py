@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from lib.extpath import ExtPath
-from lib.timestamp import TimeStamp
+from .pathutils import PathUtils
+from .timestamp import TimeStamp
 
 class Logger:
 	'''Simple logging'''
 
 	def __init__(self, filename=None, outdir=None, head='Start task', echo=print):
 		'''Open/create directory to write logs'''
-		self.outdir = ExtPath.mkdir(outdir)
-		self.path = ExtPath.child(f'{filename}_log.txt', parent=self.outdir)
+		self.path = PathUtils.mkdir(outdir).joinpath(
+			f'{filename}_log.txt' if filename else f'{TimeStamp.now(path_comp=True)}_log.txt')
 		self._fh = self.path.open(mode='w', buffering=1)
 		self.info(head)
 		self.echo = echo

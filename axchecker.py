@@ -3,7 +3,7 @@
 
 __app_name__ = 'AxChecker'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-07-11'
+__version__ = '0.5.3_2024-12-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,7 +17,7 @@ This tool might help to find missing files. Be aware that you will (nearly) neve
 
 from argparse import ArgumentParser
 from os import name as __os_name__
-from lib.extpath import ExtPath, Progressor
+from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.sqliteutils import SQLiteReader
@@ -94,7 +94,7 @@ class MfdbReader(SQLiteReader):
 
 	def get_relative_paths(self, root_id):
 		'''Get relative paths under given root'''
-		return {ExtPath.normalize(relative_path)
+		return {PathUtils.normalize(relative_path)
 			for source_id, source_type, relative_path in self.walk(root_id)
 		}
 
@@ -107,15 +107,15 @@ class MfdbReader(SQLiteReader):
 class AxChecker:
 	'''Compare AXIOM case file / SQlite data base with paths'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Create Object'''
 		self.available = True
+		self.echo = echo
 
-	def open(self, mfdb, echo=print):
+	def open(self, mfdb):
 		'''Open database'''
 		self.mfdb = MfdbReader(mfdb)
-		self.mfdb_path = ExtPath.path(mfdb)
-		self.echo = echo
+		self.mfdb_path = Path(mfdb)
 
 	def list_roots(self, max_depth):
 		'''List the potential root paths to compare'''
@@ -129,7 +129,7 @@ class AxChecker:
 	def _set_output(self, filename, outdir, log):
 		'''Set output dir, filename and log'''
 		self.filename = TimeStamp.now_or(filename, base='axchecker')
-		self.outdir = ExtPath.mkdir(outdir)
+		self.outdir = PathUtils.mkdir(outdir)
 		if log:
 			self.log = log
 		else:

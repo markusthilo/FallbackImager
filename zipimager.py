@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-19'
+__version__ = '0.5.3_2024-12-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,7 +13,7 @@ Using the Python library zipfile this module generates an ZIP archive from a sou
 
 from zipfile import ZipFile, ZIP_DEFLATED
 from argparse import ArgumentParser
-from lib.extpath import ExtPath, Progressor
+from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
@@ -21,24 +21,21 @@ from lib.hashes import FileHashes
 class ZipImager:
 	'''Imager using ZipFile'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Create object'''
 		self.available = True
-
-	def create(self, root, filename=None, outdir=None, echo=print, log=None):
-		'''Build zip file'''
-		self.root_path = ExtPath.path(root)
-		self.filename = TimeStamp.now_or(filename)
-		self.outdir = ExtPath.mkdir(outdir)
 		self.echo = echo
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(filename=self.filename, outdir=self.outdir,
-				head='zipimager.ZipImager', echo=echo)
+
+	def create(self, root, filename=None, outdir=None, log=None):
+		'''Build zip file'''
+		self.root_path = Path(root)
+		self.filename = TimeStamp.now_or(filename)
+		self.outdir = PathUtils.mkdir(outdir)
+		self.log = log if log else Logger(
+			filename=self.filename, outdir=self.outdir, head='zipimager.ZipImager', echo=self.echo)
 		self.echo('Creating Zip file')
-		self.image_path = ExtPath.child(f'{self.filename}.zip', parent=self.outdir)
-		self.tsv_path = ExtPath.child(f'{self.filename}.tsv', parent=self.outdir)
+		self.image_path = self.outdir / f'{self.filename}.zip'
+		self.tsv_path = self.outdir / f'{self.filename}.tsv'
 		file_cnt = 0
 		dir_cnt = 0
 		other_cnt = 0
@@ -89,18 +86,19 @@ class ZipImager:
 class ZipImagerCli(ArgumentParser):
 	'''CLI for the imager'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('root', nargs=1, type=ExtPath.path,
+		self.add_argument('root', nargs=1, type=Path,
 			help='Source root', metavar='DIRECTORY'
 		)
+		self.echo = echo
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
@@ -109,13 +107,12 @@ class ZipImagerCli(ArgumentParser):
 		self.filename = args.filename
 		self.outdir = args.outdir
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the imager'''
-		imager = ZipImager()
+		imager = ZipImager(echo=self.echo)
 		imager.create(self.root,
 			filename = self.filename,
-			outdir = self.outdir,
-			echo = echo
+			outdir = self.outdir
 		)
 		imager.log.close()
 

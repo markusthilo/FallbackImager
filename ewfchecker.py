@@ -15,7 +15,7 @@ from pathlib import Path
 from subprocess import run
 from re import sub
 from argparse import ArgumentParser
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 from lib.timestamp import TimeStamp
 from lib.linutils import LinUtils, OpenProc
 from lib.logger import Logger
@@ -34,10 +34,10 @@ class EwfChecker:
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None, sudo=None):
 		'''Verify image'''
-		self.image_path = ExtPath.path(image)
+		self.image_path = Path(image)
 		if not self.image_path.suffix:
 			self.image_path = self.image_path.with_suffix('.E01')
-		self.outdir = ExtPath.mkdir(outdir)
+		self.outdir = PathUtils.mkdir(outdir)
 		self.filename = filename if filename else self.image_path.stem
 		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir, 
 			head='ewfchecker.EwfChecker', echo=self.echo)
@@ -77,7 +77,7 @@ class EwfChecker:
 			self.log.error(f'ewfmount terminated with:\n{proc.stderr.read()}')
 		else:
 			ewf_path = mount_path.joinpath(next(mount_path.iterdir()))
-			xxd = ExtPath.read_bin(ewf_path)
+			xxd = PathUtils.read_bin(ewf_path)
 			self.log.info(f'Image starts with:\n\n{xxd}', echo=True)
 			self.log.info('Trying to read partition table')
 			ret = run(['fdisk', '-l', f'{ewf_path}'], capture_output=True, text=True)
@@ -111,10 +111,10 @@ class EwfCheckerCli(ArgumentParser):
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('image', nargs=1, type=ExtPath.path,
+		self.add_argument('image', nargs=1, type=Path,
 			help='EWF/E01 image file', metavar='FILE'
 		)
 
