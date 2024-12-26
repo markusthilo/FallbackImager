@@ -52,31 +52,32 @@ class PathUtils:
 
 	@staticmethod
 	def walk(root):
-		'''Recursivly give all sub-paths'''
+		'''Walk but give path, relative path and type'''
 		for path in root.rglob('*'):
 			if path.is_file():
-				tp = 'File'
+				tp = 'file'
 			elif path.is_dir():
-				tp = 'Dir'
+				tp = 'dir'
 			else:
 				tp = None
 			yield path, path.relative_to(root), tp
 
 	@staticmethod
+	def parented_walk(root):
+		'''Walk but give path, parent, name and type'''
+		for path in root.rglob('*'):
+			if path.is_dir():
+				tp = 'dir'
+			elif path.is_file():
+				tp = 'file'
+			else:
+				tp = None
+			yield path, path.parent, path.name, tp
+
+	@staticmethod
 	def quantitiy(root):
 		'''Get quantitiy of all items'''
 		return len(list(root.rglob('*')))
-
-	@staticmethod
-	def parented_walk(root):
-		'''Walk throught file system str'''
-		for path in root.rglob('*'):
-			if path.is_dir():
-				yield path, path.parent, path.name, 'dir'
-			elif path.is_file():
-				yield path, path.parent, path.name, 'file'
-			else:
-				yield path, path.parent, path.name, None
 
 	@staticmethod
 	def read_utf_head(path, lines_in=10, lines_out=1):
@@ -118,13 +119,14 @@ class PathUtils:
 class Progressor:
 	'''Show progress when going through file structure'''
 
-	def __init__(self, root_or_qut, echo=print):
+	def __init__(self, root_or_quant, echo=print, item='file/dir'):
 		'''Get quantitiy of files under root or give quantitiy as int'''
 		self.echo = echo
-		if isinstance(root_or_qut, int):
-			self.quantitiy = root_or_qut
+		self.item = item
+		if isinstance(root_or_quant, int):
+			self.quantitiy = root_or_quant
 		else:
-			self.quantitiy = ExtPath.quantitiy(root_or_qut)
+			self.quantitiy = Path.quantitiy(root_or_quant)
 		self.counter = 0
 		self.percent = 0
 		self.factor = 100/self.quantitiy
@@ -135,4 +137,4 @@ class Progressor:
 		percent = int(self.factor*self.counter)
 		if percent > self.percent:
 			self.percent = percent
-			self.echo(f'{self.percent}%, processing file/dir {self.counter} of {self.quantitiy}')
+			self.echo(f'{self.percent}%, processing {self.item} {self.counter} of {self.quantitiy}')

@@ -53,10 +53,7 @@ class ReporterGui(ReporterLabels):
 		if self.filename.get():
 			return
 		json = self.json.get()
-		if json:
-			self.filename.set(Path(json).stem)
-		else:
-			self.filename.set(f'{TimeStamp.now(path_comp=True)}_report')
+		self.filename.set(Path(json).stem if json else f'{TimeStamp.now(path_comp=True)}_report')
 
 	def _parse(self):
 		'''Parse instantaniously and show in preview window'''

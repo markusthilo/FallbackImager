@@ -16,6 +16,7 @@ This tool might help to find missing files. Be aware that you will (nearly) neve
 '''
 
 from argparse import ArgumentParser
+from pathlib import Path
 from os import name as __os_name__
 from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
@@ -221,10 +222,11 @@ class AxChecker:
 class AxCheckerCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self, echo=print, **kwargs):
 		'''Define CLI using argparser'''
+		self.echo = echo
 		super().__init__(description=__description__, **kwargs)
-		self.add_argument('-d', '--diff', type=ExtPath.path,
+		self.add_argument('-d', '--diff', type=Path,
 			help='Path to file or directory to compare with', metavar='FILE|DIRECTORY'
 		)
 		self.add_argument('-e', '--encoding', type=str,
@@ -241,13 +243,13 @@ class AxCheckerCli(ArgumentParser):
 		self.add_argument('-n', '--nohead', default=False, action='store_true',
 			help='TSV file has no head line with names of columns (e.g. "Full path" etc.)'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log and CSV list(s)', metavar='DIRECTORY'
 		)
 		self.add_argument('-r', '--root', type=int,
 			help='ID of root path to compare', metavar='INTEGER'
 		)
-		self.add_argument('mfdb', nargs=1, type=ExtPath.path,
+		self.add_argument('mfdb', nargs=1, type=Path,
 			help='AXIOM Case (.mfdb) / SQLite data base file', metavar='FILE'
 		)
 
@@ -263,10 +265,10 @@ class AxCheckerCli(ArgumentParser):
 		self.outdir = args.outdir
 		self.root = args.root
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run AxChecker'''
-		axchecker = AxChecker()
-		axchecker.open(self.mfdb, echo=echo)
+		axchecker = AxChecker(echo=echo)
+		axchecker.open(self.mfdb)
 		if self.list:
 			axchecker.list_roots(self.list)
 			return
@@ -279,7 +281,7 @@ class AxCheckerCli(ArgumentParser):
 			)
 		else:
 			axchecker.check(filename=self.filename, outdir=self.outdir)
-		axchecker.log.info('All done', echo= True)
+		axchecker.log.info('All done', echo=True)
 		axchecker.log.close()
 
 if __name__ == '__main__':	# start here if called as application

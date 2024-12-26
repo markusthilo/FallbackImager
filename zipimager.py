@@ -48,7 +48,7 @@ class ZipImager:
 		):
 			print('Path\tType\tCopied', file=tsv_fh)
 			for path, relative, tp in ExtPath.walk(self.root_path):
-				if tp == 'File':
+				if tp == 'file':
 					try:
 						zf.write(path, relative)
 						print(f'"{relative}"\tFile\tyes', file=tsv_fh)
@@ -56,7 +56,7 @@ class ZipImager:
 					except:
 						print(f'"{relative}"\tFile\tno', file=tsv_fh)
 						file_error_cnt += 1
-				elif tp == 'Dir':
+				elif tp == 'dir':
 					try:
 						zf.mkdir(f'{relative}')
 						print(f'"{relative}"\tDir\tyes', file=tsv_fh)

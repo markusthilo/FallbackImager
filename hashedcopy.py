@@ -15,7 +15,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from hashlib import md5, sha256
 from time import time, sleep
-from lib.extpath import ExtPath, Progressor
+from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes, CopyFile
@@ -37,10 +37,10 @@ class HashedCopy:
 
 	def cp(self, sources, destination, filename=None, outdir=None, log=None):
 		'''Copy multiple sources'''
-		self.dst_root_path = ExtPath.path(destination)
+		self.dst_root_path = Path(destination)
 		self.filename = TimeStamp.now_or(filename)
-		self.outdir = ExtPath.mkdir(outdir)
-		self.tsv_path = ExtPath.child(f'{self.filename}_files.tsv', parent=self.outdir)
+		self.outdir = PathUtils.mkdir(outdir)
+		self.tsv_path = self.outdir / f'{self.filename}_files.tsv'
 		self.log = log if log else Logger(
 			filename=self.filename, outdir=self.outdir, head='hashedcopy.HashedCopy', echo=self.echo)
 		if self.dst_root_path.exists():
@@ -48,55 +48,43 @@ class HashedCopy:
 				self.log.error('Destination is not a directory')
 		else:
 			self.dst_root_path.mkdir()
-		dirs = set()
-		files = set()
-		self.echo('Reading source')
-		for source in sources:
-			source_path = Path.path(source)
-			if source_path.is_dir():
-				dirs.add((source_path, self.dst_root_path/source_path.name))
-				for abs_path, rel_path, tp in ExtPath.walk(source_path):
-					if tp == 'Dir':
-						dirs.add((rel_path, abs_path, self.dst_root_path/source_path.name/rel_path))
-					else:
-						files.add((rel_path, abs_path, self.dst_root_path/source_path.name/rel_path))
-			else:
-				files.add((, source_path, self.dst_root_path/source_path.name))
-
-		print(dirs)
-		print(files)
-		self.echo('Creating directories')
-		
-		'''
-				source_path.mkdir(parents=True, exist_ok=True)
-				for abs_path, rel_path, tp in ExtPath.walk(source_path):
-					if tp == 'Dir':
-						(self.dst_root_path/source_path.name/rel_path).mkdir(parents=True, exist_ok=True)
-					else:
-						files.add((abs_path, self.dst_root_path/source_path.name/rel_path))
-
-		self.echo('Copying files')
-		hashed_files = list()
-		progress = Progressor(len(files), echo=self.echo)
-
-		for src_path, dst_path in files: 
-			src_hashes = CopyFile(src_path, dst_path)
-			hashed_files.append((src_path, dst_path, src_hashes))
-			progress.inc()
-
-		print('DEBUG', start_time, time())
-
-		sync()
-		sleep_time = start_time + self.MIN_COPY_SEC - time()
-		if sleep_time > 0:
-			echo(f'Waiting...')
-			sleep(sleep_time)
+		source_paths = sorted(list({Path(source) for source in sources}))
+		files2cp = list()
 		error_cnt = 0
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
-			print('Source_File\tDestination_File\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tSuccess', file=fh)
+			print('Source\tDestination\tType\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tSuccess', file=fh)
+			self.echo('Creating directories')
+			for source_path in source_paths:
+				root_dst_path = self.dst_root_path.joinpath(source_path)
+				if source_path.is_dir():
+					root_dst_path.mkdir(parents=True, exist_ok=True)
+					print(f'{source_path}\t{root_dst_path}\tdir\t-\t-\t-\t-\tyes', file=fh)
+					for abs_path, rel_path, tp in PathUtils.walk(source_path):
+						dst_path = self.dst_root_path.joinpath(source_path.name, rel_path)
+						if tp == 'dir':
+							dst_path.mkdir(parents=True, exist_ok=True)
+							print(f'{abs_path}\t{dst_path}\tdir\t-\t-\t-\t-\tyes', file=fh)
+						elif tp == 'file':
+							files2cp.append((abs_path, dst_path))
+						else:
+							print(f'{abs_path}\t{dst_path}\tother\t-\t-\t-\t-\tno', file=fh)
+							error_cnt += 1
+				elif source_path.is_file():
+					files2cp.append((source_path, root_dst_path))
+				else:
+					print(f'{source_path}\t{root_dst_path}\tother\t-\t-\t-\t-\tno', file=fh)
+					error_cnt += 1
+			self.echo('Copying files')
+			hashed_files = list()
+			progress = Progressor(len(files2cp), echo=self.echo, item='file')
+			for src_path, dst_path in files2cp:
+				src_hashes = CopyFile(src_path, dst_path)
+				hashed_files.append((src_path, dst_path, src_hashes))
+				progress.inc()
+			sync()
 			for src_path, dst_path, src_hashes in hashed_files:
 				dst_hashes = FileHashes(dst_path)
-				line = f'{src_path}\t{dst_path}\t{src_hashes.md5}\t{dst_hashes.md5}\t{src_hashes.sha256}\t{dst_hashes.sha256}\t'
+				line = f'{src_path}\t{dst_path}\tfile\t{src_hashes.md5}\t{dst_hashes.md5}\t{src_hashes.sha256}\t{dst_hashes.sha256}\t'
 				if src_hashes.md5 == dst_hashes.md5 and src_hashes.sha256 == dst_hashes.sha256:
 					line += 'yes'
 				else:
@@ -106,7 +94,7 @@ class HashedCopy:
 		self.log.info(f'Copied {len(hashed_files)-error_cnt} file(s), check {self.tsv_path}', echo=True)
 		if error_cnt > 0:
 			self.log.error(f'{error_cnt} missing file(s)')
-		'''
+
 
 class HashedCopyCli(ArgumentParser):
 	'''CLI for the copy tool'''
@@ -114,16 +102,16 @@ class HashedCopyCli(ArgumentParser):
 	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
-		self.add_argument('-d', '--destination', type=ExtPath.path, required=True,
+		self.add_argument('-d', '--destination', type=Path, required=True,
 			help='Destination root (required)', metavar='DIRECTORY'
 		)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log and file list (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('sources', nargs='+', type=ExtPath.path,
+		self.add_argument('sources', nargs='+', type=Path,
 			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
 		)
 		self.echo = echo

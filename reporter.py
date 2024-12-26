@@ -3,7 +3,7 @@
 
 __app_name__ = 'Reporter'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-27'
+__version__ = '0.5.3_2024-12-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,13 +15,13 @@ Example: reporter-example-template.txt
 from json import load
 from re import compile as regcompile
 from argparse import ArgumentParser
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 from lib.timestamp import TimeStamp
 
 class Reporter:
 	'''Parse JSON file throught template to generate report'''
 
-	def __init__(self):
+	def __init__(self, echo=None):
 		'''Generate object'''
 		self.available = True
 
@@ -60,18 +60,15 @@ class Reporter:
 
 	def write(self, filename=None, outdir=None):
 		'''Write parsed file'''
-		self.outdir = ExtPath.mkdir(outdir)
-		if filename:
-			self.filename = filename
-		else:
-			self.filename = self.json_path.name
+		self.outdir = PathUtils.mkdir(outdir)
+		self.filename = filename if filename else self.json_path.name
 		self.destination_path = (self.outdir/f'{self.filename}_report').with_suffix(self.template.suffix)
 		self.destination_path.write_text(self.parsed_text)
 
 class ReporterCli(ArgumentParser):
 	'''CLI for EwfVerify'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__, prog=__app_name__.lower())
 		self.add_argument('-f', '--filename', type=str,
@@ -86,6 +83,7 @@ class ReporterCli(ArgumentParser):
 		self.add_argument('template', nargs=1, type=ExtPath.path,
 			help='Template text file', metavar='FILE'
 		)
+		self.echo = echo
 
 	def parse(self, *cmd):
 		'''Parse arguments'''
@@ -95,10 +93,10 @@ class ReporterCli(ArgumentParser):
 		self.filename = args.filename
 		self.outdir = args.outdir
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the verification'''
 		reporter = Reporter()
-		echo(reporter.parse(self.json, self.template))
+		self.echo(reporter.parse(self.json, self.template))
 		if reporter.errors > 0:
 			raise RuntimeError(f'Parser reported {reporter.errors} error(s)')
 		if self.outdir or self.filename:

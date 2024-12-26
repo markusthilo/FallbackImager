@@ -3,7 +3,7 @@
 
 __app_name__ = 'Sqlite'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.0_2024-04-26'
+__version__ = '0.5.3_2024-12-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,9 +12,8 @@ The Sqlite module uses the Python library sqlite3. It can show the structure of 
 '''
 
 from argparse import ArgumentParser
-from tkinter.messagebox import showerror
-from tkinter.scrolledtext import ScrolledText
-from lib.extpath import ExtPath
+from pathlib import Path
+from lib.pathutils import PathUtils
 from lib.sqliteutils import SQLiteExec, SQLiteReader, SQLDump
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
@@ -22,21 +21,20 @@ from lib.logger import Logger
 class SQLite:
 	'''The easy way to work with SQLite'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Generate object'''
 		self.available = True
+		self.echo = echo
 
 	def open(self, db,
 		filename = None,
 		outdir = None,
-		echo = print,
 		log = None
 	):
 		'''Prepare to create zip file'''
-		self.echo = echo
-		self.db_path = ExtPath.path(db)
+		self.db_path = Path(db)
 		self.filename = TimeStamp.now_or(filename)
-		self.outdir = ExtPath.mkdir(outdir)
+		self.outdir = PathUtils.mkdir(outdir)
 		self.log = log
 
 	def start_log(self):
@@ -178,9 +176,10 @@ class SQLite:
 class SQLiteCli(ArgumentParser):
 	'''CLI for the imager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self, echo=print, **kwargs):
 		'''Define CLI using argparser'''
-		super().__init__(**kwargs)
+		self.echo = echo
+		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
@@ -190,10 +189,10 @@ class SQLiteCli(ArgumentParser):
 		self.add_argument('-l', '--list', default=False, action='store_true',
 			help='List tables/schema, ignore other tasks', dest='echo_schema'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('-r', '--read', type=ExtPath.path,
+		self.add_argument('-r', '--read', type=Path,
 			help='Read dump file and fill SQLite DB (alternative method to -x)', metavar='FILE'
 		)
 		self.add_argument('-s', '--schema', default=False, action='store_true',
@@ -202,10 +201,10 @@ class SQLiteCli(ArgumentParser):
 		self.add_argument('-t', '--table', type=str,
 			help='Dump table'
 		)
-		self.add_argument('-x', '--execute', type=ExtPath.path,
+		self.add_argument('-x', '--execute', type=Path,
 			help='Execute SQL statements from file an apply to database', metavar='FILE'
 		)
-		self.add_argument('db', nargs=1, type=ExtPath.path,
+		self.add_argument('db', nargs=1, type=Path,
 			help='Database file', metavar='FILE'
 		)
 
@@ -222,16 +221,15 @@ class SQLiteCli(ArgumentParser):
 		self.table = args.table
 		self.execute = args.execute
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the imager'''
-		sqlite = SQLite()
+		sqlite = SQLite(echo=self.echo)
 		sqlite.open(self.db,
 			filename = self.filename,
 			outdir = self.outdir,
-			echo = echo
 		)
 		if self.echo_schema:
-			echo(sqlite.get_schema())
+			self.echo(sqlite.get_schema())
 		else:
 			if self.execute:
 				sql_path = self.execute
@@ -245,6 +243,6 @@ class SQLiteCli(ArgumentParser):
 				sqlite.dump(table=self.table, column=self.column)
 
 if __name__ == '__main__':	# start here if called as application
-	app = SQLiteCli(description=__description__.strip())
+	app = SQLiteCli()
 	app.parse()
 	app.run()
