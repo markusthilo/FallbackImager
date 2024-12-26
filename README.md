@@ -23,7 +23,7 @@ $ sudo zypper install python3 python3-tk
 ```
 
 #### C
-Pre-compiled versions of the wipe tool zd are included in the releases, so on AMD64 there is no need to compile.
+Pre-compiled versions of the wipe tool zd are included in the releases, so on64-bit Intel CPUs / AMD64 there is no need to compile.
 
 To compile the source *gcc* is needed. You might use my make script:
 ```
@@ -95,9 +95,9 @@ and run:
 ```
 $ python.exe FallbackImager.py
 ```
-On Linux based Systems run from the terminal (as root using sudo -E):
+On Linux based Systems run from the terminal:
 ```
-$ ./fallbackimager-root.sh
+$ ./fallbackimager.sh
 ```
 Shure, you can run directly with *python* or *python3*:
 ```
@@ -125,10 +125,6 @@ This is a conveniant interface for *ewfacquire* from libewf. This module is not 
 ### EwfChecker
 The module simply uses *ewfinfo*. *ewfexport* and *ewfewfverify* to check an EWF/E01 image file. It is used by EwfImager. This is not available on Windows.
 
-### Reporter
-The tool parses a template and replaces %jinsert{}{} or \jinsert{}{} by values from a JSON file.
-Example: reporter-example-template.txt
-
 ### OscdImager
 The module uses *oscdimg.exe* (from the Windows ADK Package) to generate an ISO file (UDF file system). Obviously this module is only available on Windows.
 
@@ -139,10 +135,14 @@ This module is only availible on Windows with Admin privileges. It generates an 
 Using the Python library *zipfile* this module generates an ZIP archive from a source file structure. The process is robust to unreadable paths and a TSV path list is generated.
 
 ### HashedCopy
-Copies files and verifies by md5 and sha256. Filenames and hashes are stored as TSV.
+Copies files and verifies by md5 and sha256. Paths and hashes are stored as TSV.
 
 ### Sqlite
 The Sqlite module uses the Python library *sqlite3*. It can show the structure of a *.db* file ("Dump schema") or dump the content as CSV/TSV ("Dump content"). In addition SQL code can be executed ("Execute SQL") by the library. An alternative method is implemented ("Alternative") that is designed to generate a *.db* file from a MySQL dump file in case *sqlite3* fails.
+
+### Reporter
+The tool parses a template and replaces "%jinsert{}{}" or "\jinsert{}{}" by values from a JSON file.
+Example: reporter-example-template.txt
 
 ### AxChecker
 As Magnet's AXIOM has proven to be unreliable in the past, this module compares the files in an AXIOM *Case.mfdb* to a file list (CSV/TSV e.g. created with X-Ways) or a local file structure. Only one partition or subtree of the case file can be compared at a time.
@@ -158,18 +158,21 @@ Whe the target is a physical drive, you can create a partition where (after a su
 
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no "Are you really really sure questions" as Windows users might be used to.
 
+### Settings
+The Linux version has an additional settings tab. The sudo password can be set for operations needing root previliges. Make sure your user account is configured for sudo. A GUI for *blockdev --setro/--setrw* is provided and a software writeblocker can be enabled ord disabled. Be aware that setting blockdevices to read-only is not 100% safe. Make sure you do not mount devices you want to keep untouched. Disable all auto-mounting as provided e.g. by graphical file managers. Best idea might be to use a pure window manager instead of full desktop environments for forensic work.
+
 ## Cli
 Every module is executable from the Terminal. Use the parameter *-h* to get the command line arguments, e.g.:
 ```
-$ python axchecker.py -h
+$ python zipimager.py -h
 ```
 On Windows use PowerShell or CMD:
 ```
-$ python.exe axchecker.py -h
+$ python.exe zipimager.py -h
 ```
 If you have the Windows executables you can run e.g.:
 ```
-$ axchecker.exe -h
+$ zipimager.exe -h
 ```
 
 ## Legal Notice

@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-20'
+__version__ = '0.5.3_2024-12-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -20,7 +20,7 @@ Be aware that this module is extremely dangerous as it is designed to erase data
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.timestamp import TimeStamp
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 from lib.logger import Logger
 from lib.linutils import LinUtils, OpenProc
 
@@ -71,7 +71,7 @@ class WipeR:
 				raise ValueError('Byte to overwrite (-f/--value) has to be inbetween 00 and ff')
 		if not self.utils:
 			self.utils = LinUtils()
-		if ExtPath.path(targets[0]).is_block_device():
+		if Path(targets[0]).is_block_device():
 			if len(targets) > 1:
 				raise RuntimeError('Only one physical drive at a time')
 			if not verify:
@@ -82,7 +82,7 @@ class WipeR:
 							raise RuntimeError(stderr)
 		elif not extra and not verify:
 			allbytes = True
-		self.outdir = ExtPath.mkdir(outdir)
+		self.outdir = PathUtils.mkdir(outdir)
 		self.log = log if log else Logger(
 			filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
 			outdir = self.outdir, 
@@ -130,10 +130,7 @@ class WipeR:
 			mnt = None
 		):
 		'''Generate partition and file system'''
-		if loghead:
-			loghead = ExtPath.path(loghead)
-		else:
-			loghead = __parent_path__/'wipe-log-head.txt'
+		loghead = Path(loghead) if loghead else __parent_path__/'wipe-log-head.txt'
 		partition, stderr = self.utils.init_blkdev(target, mbr=mbr, fs=fs, name=name)
 		if stderr:
 			self.log.warning(stderr)
@@ -177,7 +174,7 @@ class WipeRCli(ArgumentParser):
 			help='Byte to overwrite with as hex (00 - ff)',
 			metavar='HEX_BYTE'
 		)
-		self.add_argument('-g', '--loghead', type=ExtPath.path,
+		self.add_argument('-g', '--loghead', type=Path,
 			help='Use the given file as head when writing log to new drive',
 			metavar='FILE'
 		)
@@ -188,10 +185,10 @@ class WipeRCli(ArgumentParser):
 			help='Name/label of the new partition (when target is a physical drive)',
 			metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log', metavar='DIRECTORY'
 		)
-		self.add_argument('-p', '--mount', type=ExtPath.path,
+		self.add_argument('-p', '--mount', type=Path,
 			help='Mountpoint to the new partition (when target is a physical drive)',
 			metavar='DIRECTORY'
 		)
@@ -208,7 +205,7 @@ class WipeRCli(ArgumentParser):
 		self.add_argument('-x', '--extra', action='store_true',
 			help='Overwrite all bytes/blocks twice, write random bytes at 1st pass'
 		)
-		self.add_argument('targets', nargs='*', type=ExtPath.path,
+		self.add_argument('targets', nargs='*', type=Path,
 			help='Target blockdevice or file(s) (/dev/sdc)', metavar='BLOCKDEVICE/FILE'
 		)
 

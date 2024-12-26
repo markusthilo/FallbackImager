@@ -6,7 +6,7 @@ The tool is currently developed for Linux based OS and Windows (>=10). It is wor
 
 
 Tabs
-Each module is represented by a tab in the upper part of the window.
+Each module is represented by a tab in the upper part of the application window.
 
 Most modules have a button and field “Source” to select the source for the operation (e.g. directory or logical drive). Fields can be edited directly. In most cases the buttons let you choose a folder or file.
 
@@ -36,13 +36,13 @@ ZipImager
 Using the Python library zipfile this module generates an ZIP archive from a source file structure. The process is robust to unreadable paths and a TSV path list is generated.
 
 HashedCopy
-Copies files and verifies by md5 and sha256. Filenames and hashes are stored as TSV.
+Copies files and verifies by md5 and sha256. Paths and hashes are stored as TSV.
 
 Sqlite
 The Sqlite module uses the Python library sqlite3. It can show the structure of a .db file (“Dump schema”) or dump the content as CSV/TSV (“Dump content”). In addition SQL code can be executed (“Execute SQL”) by the library. An alternative method is implemented (“Alternative”) that is designed to generate a .db file from a MySQL dump file in case sqlite3 fails.
 
 Reporter
-The tool parses a template and replaces %jinsert{}{} or \jinsert{}{} by values from a JSON file.
+The tool parses a template and replaces "%jinsert{}{}" or "\jinsert{}{}" by values from a JSON file.
 Example: reporter-example-template.txt
 
 AxChecker
@@ -58,6 +58,9 @@ By default only unwiped blocks (or SSD pages) are overwritten though it is possi
 Whe the target is a physical drive, you can create a partition where (after a successful wipe) the log is copied into. A custom head for this log can be defined in a text file (“Head of log file”, log_head.txt by default).
 
 Be aware that this module is extremely dangerous as it is designed to erase data! There will be no “Are you really really sure questions” as Windows users might be used to.
+
+Settings
+The Linux version has an additional settings tab. The sudo password can be set for operations needing root previliges. Make sure your user account is configured for sudo. A GUI for blockdev --setro/--setrw is provided and a software writeblocker can be enabled ord disabled. Be aware that setting blockdevices to read-only is not 100% safe. Make sure you do not mount devices you want to keep untouched. Disable all auto-mounting as provided e.g. by graphical file managers. Best idea might be to use a pure window manager instead of full desktop environments for forensic work.
 
 Legal Notice
 
