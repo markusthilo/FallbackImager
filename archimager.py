@@ -3,19 +3,20 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-06-22'
+__version__ = '0.5.3_2024-12-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Arch ISO to image (EWF) booted device
+This is a tool to include into an Arch ISO. The purpose ist to build a bootable ISO image to create
+EWF images of the booted device`s drives. Booting and using should not change a single bit on the drives.
 '''
 
 from pathlib import Path
 from threading import Thread
 from screenlayout.gui import main as display_settings
 from tkinter import Tk, PhotoImage, StringVar
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 from lib.stringutils import StringUtils
 from lib.linutils import LinUtils
 from lib.guilabeling import ArchImagerLabels
@@ -23,7 +24,7 @@ from lib.guiconfig import GuiConfig
 from lib.diskselectgui import DiskSelectGui
 from lib.guielements import ExpandedFrame, GridLabel, StringSelector, GridMenu
 from lib.guielements import GridSeparator, GridBlank, GridButton, ChildWindow
-from lib.guielements import Tree, LeftButton, RightButton
+from lib.guielements import LeftButton, RightButton
 
 class WriteDestinationGui(ChildWindow, ArchImagerLabels, GuiConfig):
 	'''GUI to select target to write (Linux)'''
