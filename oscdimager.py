@@ -3,7 +3,7 @@
 
 __app_name__ = 'OscdImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-25'
+__version__ = '0.5.3_2024-12-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -14,51 +14,41 @@ The module uses oscdimg.exe (from the Windows ADK Package) to generate an ISO fi
 from sys import executable as __executable__
 from pathlib import Path
 from argparse import ArgumentParser
-from lib.extpath import ExtPath
+from lib.pathutils import PathUtils
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.winutils import WinUtils, OpenProc
 from lib.hashes import FileHashes
 
-if Path(__file__).suffix.lower() == '.pyc':
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
+__parent_path__ = Path(__executable__).parent if Path(__file__).suffix.lower() == '.pyc' else Path(__file__).parent
 
 class OscdImager:
 	'''OSCDIMG via subprocess (oscdimg.exe -h -m -u2 -l$label $source $image)'''
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Look for oscdimg.exe'''
 		self.oscdimg_path = WinUtils.find_exe('oscdimg.exe', __parent_path__,
 			'\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg')
 		if self.oscdimg_path:
 			self.available = True
+			self.echo = echo
 		else:
 			self.available = False
 
 	def create (self, root,
 			filename = None,
 			outdir = None,
-			log = None,
-			echo = print
+			log = None
 		):
 		'''Create logical ISO/UDF image'''
-		self.root_path = ExtPath.path(root)
+		self.root_path = Path(root)
 		self.filename = TimeStamp.now_or(filename)
-		self.outdir = ExtPath.mkdir(outdir)
-		if filename:
-			self.label = filename
-		else:
-			self.filename = ''.join(char for char in self.root_path.stem
-				if char.isalnum() or char in ['_', '-']
-			)
+		self.outdir = PathUtils.mkdir(outdir)
+		self.label = filename if filename else ''.join(
+			char for char in self.root_path.stem if char.isalnum() or char in ['_', '-'])
 		self.label = self.filename[:32]
 		self.image_path = ExtPath.child(f'{self.filename}.iso', parent=self.outdir)
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(self.filename, outdir=self.outdir, head='oscdimager.OscdImager', echo=echo)
+		self.log = log if log else Logger(self.filename, outdir=self.outdir, head='oscdimager.OscdImager', echo=self.echo)
 		self.cmd = [
 			f'{self.oscdimg_path}',
 			'-h', '-m', '-u2',
@@ -77,16 +67,17 @@ class OscdImager:
 class OscdImagerCli(ArgumentParser):
 	'''CLI for the imager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self, echo=print, **kwargs):
 		'''Define CLI using argparser'''
+		self.echo = echo
 		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generated (without extension)', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('root', nargs=1, type=ExtPath.path,
+		self.add_argument('root', nargs=1, type=Path,
 			help='Source', metavar='DIRECTORY'
 		)
 
@@ -97,13 +88,12 @@ class OscdImagerCli(ArgumentParser):
 		self.filename = args.filename
 		self.outdir = args.outdir
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the imager'''
-		image = OscdImager()
+		image = OscdImager(echo=self.echo)
 		image.create(self.root,
 			filename = self.filename,
-			outdir = self.outdir,
-			echo = echo
+			outdir = self.outdir
 		)
 		image.log.close()
 

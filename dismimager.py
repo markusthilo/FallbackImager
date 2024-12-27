@@ -3,7 +3,7 @@
 
 __app_name__ = 'DismImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-25'
+__version__ = '0.5.3_2024-12-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,27 +17,25 @@ from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
 from argparse import ArgumentParser
 from shutil import copyfile
-from lib.extpath import ExtPath, Progressor
+from lib.pathutils import PathUtils, Progressor
 from lib.winutils import WinUtils, OpenProc
 from lib.logger import Logger
 from lib.hashes import FileHashes
 from lib.timestamp import TimeStamp
 
-if Path(__file__).suffix.lower() == '.pyc':
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
+__parent_path__ = Path(__executable__).parent if Path(__file__).suffix.lower() == '.pyc' else Path(__file__).parent
 
 class DismImager:
 	'''Create and Verify image with Dism'''
 
 	WIMMOUNT = 'WimMount.exe'
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Look for dism.exe'''
 		self.dism_path = Path(environ['SYSTEMDRIVE'])/'\\Windows\\system32\\dism.exe'
 		if self.dism_path.is_file() and IsUserAnAdmin():
 			self.available = True
+			self.echo = echo
 		else:
 			self.available = False
 
@@ -49,7 +47,6 @@ class DismImager:
 			description = None,
 			compress = 'none',
 			log = None,
-			echo = print
 		):
 		'''Create image'''
 		if root:
@@ -57,25 +54,15 @@ class DismImager:
 		else:
 			raise ValueError('Source is missing')
 		self.filename = TimeStamp.now_or(filename)
-		self.outdir = ExtPath.mkdir(outdir)
-		if image:
-			self.image_path = Path(image)
-		else:
-			self.image_path = ExtPath.child(f'{self.filename}.wim', parent=self.outdir)
-		if name:
-			self.name = name
-		else:
-			self.name = self.root_path.name
+		self.outdir = PathUtils.mkdir(outdir)
+		self.image_path = Path(image) if image else outdir / f'{self.filename}.wim'
+		self.name = name if name else self.root_path.name
 		self.description = TimeStamp.now_or(description)
 		if compress in ['max', 'fast', 'none']:
 			self.compress = compress
 		else:
 			raise NotImplementedError(f'Unknown compression "{compress}"')
-		self.echo = echo
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=self.echo)
+		self.log = log if log else Logger(self.filename, outdir=self.outdir, head='dismimager.DismImage', echo=self.echo)
 		self.log.info(f'Creating image', echo=True)
 		cmd = f'{self.dism_path} /Capture-Image /ImageFile:"{self.image_path}"'
 		cmd += f' /CaptureDir:"{self.root_path}" /Name:"{self.name}" /Description:"{self.description}"'
@@ -141,8 +128,9 @@ class DismImager:
 class DismImagerCli(ArgumentParser):
 	'''CLI for the imager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self, echo=print, **kwargs):
 		'''Define CLI using argparser'''
+		self.echo = echo
 		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-c', '--compress', type=str, default='none',
 			choices=['max', 'fast', 'none'],
@@ -157,13 +145,13 @@ class DismImagerCli(ArgumentParser):
 		self.add_argument('-n', '--name', type=str,
 			help='Intern name of the image in the WMI file', metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
 		)
 		self.add_argument('-x', '--exe', default=False, action='store_true',
 			help='Copy WimMount.exe to destination directory'
 		)
-		self.add_argument('root', nargs='?', type=ExtPath.path,
+		self.add_argument('root', nargs='?', type=Path,
 			help='Source', metavar='DIRECTORY'
 		)
 
@@ -178,16 +166,15 @@ class DismImagerCli(ArgumentParser):
 		self.compress = args.compress
 		self.exe = args.exe
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run the imager'''
-		imager = DismImager()
+		imager = DismImager(echo=self.echo)
 		imager.create(self.root,
 			filename = self.filename,
 			outdir = self.outdir,
 			name = self.name,
 			description = self.description,
-			compress = self.compress,
-			echo = echo
+			compress = self.compress
 		)
 		if self.exe:
 			imager.copy_exe()

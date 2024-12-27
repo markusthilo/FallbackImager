@@ -3,7 +3,7 @@
 
 __app_name__ = 'WimMount'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.1_2024-05-30'
+__version__ = '0.5.3_2024-12-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,10 +22,7 @@ from tkinter.messagebox import askyesno, showerror, showwarning
 from tkinter.filedialog import askdirectory, askopenfilename
 from lib.winutils import WinUtils, OpenProc
 
-if Path(__executable__).stem == __app_name__:
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
+__parent_path__ = Path(__executable__).parent if Path(__file__).suffix.lower() == '.pyc' else Path(__file__).parent
 
 class Dism:
 	'''Use Dism'''

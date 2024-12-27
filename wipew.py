@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeW'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.2_2024-06-10'
+__version__ = '0.5.3_2024-12-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -22,14 +22,11 @@ from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.timestamp import TimeStamp
-from lib.extpath import ExtPath
+from lib.PathUtils import PathUtils
 from lib.logger import Logger
 from lib.winutils import WinUtils, OpenProc
 
-if Path(__file__).suffix.lower() == '.pyc':
-	__parent_path__ = Path(__executable__).parent
-else:
-	__parent_path__ = Path(__file__).parent
+__parent_path__ = Path(__executable__).parent if Path(__file__).suffix.lower() == '.pyc' else Path(__file__).parent
 
 class WipeW:
 	'''Frontend and Python wrapper for zd-win.exe'''
@@ -38,11 +35,12 @@ class WipeW:
 	STD_BLOCKSIZE = 4096
 	MAX_BLOCKSIZE = 32768
 
-	def __init__(self):
+	def __init__(self, echo=print):
 		'''Look for zd-win.exe'''
 		self.zd_path = WinUtils.find_exe('zd-win.exe', __parent_path__)
 		if self.zd_path:
 			self.available = True
+			self.echo = print
 		else:
 			self.available = False
 
@@ -55,20 +53,15 @@ class WipeW:
 			maxbadblocks = None,
 			maxretries = None,
 			log = None,
-			outdir = None,
-			echo = print
+			outdir = None
 		):
-		self.echo = echo
-		self.outdir = ExtPath.mkdir(outdir)
-		if log:
-			self.log = log
-		else:
-			self.log = Logger(
-				filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
-				outdir = self.outdir, 
-				head = 'wipew.WipeW',
-				echo = self.echo
-			)
+		self.outdir = PathUtils.mkdir(outdir)
+		self.log = log if log else Logger(
+			filename = f'{TimeStamp.now(path_comp=True, no_ms=True)}_wipe',
+			outdir = self.outdir, 
+			head = 'wipew.WipeW',
+			echo = self.echo
+		)
 		if len(targets) == 0:
 			self.log.error('Missing drive or file(s) to wipe')
 		if verify and allbytes and extra:
@@ -139,10 +132,7 @@ class WipeW:
 		'''Generate partition and file system'''
 		if not self.physical_drive:
 				wiper.log.error('Creating partition only works on physical drive')
-		if loghead:
-			loghead = ExtPath.path(loghead)
-		else:
-			loghead = __parent_path__/'wipe-log-head.txt'
+		loghead = Path(loghead) if loghead else __parent_path__/'wipe-log-head.txt'
 		if not name:
 			name = 'Volume'
 		driveletter = WinUtils.create_partition(target, self.outdir,
@@ -166,8 +156,9 @@ class WipeW:
 class WipeWCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
 
-	def __init__(self, **kwargs):
+	def __init__(self, echo=print, **kwargs):
 		'''Define CLI using argparser'''
+		self.echo = echo
 		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-a', '--allbytes', action='store_true',
 			help='Write every byte/block (do not check before overwriting block)'
@@ -188,7 +179,7 @@ class WipeWCli(ArgumentParser):
 			help='Byte to overwrite with as hex (00 - ff)',
 			metavar='HEX_BYTE'
 		)
-		self.add_argument('-g', '--loghead', type=ExtPath.path,
+		self.add_argument('-g', '--loghead', type=Path,
 			help='Use the given file as head when writing log to new drive',
 			metavar='FILE'
 		)
@@ -202,7 +193,7 @@ class WipeWCli(ArgumentParser):
 			help='Name/label of the new partition (when target is a physical drive)',
 			metavar='STRING'
 		)
-		self.add_argument('-o', '--outdir', type=ExtPath.path,
+		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log', metavar='DIRECTORY'
 		)
 		self.add_argument('-q', '--maxbadblocks', type=int,
@@ -241,12 +232,12 @@ class WipeWCli(ArgumentParser):
 		self.verify = args.verify
 		self.extra = args.extra
 
-	def run(self, echo=print):
+	def run(self):
 		'''Run zd.exe'''
 		if self.listdrives:
 			if len(self.targets) > 0:
 				raise RuntimeError('Giving targets makes no sense with --listdrives')
-			WinUtils.echo_drives(echo=echo)
+			WinUtils.echo_drives(echo=self.echo)
 			return
 		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
@@ -259,8 +250,7 @@ class WipeWCli(ArgumentParser):
 			outdir = self.outdir,
 			value = self.value,
 			verify = self.verify,
-			extra = self.extra,
-			echo = echo
+			extra = self.extra
 		)
 		if self.create:
 			wiper.mkfs(self.targets[0],
