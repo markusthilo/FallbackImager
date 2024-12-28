@@ -3,7 +3,7 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-27'
+__version__ = '0.5.3_2024-12-28'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -16,6 +16,8 @@ from pathlib import Path
 from threading import Thread
 from screenlayout.gui import main as display_settings
 from tkinter import Tk, PhotoImage, StringVar
+from tkinter.font import nametofont
+from tkinter.ttk import Frame, Notebook
 from lib.pathutils import PathUtils
 from lib.stringutils import StringUtils
 from lib.linutils import LinUtils
@@ -24,7 +26,7 @@ from lib.guiconfig import GuiConfig
 from lib.diskselectgui import DiskSelectGui
 from lib.guielements import ExpandedFrame, GridLabel, StringSelector, GridMenu
 from lib.guielements import GridSeparator, GridBlank, GridButton, ChildWindow
-from lib.guielements import LeftButton, RightButton
+from lib.guielements import LeftButton, RightButton, OutDirSelector
 
 class WriteDestinationGui(ChildWindow, ArchImagerLabels, GuiConfig):
 	'''GUI to select target to write (Linux)'''
@@ -112,20 +114,24 @@ class WriteDestinationGui(ChildWindow, ArchImagerLabels, GuiConfig):
 		self.main_frame.destroy()
 		self._main_frame()
 
-class Gui(Tk, ArchImagerLabels):
+class Gui(Tk, ArchImagerLabels, GuiConfig):
 	'''Definitions for the GUI'''
 
 	DEFAULT_SEGMENT_SIZE = '40'
 
 	def __init__(self):
 		'''Build GUI'''
-		self.fixed_devs = LinUtils.get_blockdevs()
 		Tk.__init__(self)
-		self.title(f'{__app_name__} {__version__}')
+		title = f'{__app_name__} v{__version__}'
+		self.title(title)
 		self.resizable(0, 0)
-		self.appicon = PhotoImage(file='appicon.png')
+		self.appicon = PhotoImage(file=Path(__file__).parent/'appicon.png')
 		self.iconphoto(True, self.appicon)
-		#self.protocol('WM_DELETE_WINDOW', self._quit_app)
+		#self.protocol('WM_DELETE_WINDOW', self._power_off)
+		font = nametofont('TkTextFont').actual()
+		self.font_family = font['family']
+		self.font_size = font['size']
+		self.padding = int(self.font_size / GuiConfig.PAD)
 		frame = ExpandedFrame(self)
 		GridLabel(frame, self.SYSTEM_SETTINGS)
 		GridButton(frame, self.DISPLAY, self._display_settings, incrow=False, tip=self.TIP_DISPLAY)
@@ -241,21 +247,25 @@ class Gui(Tk, ArchImagerLabels):
 			column = 7,
 			tip = self.TIP_METADATA
 		)
-		#GridSeparator(frame)
-		#GridLabel(frame, self.DESTINATION)
-		#self.outdir = OutDirSelector(
-		#	frame,
-		#	StringVar(),
-		#	tip = self.TIP_OUTDIR
-		#)
-		#self.filename = StringSelector(
-		#	frame,
-		#	StringVar(),
-		#	self.FILENAME,
-		#	command = self._set_filename,
-		#	tip = self.TIP_FILENAME
-		#)
+		GridSeparator(frame)
+		GridLabel(frame, self.DESTINATION)
+		self.outdir = OutDirSelector(
+			frame,
+			StringVar(),
+			tip = self.TIP_OUTDIR
+		)
+		self.filename = StringSelector(
+			frame,
+			StringVar(),
+			self.FILENAME,
+			command = self._set_filename,
+			tip = self.TIP_FILENAME
+		)
 		GridBlank(frame)
+
+	def _power_off(self):
+		'''Power off device'''
+		pass
 
 	def track(self):
 		'''Track time'''
@@ -335,5 +345,5 @@ class Gui(Tk, ArchImagerLabels):
 if __name__ == '__main__':  # start here
 	#LinUtils.set_unoccupied_ro()
 	gui = Gui()
-	gui.track()
+	#gui.track()
 	gui.mainloop()
