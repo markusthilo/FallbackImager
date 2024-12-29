@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-26'
+__version__ = '0.5.3_2024-12-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -28,67 +28,67 @@ try:
 	from lib.ewfimagergui import EwfImagerGui
 	__candidates__.append((EwfImager, EwfImagerCli, EwfImagerGui))
 except Exception as ex:
-	print(ex)
+	print(f'EwfImager: {ex}')
 try:
 	from ewfchecker import EwfChecker, EwfCheckerCli
 	from lib.ewfcheckergui import EwfCheckerGui
 	__candidates__.append((EwfChecker, EwfCheckerCli, EwfCheckerGui))
 except Exception as ex:
-	print(ex)
+	print(f'EwfChecker: {ex}')
 try:
 	from oscdimager import OscdImager, OscdImagerCli
 	from lib.oscdimagergui import OscdImagerGui
 	__candidates__.append((OscdImager, OscdImagerCli, OscdImagerGui))
 except Exception as ex:
-	print(ex)
+	print(f'OscdImager: {ex}')
 try:
 	from dismimager import DismImager, DismImagerCli
 	from lib.dismimagergui import DismImagerGui
 	__candidates__.append((DismImager, DismImagerCli, DismImagerGui))
 except Exception as ex:
-	print(ex)
+	print(f'DismImager: {ex}')
 try:
 	from zipimager import ZipImager, ZipImagerCli
 	from lib.zipimagergui import ZipImagerGui
 	__candidates__.append((ZipImager, ZipImagerCli, ZipImagerGui))
 except Exception as ex:
-	print(ex)
+	print(f'ZipImager: {ex}')
 try:
 	from hashedcopy import HashedCopy, HashedCopyCli
 	from lib.hashedcopygui import HashedCopyGui
 	__candidates__.append((HashedCopy, HashedCopyCli, HashedCopyGui))
 except Exception as ex:
-	print(ex)
+	print(f'HashedCopy: {ex}')
 try:
 	from sqlite import SQLite, SQLiteCli
 	from lib.sqlitegui import SQLiteGui
 	__candidates__.append((SQLite, SQLiteCli, SQLiteGui))
 except Exception as ex:
-	print(ex)
+	print(f'SQLite: {ex}')
 try:
 	from reporter import Reporter, ReporterCli
 	from lib.reportergui import ReporterGui
 	__candidates__.append((Reporter, ReporterCli, ReporterGui))
 except Exception as ex:
-	print(ex)
+	print(f'Reporter: {ex}')
 try:
 	from axchecker import AxChecker, AxCheckerCli
 	from lib.axcheckergui import AxCheckerGui
 	__candidates__.append((AxChecker, AxCheckerCli, AxCheckerGui))
 except Exception as ex:
-	print(ex)
+	print(f'AxChecker: {ex}')
 try:
 	from wiper import WipeR, WipeRCli
 	from lib.wipergui import WipeRGui
 	__candidates__.append((WipeR, WipeRCli, WipeRGui))
 except Exception as ex:
-	print(ex)	
+	print(f'WipeR: {ex}')	
 try:
 	from wipew import WipeW, WipeWCli
 	from lib.wipewgui import WipeWGui
 	__candidates__.append((WipeW, WipeWCli, WipeWGui))
 except Exception as ex:
-	print(ex)
+	print(f'WipeW: {ex}')
 if __os_name__ == 'posix':
 	__parent_path__ = Path(__file__).parent
 	__def_conf_path__ = Path.home() / '.config/fallbackimager.conf.json'

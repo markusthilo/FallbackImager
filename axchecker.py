@@ -144,17 +144,15 @@ class AxChecker:
 		'''
 		self._set_output(filename, outdir, log)
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
-		with ExtPath.child(f'{self.filename}_paths.tsv', parent=self.outdir
-				).open(mode='w', encoding='utf-8') as fh:
-				print('source_id\tsource_type\tsource_path', file=fh)
-				for source_id, source_type, source_path in self.mfdb.read_paths():
-					print(f'{source_id}\t{source_type}\t"{source_path}"', file=fh)
+		with self.outdir.joinpath(f'{self.filename}_paths.tsv').open(mode='w', encoding='utf-8') as fh:
+			print('source_id\tsource_type\tsource_path', file=fh)
+			for source_id, source_type, source_path in self.mfdb.read_paths():
+				print(f'{source_id}\t{source_type}\t"{source_path}"', file=fh)
 		self.log.info(f'AXIOM case contains {len(self.mfdb.paths)} paths, {len(self.mfdb.file_ids)} are files', echo=True)
 		no_hit_ids = self.mfdb.file_ids - self.mfdb.get_hit_ids()
 		if no_hit_ids:
 			self.log.info(f'{len(no_hit_ids)} file(s) is/are not represented in hits', echo=True)
-			with ExtPath.child(f'{self.filename}_not_in_hits.tsv', parent=self.outdir
-			).open(mode='w', encoding='utf-8') as fh:
+			with self.outdir.joinpath(f'{self.filename}_not_in_hits.tsv').open(mode='w', encoding='utf-8') as fh:
 				for source_id in no_hit_ids:
 					source_type, source_path = self.mfdb.paths[source_id]
 					print(f'{source_id}\t{source_type}\t"{source_path}"', file=fh)
@@ -170,7 +168,7 @@ class AxChecker:
 		self._set_output(filename, outdir, log)
 		if not root_id:
 			self.log.error('Missing root ID to compare')
-		diff_path = ExtPath.path(diff)
+		diff_path = PathUtils.path(diff)
 		self.log.info(f'Reading {self.mfdb_path.name}', echo=True)
 		axiom_paths = self.mfdb.get_relative_paths(root_id)
 		self.log.info(f'Comparing {self.mfdb.paths[root_id][1]} recursivly to {diff_path.name}', echo=True)
@@ -178,12 +176,11 @@ class AxChecker:
 		if diff_path.is_dir():	# compare to dir
 			progress = Progressor(diff_path, echo=self.echo)
 			if __os_name__ == 'nt':
-				normalize = ExtPath.normalize_win
+				normalize = PathUtils.normalize_win
 			else:
-				normalize = ExtPath.normalize_posix
-			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
-				).open(mode='w', encoding='utf-8') as fh:
-				for absolut_path, relative_path, tp in ExtPath.walk(diff_path):
+				normalize = PathUtils.normalize_posix
+			with self.outdir.joinpath(f'{self.filename}_missing_files.txt').open(mode='w', encoding='utf-8') as fh:
+				for absolut_path, relative_path, tp in PathUtils.walk(diff_path):
 					progress.inc()
 					if tp == 'File' and not normalize(relative_path) in axiom_paths:
 						print(relative_path, file=fh)
@@ -196,8 +193,7 @@ class AxChecker:
 					encoding = 'utf-8'
 				encoding = self.default_encoding()
 			tsv = diff_path.read_bytes().decode(encoding, errors='ignore').split('\n')
-			with ExtPath.child(f'{self.filename}_missing_files.txt', parent=self.outdir
-				).open(mode='w', encoding=encoding) as fh:
+			with self.outdir.joinpath(f'{self.filename}_missing_files.txt').open(mode='w', encoding=encoding) as fh:
 				if not nohead:
 					print(tsv.pop(0).strip(), file=fh)
 				if self.echo == print:
@@ -206,7 +202,7 @@ class AxChecker:
 					echo = lambda msg: self.echo(msg, overwrite=True)
 				echo(1)
 				for tsv_cnt, line in enumerate(tsv):
-					path = ExtPath.normalize(line.split('\t', 1)[0])
+					path = PathUtils.normalize(line.split('\t', 1)[0])
 					if not path in axiom_paths:
 						print(line.strip(), file=fh)
 						missing_cnt += 1
