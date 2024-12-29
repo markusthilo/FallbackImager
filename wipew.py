@@ -22,7 +22,7 @@ from win32com.shell.shell import IsUserAnAdmin
 from pathlib import Path
 from argparse import ArgumentParser
 from lib.timestamp import TimeStamp
-from lib.PathUtils import PathUtils
+from lib.pathutils import PathUtils
 from lib.logger import Logger
 from lib.winutils import WinUtils, OpenProc
 
@@ -40,7 +40,7 @@ class WipeW:
 		self.zd_path = WinUtils.find_exe('zd-win.exe', __parent_path__)
 		if self.zd_path:
 			self.available = True
-			self.echo = print
+			self.echo = echo
 		else:
 			self.available = False
 
@@ -123,7 +123,7 @@ class WipeW:
 				self.log.error(f'zd-win.exe terminated with: {stderr}')
 
 	def mkfs(self, target,
-			fs = 'ntfs',
+			fs = None,
 			driveletter = None,
 			loghead = None,
 			mbr = False,
@@ -132,9 +132,11 @@ class WipeW:
 		'''Generate partition and file system'''
 		if not self.physical_drive:
 				wiper.log.error('Creating partition only works on physical drive')
-		loghead = Path(loghead) if loghead else __parent_path__/'wipe-log-head.txt'
 		if not name:
 			name = 'Volume'
+		if not fs:
+			fs = 'ntfs'
+		loghead = Path(loghead) if loghead else __parent_path__/'wipe-log-head.txt'
 		driveletter = WinUtils.create_partition(target, self.outdir,
 			label = name,
 			driveletter = driveletter,
@@ -147,11 +149,10 @@ class WipeW:
 		self.log.close()
 		log_path = Path(f'{driveletter}:\\wipe-log.txt')
 		try:
-			head = loghead.read_text()
+			head = loghead.read_text(encoding='utf-8')
 		except FileNotFoundError:
 			head = ''
-		with log_path.open('w') as fh:
-			fh.write(head + self.log.path.read_text())
+		log_path.write_text(head + self.log.path.read_text(encoding='utf-8'), encoding='utf-8')
 
 class WipeWCli(ArgumentParser):
 	'''CLI, also used for GUI of FallbackImager'''
@@ -210,7 +211,7 @@ class WipeWCli(ArgumentParser):
 			help='Overwrite all bytes/blocks twice, write random bytes at 1st pass'
 		)
 		self.add_argument('targets', nargs='*', type=str,
-			help='Target drive or file(s) (e.g. \\.\\\\PHYSICALDRIVE1)', metavar='DRIVE/FILE'
+			help='Target drive or file(s) (e.g. \\\\.\\PHYSICALDRIVE1)', metavar='DRIVE/FILE'
 		)
 
 	def parse(self, *cmd):
@@ -241,7 +242,7 @@ class WipeWCli(ArgumentParser):
 			return
 		if self.verify and (self.create or self.extra or self.mbr or self.driveletter or self.name):
 			raise RuntimeError(f'Arguments incompatible with --verify/-v')
-		wiper = WipeW()
+		wiper = WipeW(echo=self.echo)
 		wiper.wipe(self.targets,
 			allbytes = self.allbytes,
 			blocksize = self.blocksize,

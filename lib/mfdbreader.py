@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from .sqliteutils import SQLiteReader
-from .extpath import ExtPath
+from .pathutils import PathUtils
 
 class MfdbReader(SQLiteReader):
 	'''Extend SqliteReader for AXIOM data base'''
@@ -76,7 +76,7 @@ class MfdbReader(SQLiteReader):
 
 	def get_relative_paths(self, root_id):
 		'''Get relative paths under given root'''
-		return {ExtPath.normalize(relative_path)
+		return {PathUtils.normalize(relative_path)
 			for source_id, source_type, relative_path in self.walk(root_id)
 		}
 

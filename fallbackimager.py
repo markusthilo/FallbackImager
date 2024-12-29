@@ -27,62 +27,52 @@ try:
 	from ewfimager import EwfImager, EwfImagerCli
 	from lib.ewfimagergui import EwfImagerGui
 	__candidates__.append((EwfImager, EwfImagerCli, EwfImagerGui))
-except Exception as ex:
-	print(f'EwfImager: {ex}')
+except Exception: pass
 try:
 	from ewfchecker import EwfChecker, EwfCheckerCli
 	from lib.ewfcheckergui import EwfCheckerGui
 	__candidates__.append((EwfChecker, EwfCheckerCli, EwfCheckerGui))
-except Exception as ex:
-	print(f'EwfChecker: {ex}')
+except Exception: pass
 try:
 	from oscdimager import OscdImager, OscdImagerCli
 	from lib.oscdimagergui import OscdImagerGui
 	__candidates__.append((OscdImager, OscdImagerCli, OscdImagerGui))
-except Exception as ex:
-	print(f'OscdImager: {ex}')
+except Exception: pass
 try:
 	from dismimager import DismImager, DismImagerCli
 	from lib.dismimagergui import DismImagerGui
 	__candidates__.append((DismImager, DismImagerCli, DismImagerGui))
-except Exception as ex:
-	print(f'DismImager: {ex}')
+except Exception: pass
 try:
 	from zipimager import ZipImager, ZipImagerCli
 	from lib.zipimagergui import ZipImagerGui
 	__candidates__.append((ZipImager, ZipImagerCli, ZipImagerGui))
-except Exception as ex:
-	print(f'ZipImager: {ex}')
+except Exception: pass
 try:
 	from hashedcopy import HashedCopy, HashedCopyCli
 	from lib.hashedcopygui import HashedCopyGui
 	__candidates__.append((HashedCopy, HashedCopyCli, HashedCopyGui))
-except Exception as ex:
-	print(f'HashedCopy: {ex}')
+except Exception: pass
 try:
 	from sqlite import SQLite, SQLiteCli
 	from lib.sqlitegui import SQLiteGui
 	__candidates__.append((SQLite, SQLiteCli, SQLiteGui))
-except Exception as ex:
-	print(f'SQLite: {ex}')
+except Exception: pass
 try:
 	from reporter import Reporter, ReporterCli
 	from lib.reportergui import ReporterGui
 	__candidates__.append((Reporter, ReporterCli, ReporterGui))
-except Exception as ex:
-	print(f'Reporter: {ex}')
+except Exception: pass
 try:
 	from axchecker import AxChecker, AxCheckerCli
 	from lib.axcheckergui import AxCheckerGui
 	__candidates__.append((AxChecker, AxCheckerCli, AxCheckerGui))
-except Exception as ex:
-	print(f'AxChecker: {ex}')
+except Exception: pass
 try:
 	from wiper import WipeR, WipeRCli
 	from lib.wipergui import WipeRGui
 	__candidates__.append((WipeR, WipeRCli, WipeRGui))
-except Exception as ex:
-	print(f'WipeR: {ex}')	
+except Exception: pass
 try:
 	from wipew import WipeW, WipeWCli
 	from lib.wipewgui import WipeWGui
