@@ -345,5 +345,5 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 if __name__ == '__main__':  # start here
 	#LinUtils.set_unoccupied_ro()
 	gui = Gui()
-	#gui.track()
+	gui.track()
 	gui.mainloop()

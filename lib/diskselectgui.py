@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .guilabeling import BasicLabels
 from .guiconfig import GuiConfig
-from .guielements import ChildWindow, ExpandedFrame, ExpandedTree, LeftButton, RightButton
+from .guielements import ChildWindow, ExpandedFrame, ExpandedTree, LeftButton, RightButton, MissingEntry
 from .linutils import LinUtils
 from .stringutils import StringUtils
 
@@ -26,7 +26,8 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 		self.main_frame = ExpandedFrame(self)
 		self.lsblk(self.main_frame)
 		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.REFRESH, self._refresh)
+		LeftButton(frame, self.SELECT, self._select, tip=self.TIP_SELECT_BLKDEV)
+		LeftButton(frame, self.REFRESH, self._refresh, tip=self.TIP_REFRESH_DEVS)
 		RightButton(frame, self.QUIT, self.quit)
 
 	def _yes_no(self, bool):
@@ -54,13 +55,22 @@ class DiskSelectGui(ChildWindow, BasicLabels):
 				StringUtils.str(details['vendor']),
 				StringUtils.str(details['model']),
 				StringUtils.str(details['rev']),
+				StringUtils.str(details['fs']),
 				self._yes_no(details['ro']),
 				StringUtils.join(details['mountpoints'], delimiter=', ')
 			)
 			self.tree.insert(details['parent'], 'end', text=path, values=values, iid=path, open=True)
-		self.tree.bind("<Double-1>", self._choose)
+		self.tree.bind("<Double-1>", self._select_focus)
 
-	def _choose(self, event):
+	def _select(self):
+		'''Set target and quit'''
+		if focus := self.tree.focus():
+			self.button.set(focus)
+			self.quit()
+		else:
+			MissingEntry(self.PICK_BLOCK_DEVICE)
+
+	def _select_focus(self, event):
 		'''Run on double click'''
 		item = self.tree.identify('item', event.x, event.y)
 		self.button.set(self.tree.item(item)['text'])

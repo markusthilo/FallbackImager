@@ -196,6 +196,7 @@ class GridScrolledText(ScrolledText):
 		self.configure(state='normal')
 		if overwrite:
 			self.delete('end-2l', 'end')
+			self.insert('end', '\n')
 		self.insert('end', ' '.join(f'{string}' for string in msg) + '\n')
 		self.configure(state='disabled')
 		if end:

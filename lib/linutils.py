@@ -196,10 +196,11 @@ class LinUtils:
 				'model': dev['model'],
 				'rev': dev['rev'],
 				'serial': dev['serial'],
+				'fs': dev['fstype'],
 				'ro': dev['ro'],
 				'mountpoints': dev['mountpoints']
 			} for dev in loads(run(
-				['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,REV,SERIAL,RO,MOUNTPOINTS'],
+				['lsblk', '--json', '-o', 'PATH,LABEL,TYPE,SIZE,VENDOR,MODEL,REV,SERIAL,FSTYPE,RO,MOUNTPOINTS'],
 				capture_output=True, text=True).stdout)['blockdevices']
 		}
 		for outer_path in blkdevs:
@@ -261,11 +262,11 @@ class LinUtils:
 		return int(loads(run(['lsblk', '--json', '-o', 'SIZE', '-b', f'{dev}'],
 			capture_output=True, text=True).stdout)['blockdevices'][0]['size'])
 
-	#@staticmethod
-	#def get_mounted():
-	#	'''Get mounted partitions'''
-	#	ret = run(['mount'], capture_output=True, text=True)
-	#	return [line.split(' ', 1)[0] for line in ret.stdout.split('\n') if line.startswith('/dev/')]
+	@staticmethod
+	def get_mounted():
+		'''Get mounted partitions'''
+		ret = run(['mount'], capture_output=True, text=True)
+		return [line.split(' ', 1)[0] for line in ret.stdout.split('\n') if line.startswith('/dev/')]
 
 	@staticmethod
 	def get_occupied():

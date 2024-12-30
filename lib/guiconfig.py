@@ -33,6 +33,7 @@ class GuiConfig:
 		('vendor', 12),
 		('model', 24),
 		('rev', 12),
+		('fs', 12),
 		('ro', 4),
 		('mountpoints', 20)
 	)	
@@ -44,5 +45,6 @@ class GuiConfig:
 		('vendor', 12),
 		('model', 12),
 		('rev', 12),
+		('fs', 12),
 		('ro', 4)
 	)

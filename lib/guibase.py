@@ -4,6 +4,7 @@
 from os import name as __os__
 if __os__ == 'nt':
 	from win32com.shell.shell import IsUserAnAdmin
+from time import sleep
 from tkinter import Tk, PhotoImage, TclError
 from tkinter.messagebox import askyesno, showerror
 from tkinter.font import nametofont
@@ -105,7 +106,7 @@ class GuiBase(Tk):
 			int(self.root_height / (2*self.font_size)),
 			ro=True
 		)
-		self.stop_button = GridButton(self.info_window, BasicLabels.STOP_WORK, self._close_infos, sticky='e')
+		self.stop_button = GridButton(self.info_window, BasicLabels.QUIT, self._close_infos, sticky='e')
 		self.info_window.set_minsize()
 		self.worker = Worker(self)
 		self.worker.start()
@@ -116,27 +117,12 @@ class GuiBase(Tk):
 		self.stop_button.configure(text=BasicLabels.QUIT)
 
 	def	_close_infos(self):
-		'''Close info window, ask to terminate worker in case it is still running.'''
+		'''Close info window, ask to terminate app in case job is still running.'''
 		if self.worker:
-			if askyesno(
-				title = f'{BasicLabels.STOP_WORK}?',
-				message = BasicLabels.ARE_YOU_SURE
-			):
-				self.worker.terminate()
-			else:
-				return
+			self._quit_app()
 		self.worker = None
 		self.start_button.configure(state='normal', text=BasicLabels.START_JOBS)
 		self.info_window.destroy()
-
-	def append_info(self, *msg, overwrite=False):
-		'''Append message in info box'''
-		self.infos_text.configure(state='normal')
-		if overwrite:
-			self.infos_text.delete('end-2l', 'end')
-		self.infos_text.insert('end', ' '.join(f'{string}' for string in msg) + '\n')
-		self.infos_text.configure(state='disabled')
-		self.infos_text.yview('end')
 
 	def	_quit_app(self):
 		'''Store configuration and quit application'''

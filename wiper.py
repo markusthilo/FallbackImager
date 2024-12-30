@@ -3,7 +3,7 @@
 
 __app_name__ = 'WipeR'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-26'
+__version__ = '0.5.3_2024-12-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -38,10 +38,14 @@ class WipeR:
 		self.zd_path = LinUtils.find_bin('zd', __parent_path__)
 		if self.zd_path:
 			self.available = True
+			self.echo = echo
+			self.utils = utils
 		else:
 			self.available = False
-		self.echo = echo
-		self.utils = utils
+
+	def _show_progress_gui(self, *msg):
+		'''Show progress in GUI'''
+		self.echo(*msg, overwrite=True)
 
 	def wipe(self, targets,
 			verify = False,
@@ -104,7 +108,7 @@ class WipeR:
 			self.cmd.append('-a')
 		elif extra:
 			self.cmd.append('-x')
-		show_progress = lambda msg: print(f'\r{msg}', end='') if self.echo == print else lambda msg: self.echo(f'\n{msg}', overwrite=True)
+		show_progress = print if self.echo == print else self._show_progress_gui
 		for target in targets:
 			proc = OpenProc(self.cmd, target, sudo=self.utils.sudo, password=self.utils.password)
 			for line in proc.stdout:

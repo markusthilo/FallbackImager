@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from threading import Thread
+
+#from multiprocessing import Process
+#from multiprocessing import active_children
+
 from shlex import split as ssplit
 from .guilabeling import BasicLabels
 
@@ -62,3 +66,5 @@ class Worker(Thread):
 			echo(BasicLabels.NOTHING2DO)
 			echo()
 		self.gui.finished_jobs()
+
+		

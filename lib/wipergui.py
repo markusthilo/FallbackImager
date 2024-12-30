@@ -29,16 +29,10 @@ class SelectTargetWindow(DiskSelectGui, WipeLabels):
 		self.main_frame = ExpandedFrame(self)
 		self.lsblk(self.main_frame)
 		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.REFRESH, self._refresh)
-		frame = ExpandedFrame(self.main_frame)
-
-		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files, tip=self.TIP_FILES_TO_WIPE )
+		LeftButton(frame, self.SELECT, self._select, tip=self.TIP_SELECT_TARGET)
+		LeftButton(frame, self.REFRESH, self._refresh, tip=self.TIP_REFRESH_DEVS)
+		LeftButton(frame, self.SELECT_FILES_TO_WIPE, self._select_files, tip=self.TIP_FILES_TO_WIPE)
 		RightButton(frame, self.QUIT, self.quit)
-
-	def _select_focus(self):
-		'''Set target and quit'''
-		self.button.set(self.tree.focus())
-		self.quit()
 
 	def _select_files(self):
 		'''Choose file(s) to wipe'''
@@ -194,7 +188,7 @@ class WipeRGui(WipeLabels):
 		max_bad_blocks = self.max_bad_blocks.get()
 		max_retries = self.max_retries.get()
 		log_head = self.log_head.get()
-		if not target:
+		if not target or target.startswith(self.TARGET_WARNING):
 			MissingEntry(self.TARGET_REQUIRED)
 			return
 		if not outdir:
@@ -235,7 +229,7 @@ class WipeRGui(WipeLabels):
 			if part_table != '-' and filesystem != '-' and task != 'Verify':
 				if part_table == 'mbr':
 					cmd += f' --mbr'
-				cmd += f' --create {filesystem}'
+				cmd += f' --create {filesystem.lower()}'
 				if part_name:
 					cmd += f' --name "{part_name}"'
 				if log_head:
