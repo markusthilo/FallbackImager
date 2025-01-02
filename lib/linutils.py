@@ -88,14 +88,14 @@ class LinUtils:
 	#			if dev['type'] == 'disk' and not dev['path'].startswith('/dev/zram')
 	#	]
 
-	#@staticmethod
-	#def get_physical_devs():
-	#	'''Get types part and disk except /dev/zram*'''
-	#	return [
-	#		dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
-	#			capture_output=True, text=True).stdout)['blockdevices']
-	#			if dev['type'] in ('disk', 'part') and not dev['path'].startswith('/dev/zram')
-	#	]
+	@staticmethod
+	def get_physical_devs():
+		'''Get types part and disk except /dev/zram*'''
+		return [
+			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH,TYPE'],
+				capture_output=True, text=True).stdout)['blockdevices']
+				if dev['type'] in ('disk', 'part') and not dev['path'].startswith('/dev/zram')
+		]
 
 	@staticmethod
 	def get_rootdevs():
@@ -275,6 +275,11 @@ class LinUtils:
 		return {LinUtils.rootdev_of(part) for part in mounted} | set(mounted)
 
 	@staticmethod
+	def get_unoccupied():
+		'''Set types part and disk not mounted to ro except /dev/zram*'''
+		return set(LinUtils.get_physical_devs()) - LinUtils.get_occupied()
+
+	@staticmethod
 	def get_ro(dev):
 		'''Get rw/ro of given blockdevice'''
 		return loads(run(['lsblk', '--json', '-o', 'RO', f'{dev}'],
@@ -435,13 +440,6 @@ class LinUtils:
 		'''Set block device to read and write access'''
 		return self._run('blockdev', '--setrw', f'{dev}')
 
-	def set_unoccupied_ro(self):
-		'''Set types part and disk not mounted to ro except /dev/zram*'''
-		occopied_physical_blkdevs = set(LinUtils.get_physical_devs()) - LinUtils.get_occupied()
-		for dev in occopied_physical_blkdevs:
-			self.set_ro(dev)
-		return occopied_physical_blkdevs
-
 	def mount_rw(self, part, target):
 		'''Set partition and root device to rw and mount'''
 		root_stdout, root_stderr = self.set_rw(LinUtils.rootdev_of(part))
@@ -456,6 +454,10 @@ class LinUtils:
 	def killall(self, name):
 		'''Use killall to terminate process'''
 		return self._run('killall', name)
+
+	def poweroff(self):
+		'''Poweroff machine'''
+		return self._run('shutdown', '--poweroff')
 
 class OpenProc(Popen):
 	'''Use Popen the way it is needed here'''

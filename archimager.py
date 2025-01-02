@@ -3,7 +3,7 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-30'
+__version__ = '0.5.3_2025-01-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,6 +12,7 @@ This is a tool to include into an Arch ISO. The purpose ist to build a bootable 
 EWF images of the booted device`s drives. Booting and using should not change a single bit on the drives.
 '''
 
+from sys import argv
 from pathlib import Path
 from threading import Thread
 from screenlayout.gui import main as display_settings
@@ -119,8 +120,9 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 
 	DEFAULT_SEGMENT_SIZE = '40'
 
-	def __init__(self):
+	def __init__(self, debug=False):
 		'''Build GUI'''
+		self.debug = debug
 		Tk.__init__(self)
 		title = f'{__app_name__} v{__version__}'
 		self.title(title)
@@ -343,7 +345,17 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 		'''
 
 if __name__ == '__main__':  # start here
-	#LinUtils.set_unoccupied_ro()
-	gui = Gui()
-	gui.track()
-	gui.mainloop()
+	if len(argv) > 1 and argv[1] in ('-d','--debug'):
+		debug = True
+		for dev in LinUtils.get_unoccupied():
+			print(dev)
+	else:
+		debug = False
+		for dev in LinUtils.get_unoccupied():	# write protection
+			LinUtils.set_ro(dev)
+	while True:
+		gui = Gui(debug=debug)
+		gui.track()
+		gui.mainloop()
+		if debug:
+			exit()
