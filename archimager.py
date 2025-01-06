@@ -3,7 +3,7 @@
 
 __app_name__ = 'ArchImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-02'
+__version__ = '0.5.3_2025-01-06'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -15,7 +15,7 @@ EWF images of the booted device`s drives. Booting and using should not change a 
 from sys import argv
 from pathlib import Path
 from threading import Thread
-from screenlayout.gui import main as display_settings
+from subprocess import Popen
 from tkinter import Tk, PhotoImage, StringVar
 from tkinter.font import nametofont
 from tkinter.ttk import Frame, Notebook
@@ -27,93 +27,7 @@ from lib.guiconfig import GuiConfig
 from lib.diskselectgui import DiskSelectGui
 from lib.guielements import ExpandedFrame, GridLabel, StringSelector, GridMenu
 from lib.guielements import GridSeparator, GridBlank, GridButton, ChildWindow
-from lib.guielements import LeftButton, RightButton, OutDirSelector
-
-class WriteDestinationGui(ChildWindow, ArchImagerLabels, GuiConfig):
-	'''GUI to select target to write (Linux)'''
-
-	def __init__(self, root, select):
-		'''Window to select partition, or directory'''
-		try:
-			if root.child_win_active:
-				return
-		except AttributeError:
-			pass
-		self.root = root
-		self._select = select
-		self.root.child_win_active = True
-		ChildWindow.__init__(self, self.root, self.SELECT_TARGET)
-		self._main_frame()
-		
-	def _main_frame(self):
-		'''Main frame'''
-		blkdevs = LinUtils.lsblk(physical=True, exclude=self.root.fixed_devs)
-		self.main_frame = ExpandedFrame(self)
-		frame = ExpandedFrame(self.main_frame)
-		self.tree = Tree(frame,
-			text = 'name',
-			width = GuiConfig.WRITE_DEST_NAME_WIDTH,
-			columns = GuiConfig.WRITE_DEST_COLUMNS_WIDTH
-		)
-		for dev, details in blkdevs.items():
-			if details['ro']:
-				ro = self.YES
-			else:
-				ro = self.NO
-			values = (
-				details['type'],
-				details['size'],
-				StringUtils.str(details['label']),
-				StringUtils.str(details['vendor']),
-				StringUtils.str(details['model']),
-				StringUtils.str(details['rev']),
-				ro
-			)
-			if details['type'] == 'part':
-				self.tree.insert(details['parent'], 'end',
-					text = dev,
-					values = values,
-					iid = f'part:{dev}',
-					open=True
-				)
-				mountpoint = LinUtils.mountpoint(dev)
-
-				#TREE_WALK_DEPTH = 10
-				#TREE_WALK_WIDTH = 100
-
-				for path, parent, name, tp in ExtPath.parented_walk(Path(mountpoint)):
-					if parent == mountpoint:
-						parent_iid = f'part:{dev}:{path}'
-					else:
-						parent_iid = f'dir:{path}'
-					try:
-						if cnt == GuiConfig.TREE_WALK_DEPTH:
-							self.tree.insert(parent_iid, 'end', text='...')
-							break
-						if tp == 'dir':
-							iid = f'dir:{path}'
-							self.tree.insert(parent_iid, 'end', text=name, values='dir', iid=iid)
-						elif tp == 'file':
-							iid = f'other:{path}'
-							self.tree.insert(parent_iid, 'end', text=name, values='file', iid=iid)
-					except:
-						continue
-			else:
-				self.tree.insert(details['parent'], 'end', text=dev, values=values, iid=dev, open=True)
-		self.tree.bind("<Double-1>", self._choose)
-		frame = ExpandedFrame(self.main_frame)
-		LeftButton(frame, self.REFRESH, self._refresh)
-		RightButton(frame, self.QUIT, self.destroy)
-
-	def _choose(self, event):
-		'''Run on double click'''
-		item = self.tree.identify('item', event.x, event.y)
-		print(event, self.tree.item(item))
-
-	def _refresh(self):
-		'''Destroy and reopen Target Window'''
-		self.main_frame.destroy()
-		self._main_frame()
+from lib.guielements import LeftButton, RightButton, DirSelector
 
 class Gui(Tk, ArchImagerLabels, GuiConfig):
 	'''Definitions for the GUI'''
@@ -136,7 +50,7 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 		self.padding = int(self.font_size / GuiConfig.PAD)
 		frame = ExpandedFrame(self)
 		GridLabel(frame, self.SYSTEM_SETTINGS)
-		GridButton(frame, self.DISPLAY, self._display_settings, incrow=False, tip=self.TIP_DISPLAY)
+		self.display_settings_button = GridButton(frame, self.DISPLAY, self._display_settings, incrow=False, tip=self.TIP_DISPLAY)
 		GridMenu(
 			frame,
 			StringVar(value=self.DEFAULT_KBD),
@@ -177,21 +91,6 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 			self.REAL_TIME,
 			command = self._set_realtime,
 			tip=self.TIP_TIME
-		)
-		GridLabel(frame, self.DESTINATION)
-		self.outdir = StringSelector(
-			frame,
-			StringVar(),
-			self.DESTINATION,
-			command = self._select_outdir,
-			tip = self.TIP_OUTDIR
-		)
-		self.filename = StringSelector(
-			frame,
-			StringVar(),
-			self.FILENAME,
-			command = self._set_filename,
-			tip = self.TIP_FILENAME
 		)
 		GridSeparator(frame)
 		GridLabel(frame, self.SOURCE)
@@ -251,9 +150,15 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 		)
 		GridSeparator(frame)
 		GridLabel(frame, self.DESTINATION)
-		self.outdir = OutDirSelector(
+		self.initial_outdir = None
+		self.outdir = DirSelector(
+
 			frame,
 			StringVar(),
+			self.DIRECTORY,
+			self.SELECT_OUTDIR,
+			command = self._select_outdir,
+			initialdir = self.initial_outdir,
 			tip = self.TIP_OUTDIR
 		)
 		self.filename = StringSelector(
@@ -263,6 +168,7 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 			command = self._set_filename,
 			tip = self.TIP_FILENAME
 		)
+
 		GridBlank(frame)
 
 	def _power_off(self):
@@ -271,6 +177,8 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 
 	def track(self):
 		'''Track time'''
+		if not LinUtils.pgrep('arandr'):
+			self.display_settings_button.config(state='normal')
 		newtime = LinUtils.get_system_time()
 		if newtime != self.system_time:
 			self.system_time = newtime
@@ -279,7 +187,8 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 
 	def _display_settings(self):
 		'''Launch app for display settings'''
-		Thread(target=display_settings).start()
+		self.display_settings_button.config(state='disabled')
+		Popen(['arandr'])
 
 	def _change_kbd(self, kbd_layout):
 		'''Change keyboard layout'''
@@ -287,8 +196,8 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 
 	def _select_outdir(self):
 		'''Open and select write destination'''
+		askdirectory
 		WriteDestinationGui(self, self.outdir)
-
 
 	def _acquire_hardware(self):
 		'''Acquire hardware infos'''
@@ -347,6 +256,7 @@ class Gui(Tk, ArchImagerLabels, GuiConfig):
 if __name__ == '__main__':  # start here
 	if len(argv) > 1 and argv[1] in ('-d','--debug'):
 		debug = True
+		print('DEBUG MODE')
 		for dev in LinUtils.get_unoccupied():
 			print(dev)
 	else:

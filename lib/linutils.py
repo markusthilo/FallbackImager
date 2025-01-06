@@ -321,7 +321,13 @@ class LinUtils:
 
 	@staticmethod
 	def get_system_time():
+		'''Give system time in readable form / as string'''
 		return strftime('%G-%m-%d %T %Z/%z')
+
+	@staticmethod
+	def pgrep(name):
+		'''Run pgrep'''
+		return run(['pgrep', name], capture_output=True, text=True).stdout
 
 	### root / sudo required ###
 

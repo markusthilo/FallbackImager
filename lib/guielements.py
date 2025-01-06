@@ -321,7 +321,7 @@ class FilenameSelector(StringSelector):
 class DirSelector(Button):
 	'''Button + Entry to select a directory'''
 	def __init__(self, parent, variable, text, ask,
-		default=None, command=None, column=1, columnspan=255, incrow=True, tip=None, missing=None):
+		initialdir=None, command=None, column=1, columnspan=255, incrow=True, tip=None, mustexist=False):
 		self._variable = variable
 		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
 		self.grid(row=parent.row, column=column, sticky='w', padx=parent.padding)
@@ -329,13 +329,14 @@ class DirSelector(Button):
 			row=parent.row, column=column+1, columnspan=columnspan, sticky='w', padx=parent.padding)
 		self.ask = ask
 		self.command = command
-		self.missing = missing
+		self.initialdir = initialdir
+		self.mustexist = mustexist
 		if incrow:
 			parent.row += 1
 		if tip:
 			Hovertip(self, tip)
 	def _select(self):
-		new_dir = askdirectory(title=self.ask, mustexist=False)
+		new_dir = askdirectory(title=self.ask, initialdir=self.initialdir, mustexist=self.mustexist)
 		if new_dir:
 			self._variable.set(value=new_dir)
 		if self.command:
