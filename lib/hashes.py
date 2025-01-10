@@ -1,45 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from hashlib import md5, sha256
+from hashlib import file_digest
+from multiprocessing import Pool, cpu_count
 
 class FileHashes:
-	'''Calculate MD5 and SHA256 from file (as pathlib.Path)'''
+	'''Calculate hashes of file in parallel'''
 
-	BLOCK_SIZE = max(md5().block_size, sha256().block_size) * 1024
+	@staticmethod
+	def hashsum(path, fn='md5'):
+		'''Calculate hash of file'''
+		if path.is_file():
+			with path.open('rb', buffering=0) as fh:
+				return path, file_digest(fh, fn).hexdigest()
+		else:
+			return path, ''
 
-	def __init__(self, path):
-		'''Shut up and calculate'''
-		self.md5 = md5()
-		self.sha256 = sha256()
-		with path.open('rb') as fh:
-			while True:
-				block = fh.read(self.BLOCK_SIZE)
-				if not block:
-					break
-				self.md5.update(block)
-				self.sha256.update(block)
-		self.md5 = self.md5.hexdigest()
-		self.sha256 = self.sha256.hexdigest()
+	def __init__(self, paths, fn='md5', parallel=50):
+		'''Generate object to calculate hashes of files using multiprocessing pool'''
+		self.paths = paths
+		self.fn = fn
+		self.pool = Pool(processes=max(1, int(cpu_count() * parallel / 100)))
 
-	def __repr__(self):
-		'''Representation for logs etc.'''
-		return f'md5: {self.md5}\nsha256: {self.sha256}'
+	def _sum(self, path):
+		'''Calculate hash of file'''
+		return self.hashsum(path, fn=self.fn)
 
-class CopyFile(FileHashes):
-	'''Copy one file (as pathlib.Path) and calculate hashes'''
+	def calculate_hashes(self):
+		'''Calculate all hashes in parallel'''
+		return dict(self.pool.map(self.hashsum, (path for path in self.paths)))
 
-	def __init__(self, src, dst):
-		'''Copy source file to destination'''
-		self.md5 = md5()
-		self.sha256 = sha256()
-		with src.open('rb') as sfh, dst.open('wb') as dfh:
-			while True:
-				block = sfh.read(self.BLOCK_SIZE)
-				if not block:
-					break
-				dfh.write(block)
-				self.md5.update(block)
-				self.sha256.update(block)
-		self.md5 = self.md5.hexdigest()
-		self.sha256 = self.sha256.hexdigest()
+	def __del__(self):
+		'''Cleanup pool resources'''
+		if hasattr(self, 'pool'):
+			self.pool.close()
+			self.pool.join()

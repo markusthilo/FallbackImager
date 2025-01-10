@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-26'
+__version__ = '0.5.3_2025-01-10'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,12 +13,10 @@ Safe copy with log and hashes.
 
 from pathlib import Path
 from argparse import ArgumentParser
-from hashlib import md5, sha256
-from time import time, sleep
 from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.hashes import FileHashes, CopyFile
+from lib.hashes import FileHashes
 try:
 	from os import sync as os_sync
 	def sync(): os_sync()
@@ -27,8 +25,6 @@ except ImportError:
 
 class HashedCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
-
-	MIN_COPY_SEC = 10
 
 	def __init__(self, echo=print):
 		'''Create object'''
