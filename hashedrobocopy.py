@@ -18,11 +18,7 @@ from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import FileHashes
-try:
-	from os import sync as os_sync
-	def sync(): os_sync()
-except ImportError:
-	def sync(): pass
+from lib.winutils import RoboWalk, RoboCopy
 
 class HashedCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
@@ -31,6 +27,13 @@ class HashedCopy:
 		'''Create object'''
 		self.available = True
 		self.echo = echo
+
+	def _robocopy(self, src, dst):
+		'''Use robocopy to copy recursivly'''
+		robocopy = RoboCopy(self.src_path, self.dst_path, '/e', log=self.log)
+		for line in robocopy.stdout():
+			echo(line)
+		#self.log.info('Robocopy done', echo=True)
 
 	def cp(self, sources, destination, filename=None, outdir=None, log=None):
 		'''Copy multiple sources'''
@@ -45,8 +48,28 @@ class HashedCopy:
 				self.log.error('Destination is not a directory')
 		else:
 			self.dst_root_path.mkdir()
-		source_paths = sorted(list({Path(source) for source in sources}))
-		files2cp = list()
+		self.sources = {Path(source).resolve() for source in sources if Path(source).exists()}
+		files2copy = dict()
+		for source in self.sources:
+			tree = RoboWalk(Path(source))
+			for absolut, relative in tree.relative_files():
+				files2copy[absolut] = relative
+
+		
+		exit()
+		robocopy = Thread(target=self._robocopy, args=(),
+		self.log.info('Calculating MD5 hashes', echo=True)
+		md5 = FileHashes(files2copy.keys())
+		md5hashes = md5.calculate()
+		self.log.info('Calculating SHA256 hashes', echo=True)
+		sha256 = FileHashes(files2copy.keys(), fn='sha256')
+		sha256hashes = sha256.calculate()
+
+		exit()
+
+
+
+
 		error_cnt = 0
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
 			print('Source\tDestination\tType\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tSuccess', file=fh)

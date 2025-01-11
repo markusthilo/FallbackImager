@@ -192,3 +192,41 @@ class OpenProc(Popen):
 		for ln, line in enumerate(stdout):
 			if line.lower().startswith(lower_str):
 				yield {key: WinUtils.get_value(stdout[ln+ln_delta]) for ln_delta, key in ln_key}
+
+class RoboCopy(OpenProc):
+	'''Run robocopy'''
+
+	def __init__(self, src, dst, *args, log=None):
+		'''Run robocopy'''
+		cmd = ['Robocopy.exe', src, dst]
+		if args:
+			cmd.extend(args)
+		cmd.extend([ '/njh', '/njs', '/unicode'])
+		super().__init__(cmd, log=log)
+
+class RoboWalk(RoboCopy):
+	'''Run robocopy'''
+
+	def __init__(self, root):
+		'''Use robocopy to get tree'''
+		self.root = root.resolve()
+		super().__init__(self.root, 'NULL', '/e', '/l', '/fp', '/ns', '/nc')
+		self.files = list()
+		self.dicts = list()
+		for line in self.stdout:
+			line = line.strip()
+			if line:
+				if line.endswith('\\'):
+					self.dicts.append(Path(line))
+				else:
+					self.files.append(Path(line))
+
+	def relative_files(self):
+		'''Yield relative files'''
+		for file in self.files:
+			yield file, file.relative_to(self.root)
+
+	def relative_dirs(self):
+		'''Yield relative dirs'''
+		for dir in self.dicts:
+			yield dir, dir.relative_to(self.root)

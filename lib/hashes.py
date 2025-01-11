@@ -22,11 +22,11 @@ class FileHashes:
 		self.fn = fn
 		self.pool = Pool(processes=max(1, int(cpu_count() * parallel / 100)))
 
-	def _sum(self, path):
-		'''Calculate hash of file'''
-		return self.hashsum(path, fn=self.fn)
+	#def _sum(self, path):
+	#	'''Calculate hash of file'''
+	#	return self.hashsum(path, fn=self.fn)
 
-	def calculate_hashes(self):
+	def calculate(self):
 		'''Calculate all hashes in parallel'''
 		return dict(self.pool.map(self.hashsum, (path for path in self.paths)))
 
