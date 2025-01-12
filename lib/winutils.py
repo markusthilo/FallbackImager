@@ -196,13 +196,19 @@ class OpenProc(Popen):
 class RoboCopy(OpenProc):
 	'''Run robocopy'''
 
-	def __init__(self, src, dst, *args, log=None):
-		'''Run robocopy'''
+	def __init__(self, src, dst, *args):
+		'''Create robocopy process'''
 		cmd = ['Robocopy.exe', src, dst]
 		if args:
 			cmd.extend(args)
 		cmd.extend([ '/njh', '/njs', '/unicode'])
-		super().__init__(cmd, log=log)
+		super().__init__(cmd)
+
+	def run(self):
+		'''Run robocopy'''
+		for line in self.stdout:
+			if line := line.strip():
+				yield(line)
 
 class RoboWalk(RoboCopy):
 	'''Run robocopy'''
@@ -212,21 +218,18 @@ class RoboWalk(RoboCopy):
 		self.root = root.resolve()
 		super().__init__(self.root, 'NULL', '/e', '/l', '/fp', '/ns', '/nc')
 		self.files = list()
-		self.dicts = list()
+		self.dirs = list()
 		for line in self.stdout:
-			line = line.strip()
-			if line:
+			if line := line.strip():
 				if line.endswith('\\'):
-					self.dicts.append(Path(line))
+					self.dirs.append(Path(line))
 				else:
 					self.files.append(Path(line))
 
-	def relative_files(self):
-		'''Yield relative files'''
-		for file in self.files:
-			yield file, file.relative_to(self.root)
+	def get_relative_files(self):
+		'''Relative file paths'''
+		return {path: path.relative_to(self.root) for path in self.files}
 
-	def relative_dirs(self):
-		'''Yield relative dirs'''
-		for dir in self.dicts:
-			yield dir, dir.relative_to(self.root)
+	def get_relative_dirs(self):
+		'''Relative dir paths'''
+		return {path: path.relative_to(self.root) for path in self.dirs}

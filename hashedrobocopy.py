@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-11'
+__version__ = '0.5.3_2025-01-12'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -13,6 +13,7 @@ Safe copy with log and hashes.
 
 from pathlib import Path
 from threading import Thread
+from time import sleep
 from argparse import ArgumentParser
 from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
@@ -20,7 +21,7 @@ from lib.logger import Logger
 from lib.hashes import FileHashes
 from lib.winutils import RoboWalk, RoboCopy
 
-class HashedCopy:
+class HashedRoboCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
 
 	def __init__(self, echo=print):
@@ -28,100 +29,97 @@ class HashedCopy:
 		self.available = True
 		self.echo = echo
 
-	def _robocopy(self, src, dst):
-		'''Use robocopy to copy recursivly'''
-		robocopy = RoboCopy(self.src_path, self.dst_path, '/e', log=self.log)
-		for line in robocopy.stdout():
-			echo(line)
-		#self.log.info('Robocopy done', echo=True)
+	def _print_line(self, line):
+		'''Print line'''
+		if line.rstrip().endswith('%'):
+			print(f'\r{line.strip()}  \r', end='')
+		else:
+			print(line)
 
-	def cp(self, sources, destination, filename=None, outdir=None, log=None):
+	def _print_allive(self):
+		'''Show that I am alive'''
+		try:
+			self._allive_i += 1
+		except AttributeError:
+			self._allive_i = 0
+		if self._allive_i > 3:
+			self._allive_i = 0
+		print(f'\r{"-\\|/"[self._allive_i]}\r', end='')
+
+	def _calc_hashes(self):
+		'''Calculate hashes'''
+		self.hashes = dict()
+		for alg in self._hashe_algs:
+			self.log.info(f'Calculating {alg} hashes')
+			print(alg)
+			self.hashes[alg] = FileHashes(self.src_tree.files, algorithm=alg).calculate()
+		self.log.info('Finished calculating hashes')
+
+	def cp(self, source, destination, filename=None, outdir=None, hashes=('md5',), log=None):
 		'''Copy multiple sources'''
-		self.dst_root_path = Path(destination)
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = PathUtils.mkdir(outdir)
 		self.tsv_path = self.outdir / f'{self.filename}_files.tsv'
 		self.log = log if log else Logger(
-			filename=self.filename, outdir=self.outdir, head='hashedcopy.HashedCopy', echo=self.echo)
-		if self.dst_root_path.exists():
-			if not self.dst_root_path.is_dir():
-				self.log.error('Destination is not a directory')
+			filename=self.filename, outdir=self.outdir, head='hashedrobocopy.HashedRoboCopy', echo=self.echo)
+		self.source = Path(source).resolve()
+		if not self.source.exists():
+			self.log.error(f'Source {self.source} does not exist')
+		self.destination = Path(destination).resolve()
+		if not self.destination.is_dir():
+			self.log.error('Destination {self.destination} is not a directory')
+		if self.source.name:
+			self.destination = self.destination.joinpath(self.source.name)
 		else:
-			self.dst_root_path.mkdir()
-		self.sources = {Path(source).resolve() for source in sources if Path(source).exists()}
-		files2copy = dict()
-		for source in self.sources:
-			tree = RoboWalk(Path(source))
-			for absolut, relative in tree.relative_files():
-				files2copy[absolut] = relative
-
-		
-		exit()
-		robocopy = Thread(target=self._robocopy, args=(),
-		self.log.info('Calculating MD5 hashes', echo=True)
-		md5 = FileHashes(files2copy.keys())
-		md5hashes = md5.calculate()
-		self.log.info('Calculating SHA256 hashes', echo=True)
-		sha256 = FileHashes(files2copy.keys(), fn='sha256')
-		sha256hashes = sha256.calculate()
-
-		exit()
-
-
-
-
-		error_cnt = 0
+			splitted = f'{self.source}'.split(':')
+			if len(splitted) > 1:
+				self.destination = self.destination.joinpath(splitted[0])
+			else:
+				splitted = f'{self.source}'.split('\\')
+				if len(splitted) > 1:
+					self.destination = self.destination.joinpath(splitted[-2])
+				else:
+					self.destination = self.destination.joinpath(filename)
+		if self.destination.exists():
+			self.log.error('Destination {self.destination} already exits')
+		self.src_tree = RoboWalk(self.source)
+		self._hashe_algs = hashes
+		hash_thread = Thread(target=self._calc_hashes)
+		hash_thread.start()
+		self.log.info(f'Using Robocopy.exe to copy {self.source} to {self.destination}', echo=True)
+		robocopy = RoboCopy(self.source, self.destination, '/e', '/fp', '/ns', '/nc', '/ndl')
+		for line in robocopy.run():
+			self._print_line(line)
+		returncode = robocopy.wait()
+		if returncode == 1:
+			self.log.info('Finished copy process successfully, Robocopy.exe returncode: 1', echo=True)
+		else:
+			self.log.warning(f'Robocopy.exe failed with returncode: {returncode}')
+		if hash_thread.is_alive():
+			self.echo('Calculating hashes')
+			while hash_thread.is_alive():
+				self._print_allive()
+				sleep(.25)
+			self.echo()
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
-			print('Source\tDestination\tType\tSource_MD5\tDestination_MD5\tSource_SHA256\tDestination_SHA256\tSuccess', file=fh)
-			self.echo('Creating directories')
-			for source_path in source_paths:
-				root_dst_path = self.dst_root_path.joinpath(source_path)
-				if source_path.is_dir():
-					root_dst_path.mkdir(parents=True, exist_ok=True)
-					print(f'{source_path}\t{root_dst_path}\tdir\t-\t-\t-\t-\tyes', file=fh)
-					for abs_path, rel_path, tp in PathUtils.walk(source_path):
-						dst_path = self.dst_root_path.joinpath(source_path.name, rel_path)
-						if tp == 'dir':
-							dst_path.mkdir(parents=True, exist_ok=True)
-							print(f'{abs_path}\t{dst_path}\tdir\t-\t-\t-\t-\tyes', file=fh)
-						elif tp == 'file':
-							files2cp.append((abs_path, dst_path))
-						else:
-							print(f'{abs_path}\t{dst_path}\tother\t-\t-\t-\t-\tno', file=fh)
-							error_cnt += 1
-				elif source_path.is_file():
-					files2cp.append((source_path, root_dst_path))
-				else:
-					print(f'{source_path}\t{root_dst_path}\tother\t-\t-\t-\t-\tno', file=fh)
-					error_cnt += 1
-			self.echo('Copying files')
-			hashed_files = list()
-			progress = Progressor(len(files2cp), echo=self.echo, item='file')
-			for src_path, dst_path in files2cp:
-				src_hashes = CopyFile(src_path, dst_path)
-				hashed_files.append((src_path, dst_path, src_hashes))
-				progress.inc()
-			sync()
-			for src_path, dst_path, src_hashes in hashed_files:
-				dst_hashes = FileHashes(dst_path)
-				line = f'{src_path}\t{dst_path}\tfile\t{src_hashes.md5}\t{dst_hashes.md5}\t{src_hashes.sha256}\t{dst_hashes.sha256}\t'
-				if src_hashes.md5 == dst_hashes.md5 and src_hashes.sha256 == dst_hashes.sha256:
-					line += 'yes'
-				else:
-					line += 'no'
-					error_cnt += 1
-				print(line, file=fh)
-		self.log.info(f'Copied {len(hashed_files)-error_cnt} file(s), check {self.tsv_path}', echo=True)
-		if error_cnt > 0:
-			self.log.error(f'{error_cnt} missing file(s)')
+			print(f'Source\tRelative_Path\tType\t{"\t".join(self._hashe_algs)}', file=fh)
+			cols2add = '\t-' * len(self._hashe_algs)
+			for absolut, relative in self.src_tree.get_relative_dirs().items():
+				print(f'{absolut}\t{relative}\tdir{cols2add}', file=fh)
+			for absolut, relative in self.src_tree.get_relative_files().items():
+				hashes = [self.hashes[alg][absolut] for alg in self._hashe_algs]
+				print(f'{absolut}\t{relative}\tfile{"\t".join(hashes)}', file=fh)
+		self.log.info(f'Done, file hashes are listed in {self.tsv_path}', echo=True)
 
-
-class HashedCopyCli(ArgumentParser):
+class HashedRoboCopyCli(ArgumentParser):
 	'''CLI for the copy tool'''
 
 	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
+		self.add_argument('-a', '--algorithms', type=str,
+			help='Algorithms to hash seperated by colon (e.g. -a md5,sha256, default is md5)', metavar='STRING'
+		)
 		self.add_argument('-d', '--destination', type=Path, required=True,
 			help='Destination root (required)', metavar='DIRECTORY'
 		)
@@ -131,7 +129,7 @@ class HashedCopyCli(ArgumentParser):
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log and file list (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('sources', nargs='+', type=Path,
+		self.add_argument('source', nargs=1, type=Path,
 			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
 		)
 		self.echo = echo
@@ -139,21 +137,21 @@ class HashedCopyCli(ArgumentParser):
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.sources = args.sources
+		self.source = args.source[0]
 		self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir
 
 	def run(self):
 		'''Run the tool'''
-		copy = HashedCopy(echo=self.echo)
-		copy.cp(self.sources, self.destination,
+		copy = HashedRoboCopy(echo=self.echo)
+		copy.cp(self.source, self.destination,
 			filename = self.filename,
 			outdir = self.outdir
 		)
 		copy.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = HashedCopyCli()
+	app = HashedRoboCopyCli()
 	app.parse()
 	app.run()
