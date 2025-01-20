@@ -196,8 +196,9 @@ class OpenProc(Popen):
 class RoboCopy(OpenProc):
 	'''Run robocopy'''
 
-	def __init__(self, src, dst, *args):
+	def __init__(self, src, dst, *args, echo=print):
 		'''Create robocopy process'''
+		self._echo = echo
 		cmd = ['Robocopy.exe', src, dst]
 		if args:
 			cmd.extend(args)
@@ -209,6 +210,15 @@ class RoboCopy(OpenProc):
 		for line in self.stdout:
 			if line := line.strip():
 				yield(line)
+
+	def wait(self):
+		'''Wait for process to finish'''
+		for line in self.run():
+				if line.rstrip().endswith('%'):
+					self._echo(f'{line}  ', end='\r')
+				else:
+					print(line)
+		return super().wait()
 
 class RoboWalk(RoboCopy):
 	'''Run robocopy'''

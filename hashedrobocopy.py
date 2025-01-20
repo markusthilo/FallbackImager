@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-12'
+__version__ = '0.5.3_2025-01-20'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -28,13 +28,6 @@ class HashedRoboCopy:
 		'''Create object'''
 		self.available = True
 		self.echo = echo
-
-	def _print_line(self, line):
-		'''Print line'''
-		if line.rstrip().endswith('%'):
-			print(f'\r{line.strip()}  \r', end='')
-		else:
-			print(line)
 
 	def _print_allive(self):
 		'''Show that I am alive'''
@@ -118,7 +111,10 @@ class HashedRoboCopyCli(ArgumentParser):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
 		self.add_argument('-a', '--algorithms', type=str,
-			help='Algorithms to hash seperated by colon (e.g. -a md5,sha256, default is md5)', metavar='STRING'
+			help='Algorithms to hash seperated by colon (e.g. "md5,sha256", no hashing: "none", default: "md5")', metavar='STRING'
+		)
+		self.add_argument('-c', '--check', action='store_true',
+			help='Hash files at destination and check if mathing to source (use 1st given algorithm)'
 		)
 		self.add_argument('-d', '--destination', type=Path, required=True,
 			help='Destination root (required)', metavar='DIRECTORY'
@@ -138,6 +134,7 @@ class HashedRoboCopyCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.source = args.source[0]
+		self.check = args.check
 		self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir
@@ -147,7 +144,8 @@ class HashedRoboCopyCli(ArgumentParser):
 		copy = HashedRoboCopy(echo=self.echo)
 		copy.cp(self.source, self.destination,
 			filename = self.filename,
-			outdir = self.outdir
+			outdir = self.outdir,
+			check = self.check
 		)
 		copy.log.close()
 
