@@ -18,8 +18,8 @@ from argparse import ArgumentParser
 from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.hashes import FileHashes
-from lib.winutils import RoboWalk, RoboCopy
+from lib.hashes import HashThread
+#from lib.winutils import RoboWalk, RoboCopy
 
 class HashedRoboCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
@@ -48,19 +48,26 @@ class HashedRoboCopy:
 			self.hashes[alg] = FileHashes(self.src_tree.files, algorithm=alg).calculate()
 		self.log.info('Finished calculating hashes')
 
-	def cp(self, source, destination, filename=None, outdir=None, hashes=('md5',), log=None):
+	def copy(self, sources, destination, filename=None, outdir=None, hashes=None, compare=False, processes=None, log=None):
 		'''Copy multiple sources'''
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = PathUtils.mkdir(outdir)
 		self.tsv_path = self.outdir / f'{self.filename}_files.tsv'
 		self.log = log if log else Logger(
 			filename=self.filename, outdir=self.outdir, head='hashedrobocopy.HashedRoboCopy', echo=self.echo)
-		self.source = Path(source).resolve()
-		if not self.source.exists():
-			self.log.error(f'Source {self.source} does not exist')
-		self.destination = Path(destination).resolve()
-		if not self.destination.is_dir():
-			self.log.error('Destination {self.destination} is not a directory')
+		self.src_files = set()
+		self.src_dirs = set()
+		for source in sources:
+			if source.is_file():
+				self.src_files.add(Path(source).resolve())
+			elif source.is_dir():
+				self.src_dirs.add(Path(source).resolve())
+			elif source.exists():
+				self.log.error(f'Source {source} is neither a file nor a directory')
+			else:
+				self.log.error(f'Source {source} does not exist')
+
+		'''
 		if self.source.name:
 			self.destination = self.destination.joinpath(self.source.name)
 		else:
@@ -73,12 +80,26 @@ class HashedRoboCopy:
 					self.destination = self.destination.joinpath(splitted[-2])
 				else:
 					self.destination = self.destination.joinpath(filename)
-		if self.destination.exists():
-			self.log.error('Destination {self.destination} already exits')
-		self.src_tree = RoboWalk(self.source)
-		self._hashe_algs = hashes
-		hash_thread = Thread(target=self._calc_hashes)
+		'''
+
+		self.destination = Path(destination).resolve()
+		if self.destination.exists() and not self.destination.is_dir():
+			self.log.error('Destination {self.destination} exits and is not a directory')
+
+		files2hash = set()
+		#for src_dir in self.src_dirs:
+		#	files2hash.update(RoboWalk(src_dir).files)
+		files2hash.update(self.src_files)
+
+		print(files2hash)
+
+		hash_thread = HashThread(files2hash, algorithms=hashes, processes=processes)
 		hash_thread.start()
+		hash_thread.join()
+		print(hash_thread.hashes)
+		exit()
+
+
 		self.log.info(f'Using Robocopy.exe to copy {self.source} to {self.destination}', echo=True)
 		robocopy = RoboCopy(self.source, self.destination, '/e', '/fp', '/ns', '/nc', '/ndl')
 		for line in robocopy.run():
@@ -113,7 +134,7 @@ class HashedRoboCopyCli(ArgumentParser):
 		self.add_argument('-a', '--algorithms', type=str,
 			help='Algorithms to hash seperated by colon (e.g. "md5,sha256", no hashing: "none", default: "md5")', metavar='STRING'
 		)
-		self.add_argument('-c', '--check', action='store_true',
+		self.add_argument('-c', '--compare', action='store_true',
 			help='Hash files at destination and check if mathing to source (use 1st given algorithm)'
 		)
 		self.add_argument('-d', '--destination', type=Path, required=True,
@@ -125,7 +146,10 @@ class HashedRoboCopyCli(ArgumentParser):
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log and file list (default: current)', metavar='DIRECTORY'
 		)
-		self.add_argument('source', nargs=1, type=Path,
+		self.add_argument('-p', '--processes', type=int,
+			help='Number of parallel processes to hash (default: CPU cores / 2)', metavar='INTEGER'
+		)
+		self.add_argument('sources', nargs='+', type=Path,
 			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
 		)
 		self.echo = echo
@@ -133,21 +157,31 @@ class HashedRoboCopyCli(ArgumentParser):
 	def parse(self, *cmd):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
-		self.source = args.source[0]
-		self.check = args.check
+		self.sources = args.sources
+		self.compare = args.compare
+		if args.algorithms:
+			if args.algorithms.lower() == 'none':
+				self.algorithms = list()
+			else:
+				self.algorithms = [alg.strip() for alg in args.algorithms.split(',')]
+		else:
+			self.algorithms = ['md5']
 		self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir
+		self.processes = args.processes
 
 	def run(self):
 		'''Run the tool'''
-		copy = HashedRoboCopy(echo=self.echo)
-		copy.cp(self.source, self.destination,
+		hrc = HashedRoboCopy(echo=self.echo)
+		hrc.copy(self.sources, self.destination,
 			filename = self.filename,
 			outdir = self.outdir,
-			check = self.check
+			hashes = self.algorithms,
+			compare = self.compare,
+			processes = self.processes
 		)
-		copy.log.close()
+		hrc.log.close()
 
 if __name__ == '__main__':	# start here if called as application
 	app = HashedRoboCopyCli()
