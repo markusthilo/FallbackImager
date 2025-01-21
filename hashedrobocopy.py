@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-20'
+__version__ = '0.5.3_2025-01-21'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -87,8 +87,8 @@ class HashedRoboCopy:
 			self.log.error('Destination {self.destination} exits and is not a directory')
 
 		files2hash = set()
-		#for src_dir in self.src_dirs:
-		#	files2hash.update(RoboWalk(src_dir).files)
+		for src_dir in self.src_dirs:
+			files2hash.update(RoboWalk(src_dir).files)
 		files2hash.update(self.src_files)
 
 		print(files2hash)
@@ -97,6 +97,8 @@ class HashedRoboCopy:
 		hash_thread.start()
 		hash_thread.join()
 		print(hash_thread.hashes)
+
+
 		exit()
 
 
