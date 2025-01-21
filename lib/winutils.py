@@ -196,13 +196,14 @@ class OpenProc(Popen):
 class RoboCopy(OpenProc):
 	'''Run robocopy'''
 
-	def __init__(self, src, dst, *args, echo=print):
+	def __init__(self, src, dst, *args, echo=print, quantity=None):
 		'''Create robocopy process'''
 		self._echo = echo
+		self._quantity = quantity
 		cmd = ['Robocopy.exe', src, dst]
 		if args:
 			cmd.extend(args)
-		cmd.extend([ '/njh', '/njs', '/unicode'])
+		cmd.extend(['/fp', '/ns', '/njh', '/njs', '/unicode'])
 		super().__init__(cmd)
 
 	def run(self):
@@ -213,10 +214,15 @@ class RoboCopy(OpenProc):
 
 	def wait(self):
 		'''Wait for process to finish'''
+		counter = 0
 		for line in self.run():
 				if line.rstrip().endswith('%'):
-					self._echo(f'{line}  ', end='\r')
-				else:
+					if self._quantity:
+						counter += 1
+						self._echo(f'File {counter} of {self._quantity} in directory - {line}', end='\r')
+					else:
+						self._echo(f'{line}', end='\r')
+				elif not line.startswith('*'):
 					print(line)
 		return super().wait()
 
@@ -226,7 +232,7 @@ class RoboWalk(RoboCopy):
 	def __init__(self, root):
 		'''Use robocopy to get tree'''
 		self.root = root.resolve()
-		super().__init__(self.root, 'NULL', '/e', '/l', '/fp', '/ns', '/nc')
+		super().__init__(self.root, 'NULL', '/e', '/l', '/nc')
 		self.files = list()
 		self.dirs = list()
 		for line in self.stdout:

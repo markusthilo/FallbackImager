@@ -21,7 +21,7 @@ class FileHashes:
 	def _hashsum(path_algorithm):
 		'''Calculate hash of file (1 arg to use with multiprocessing.pool)'''
 		path, algorithm = path_algorithm
-		return path, FileHashes.hashsum(path, algorithm=algorithm)
+		return FileHashes.hashsum(path, algorithm=algorithm)
 
 	def __init__(self, paths, algorithm='md5', processes=None):
 		'''Generate object to calculate hashes of files using multiprocessing pool'''
