@@ -196,10 +196,8 @@ class OpenProc(Popen):
 class RoboCopy(OpenProc):
 	'''Run robocopy'''
 
-	def __init__(self, src, dst, *args, echo=print, quantity=None):
+	def __init__(self, src, dst, *args):
 		'''Create robocopy process'''
-		self._echo = echo
-		self._quantity = quantity
 		cmd = ['Robocopy.exe', src, dst]
 		if args:
 			cmd.extend(args)
@@ -212,18 +210,22 @@ class RoboCopy(OpenProc):
 			if line := line.strip():
 				yield(line)
 
-	def wait(self):
+	def wait(self, echo=print, quantity=None, start=1):
 		'''Wait for process to finish'''
-		counter = 0
+		self.counter = start - 1
 		for line in self.run():
-				if line.rstrip().endswith('%'):
-					if self._quantity:
-						counter += 1
-						self._echo(f'File {counter} of {self._quantity} in directory - {line}', end='\r')
-					else:
-						self._echo(f'{line}', end='\r')
-				elif not line.startswith('*'):
-					print(line)
+			if line.rstrip().endswith('%'):
+				echo(f'{line}', end='\r')
+			elif not line.startswith('*'):
+				continue
+			splitted = line.split(' ', 1)
+			if len(splitted) == 2:
+				line = splitted[1].strip()
+				if quantity:
+					self.counter += 1
+					echo(f'File {self.counter} of {quantity}: {line}')
+				else:
+					echo(line)
 		return super().wait()
 
 class RoboWalk(RoboCopy):
