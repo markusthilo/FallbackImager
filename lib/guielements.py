@@ -321,7 +321,14 @@ class FilenameSelector(StringSelector):
 class DirSelector(Button):
 	'''Button + Entry to select a directory'''
 	def __init__(self, parent, variable, text, ask,
-		initialdir=None, command=None, column=1, columnspan=255, incrow=True, tip=None, mustexist=False):
+		initialdir=None,
+		command=None,
+		column=1,
+		columnspan=255,
+		incrow=True,
+		tip=None,
+		mustexist=False
+	):
 		self._variable = variable
 		super().__init__(parent, text=text, command=self._select, width=GuiConfig.BUTTON_WIDTH)
 		self.grid(row=parent.row, column=column, sticky='w', padx=parent.padding)
@@ -352,13 +359,13 @@ class OutDirSelector(DirSelector):
 		if not tip:
 			tip = BasicLabels.TIP_OUTDIR
 		super().__init__(parent, variable, BasicLabels.DIRECTORY, BasicLabels.SELECT_OUTDIR,
-			tip=tip, missing=BasicLabels.OUTDIR_REQUIRED)
+			tip=tip)#, missing=BasicLabels.OUTDIR_REQUIRED)
 
 class SourceDirSelector(DirSelector):
 	'''Select source directory'''
 	def __init__(self, parent, variable, tip=None):
 		super().__init__(parent, variable, BasicLabels.SOURCE, BasicLabels.SELECT_SOURCE,
-			tip=tip, missing=BasicLabels.SOURCE_REQUIRED)
+			tip=tip)#, missing=BasicLabels.SOURCE_REQUIRED)
 
 class FileSelector(Button):
 	'''Select a file'''

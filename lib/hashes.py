@@ -3,6 +3,7 @@
 
 from hashlib import file_digest
 from threading import Thread
+from time import sleep
 
 class FileHashes:
 	'''Calculate hashes of files'''
@@ -23,7 +24,7 @@ class HashThread(Thread):
 		'''Generate object to calculate hashes of files using multiprocessing pool'''
 		super().__init__()
 		self._paths = paths
-		self._algs = algorithms
+		self._algs = algorithms if algorithms else ['md5']
 
 	def run(self):
 		'''Calculate all hashes (multiple algorithms) in parallel - this method launches the worker'''
@@ -31,3 +32,13 @@ class HashThread(Thread):
 		for alg in self._algs:
 			for path in self._paths:
 				self.hashes[path][alg] = FileHashes.hashsum(path, algorithm=alg)
+
+	def wait(self, echo=print):
+		'''Wait for worker to finish and return results'''
+		index = 0
+		while self.is_alive():
+			echo('-\\|/'[index], end='\r')
+			sleep(.25)
+			index = index + 1 if index < 3 else 0
+		self.join()
+		return self.hashes

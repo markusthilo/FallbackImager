@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'HashedCopy'
+__app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-21'
+__version__ = '0.5.3_2025-01-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Safe copy with log and hashes.
+Use RoboCopy and buld hashes of the source.
 '''
 
+from os import environ
 from pathlib import Path
-from threading import Thread
-from time import sleep
 from argparse import ArgumentParser
-from lib.pathutils import PathUtils, Progressor
+from lib.pathutils import PathUtils
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import HashThread
@@ -26,10 +25,15 @@ class HashedRoboCopy:
 
 	def __init__(self, echo=print):
 		'''Create object'''
-		self.available = True
-		self.echo = echo
+		self.robocopy_path = Path(environ['SYSTEMDRIVE'])/'\\Windows\\system32\\Robocopy.exe'
+		if self.dism_path.is_file():
+			self.available = True
+			self.echo = echo
+		else:
+			self.available = False
 
-	def copy(self, sources, destination, filename=None, outdir=None, hashes=None, compare=False, log=None):
+
+	def copy(self, sources, destination, filename=None, outdir=None, hashes=['md5'], log=None):
 		'''Copy multiple sources'''
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = PathUtils.mkdir(outdir)
@@ -52,64 +56,50 @@ class HashedRoboCopy:
 		if self.destination.exists() and not self.destination.is_dir():
 			self.log.error('Destination {self.destination} exits and is not a directory')
 		files2hash = self.src_files.copy()
+		dirs2log = self.src_dirs.copy()
 		quantity = len(self.src_files)
 		for src_dir in self.src_dirs:
 			robowalk = RoboWalk(src_dir)
 			files2hash.update(robowalk.files)
+			dirs2log.update(robowalk.dirs)
 			quantity += len(robowalk.files)
-		hash_thread = HashThread(files2hash, algorithms=hashes)
-		hash_thread.start()
+		self.hash_algs = hashes
+		if self.hash_algs:
+			hash_thread = HashThread(files2hash, algorithms=self.hash_algs)
+			hash_thread.start()
 		start = 1
 		for src_file in self.src_files:
 			self.log.info(f'Using Robocopy.exe to copy {src_file} to {self.destination}', echo=True)
 			robocopy = RoboCopy(src_file.parent, self.destination, src_file.name, '/fp', '/ns', '/ndl')
-			self._returncode(robocopy.wait(echo=self.echo, quantity=quantity, start=start))
+			self._log_robocopy(robocopy.wait(echo=self.echo, quantity=quantity, start=start))
 			start = robocopy.counter + 1
 		for src_dir in self.src_dirs:
 			self.log.info(f'Using Robocopy.exe to copy {src_dir} to {self.destination}', echo=True)
 			robocopy = RoboCopy(src_dir, self.destination / src_dir.name, '/e', '/fp', '/ns', '/ndl')
-			self._robocopy(robocopy.wait(echo=self.echo, quantity=quantity, start=start))
+			self._log_robocopy(robocopy.wait(echo=self.echo, quantity=quantity, start=start))
 			start = robocopy.counter + 1
-		if hash_thread.is_alive():
-			index = 0
-			self.echo('Calculating hashes')
-			while hash_thread.is_alive():
-				self.echo('-\\|/'[index], end='\r')
-				sleep(.25)
-				index = index + 1 if index < 3 else 0
-		hash_thread.join()
-		if compare:
-			pass
-		else:
-			with self.tsv_path.open('w', encoding='utf-8') as fh:
-				print(f'Source\tRelative_Path\tType\t{"\t".join(self._hashe_algs)}', file=fh)
-				cols2add = '\t-' * len(self._hashe_algs)
-				for absolut, relative in self.src_tree.get_relative_dirs().items():
-					print(f'{absolut}\t{relative}\tdir{cols2add}', file=fh)
-				for absolut, relative in self.src_tree.get_relative_files().items():
-					hashes = [self.hashes[alg][absolut] for alg in self._hashe_algs]
-					print(f'{absolut}\t{relative}\tfile{"\t".join(hashes)}', file=fh)
-			
-		
-		
+		if self.hash_algs:
+			self.hashes = hash_thread.wait(echo=self.echo)
+		with self.tsv_path.open('w', encoding='utf-8') as fh:
+			print(f'Source\tType\t{"\t".join(self.hash_algs)}', file=fh)
+			cols2add = '\t-' * len(self.hash_algs)
+			for path in dirs2log:
+				print(f'{path}\tdir\t{cols2add}', file=fh)
+			for path, hashes in self.hashes.items():
+				print(f'{path}\tfile\t{"\t".join(hashes[alg] for alg in self.hash_algs)}', file=fh)
 		self.log.info(f'Done, file hashes are listed in {self.tsv_path}', echo=True)
-
-
-		#if errors == 0:
-		#	self.log.info('Finished copy process successfully, Robocopy.exe returncode: 1', echo=True)
-		#else:
-		#	self.log.warning(f'Robocopy.exe failed with returncode: {returncode}')
-
-
-
+		if self.errors:
+			self.log.warning(f'Robocopy.exe reported problems')
+		else:
+			self.log.info('Finished copy process without Errors', echo=True)
 
 	def _log_robocopy(self, returncode):
 		'''Log robocopy returncode'''
 		if returncode > 5:
 			self.log.warning(f'Robocopy.exe failed with returncode {returncode}')
 			self.errors += 1
-			return
-		self.log.info(f'Robocopy.exe finished with returncode {returncode}', echo=True)
+		else:
+			self.log.info(f'Robocopy.exe finished with returncode {returncode}', echo=True)
 
 class HashedRoboCopyCli(ArgumentParser):
 	'''CLI for the copy tool'''
@@ -119,9 +109,6 @@ class HashedRoboCopyCli(ArgumentParser):
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
 		self.add_argument('-a', '--algorithms', type=str,
 			help='Algorithms to hash seperated by colon (e.g. "md5,sha256", no hashing: "none", default: "md5")', metavar='STRING'
-		)
-		self.add_argument('-c', '--compare', action='store_true',
-			help='Hash files at destination and check if mathing to source (use 1st given algorithm)'
 		)
 		self.add_argument('-d', '--destination', type=Path, required=True,
 			help='Destination root (required)', metavar='DIRECTORY'
@@ -144,7 +131,6 @@ class HashedRoboCopyCli(ArgumentParser):
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.sources = args.sources
-		self.compare = args.compare
 		if args.algorithms:
 			if args.algorithms.lower() == 'none':
 				self.algorithms = list()
@@ -163,8 +149,7 @@ class HashedRoboCopyCli(ArgumentParser):
 		hrc.copy(self.sources, self.destination,
 			filename = self.filename,
 			outdir = self.outdir,
-			hashes = self.algorithms,
-			compare = self.compare
+			hashes = self.algorithms
 		)
 		hrc.log.close()
 

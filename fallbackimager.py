@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-30'
+__version__ = '0.5.3_2025-01-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -52,6 +52,11 @@ try:
 	from hashedcopy import HashedCopy, HashedCopyCli
 	from lib.hashedcopygui import HashedCopyGui
 	__candidates__.append((HashedCopy, HashedCopyCli, HashedCopyGui))
+except Exception: pass
+try:
+	from hashedrobocopy import HashedRoboCopy, HashedRoboCopyCli
+	from lib.hashedrobocopygui import HashedRoboCopyGui
+	__candidates__.append((HashedRoboCopy, HashedRoboCopyCli, HashedRoboCopyGui))
 except Exception: pass
 try:
 	from sqlite import SQLite, SQLiteCli
