@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-30'
+__version__ = '0.5.3_2025-02-05'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -26,12 +26,11 @@ class HashedRoboCopy:
 	def __init__(self, echo=print):
 		'''Create object'''
 		self.robocopy_path = Path(environ['SYSTEMDRIVE'])/'\\Windows\\system32\\Robocopy.exe'
-		if self.dism_path.is_file():
+		if self.robocopy_path.is_file():
 			self.available = True
 			self.echo = echo
 		else:
 			self.available = False
-
 
 	def copy(self, sources, destination, filename=None, outdir=None, hashes=['md5'], log=None):
 		'''Copy multiple sources'''
@@ -141,7 +140,6 @@ class HashedRoboCopyCli(ArgumentParser):
 		self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir
-		self.processes = args.processes
 
 	def run(self):
 		'''Run the tool'''
