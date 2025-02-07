@@ -146,6 +146,8 @@ class HashedCopyLabels(BasicLabels):
 	TIP_ADD_DIR = 'Select a directory to copy'
 	SELECT_DESTINATION = 'Select destination to copy to'
 	TIP_DESTINATION = 'Destination directory (or device/volume) to copy to'
+	CALCULATE_HASHES = 'Calculate hash(es)'
+	TIP_CALCULATE = 'Calculate'
 
 class SQLiteLabels(BasicLabels):
 	SQLITE_DB = 'SQLite DB'

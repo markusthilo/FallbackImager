@@ -8,7 +8,7 @@ from .guiconfig import GuiConfig
 from .guilabeling import HashedCopyLabels
 from .guielements import DirSelector, FilenameSelector, OutDirSelector
 from .guielements import GridSeparator, GridLabel, NotebookFrame
-from .guielements import GridButton, AddJobButton, MissingEntry
+from .guielements import GridButton, AddJobButton, MissingEntry, Checker
 
 class HashedRoboCopyGui(HashedCopyLabels):
 	'''Notebook page'''
@@ -51,6 +51,19 @@ class HashedRoboCopyGui(HashedCopyLabels):
 			'{now}_copy',
 			self.root.settings.init_stringvar('Filename')
 		)
+		GridSeparator(frame)
+		GridLabel(frame, self.CALCULATE_HASHES)
+		self.calc_hashes = [
+			(alg, Checker(
+				frame,
+				self.root.settings.init_boolvar(alg.upper()),
+				f'{alg}       ',
+				tip = f'{self.TIP_CALCULATE} {alg}',
+				column = i*2 + 3,
+				incrow = False
+			))
+			for i, alg in enumerate(('md5', 'sha1', 'sha256', 'sha512', 'sha3_256', 'sha3_512', 'shake_128', 'shake_256'))
+		]
 		AddJobButton(frame, 'HashedCopy', self._add_job)
 
 	def _add_files(self):
@@ -91,5 +104,8 @@ class HashedRoboCopyGui(HashedCopyLabels):
 		cmd = f'hashedcopy --destination "{destination}" --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'
+		hash_algs = [alg for alg, var in self.calc_hashes if var.get()]
+		if hash_algs:
+			cmd += f' --hash-algs {",".join(hash_algs)}'
 		cmd += sources
 		self.root.append_job(cmd)

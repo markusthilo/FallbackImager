@@ -242,11 +242,11 @@ class GridMenu(OptionMenu):
 
 class Checker(Checkbutton):
 	'''Checkbox'''
-	def __init__(self, parent, variable, text, command=None, column=0, columnspan=2, tip=None):
+	def __init__(self, parent, variable, text, command=None, column=0, columnspan=2, incrow=True, tip=None):
 		self._variable = variable
 		super().__init__(parent, variable=self._variable, command=command)
 		self.grid(row=parent.row, column=column)
-		GridLabel(parent, text, column=column+1, columnspan=columnspan-1)
+		GridLabel(parent, text, column=column+1, columnspan=columnspan-1, incrow=incrow)
 		if tip:
 			Hovertip(self, tip)
 	def set(self, value):

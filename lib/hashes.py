@@ -5,7 +5,7 @@ from hashlib import file_digest
 from threading import Thread
 from time import sleep
 
-class FileHashes:
+class FileHash:
 	'''Calculate hashes of files'''
 
 	@staticmethod
@@ -31,7 +31,7 @@ class HashThread(Thread):
 		self.hashes = {path: dict() for path in self._paths}
 		for alg in self._algs:
 			for path in self._paths:
-				self.hashes[path][alg] = FileHashes.hashsum(path, algorithm=alg)
+				self.hashes[path][alg] = FileHash.hashsum(path, algorithm=alg)
 
 	def wait(self, echo=print):
 		'''Wait for worker to finish and return results'''
