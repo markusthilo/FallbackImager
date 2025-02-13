@@ -201,7 +201,7 @@ class RoboCopy(OpenProc):
 		cmd = ['Robocopy.exe', src, dst]
 		if args:
 			cmd.extend(args)
-		cmd.extend(['/fp', '/ns', '/njh', '/njs', '/unicode'])
+		cmd.extend(['/fp', '/nc', '/ns', '/njh', '/njs', '/ndl', '/unicode'])
 		super().__init__(cmd)
 
 	def run(self):
@@ -210,44 +210,11 @@ class RoboCopy(OpenProc):
 			if line := line.strip():
 				yield(line)
 
-	def wait(self, echo=print, quantity=None, start=1):
+	def wait(self, echo=print):
 		'''Wait for process to finish'''
-		self.counter = start - 1
 		for line in self.run():
 			if line.rstrip().endswith('%'):
 				echo(f'{line}', end='\r')
-			elif not line.startswith('*'):
-				continue
-			splitted = line.split(' ', 1)
-			if len(splitted) == 2:
-				line = splitted[1].strip()
-				if quantity:
-					self.counter += 1
-					echo(f'File {self.counter} of {quantity}: {line}')
-				else:
-					echo(line)
+			else:
+				echo(line)
 		return super().wait()
-
-class RoboWalk(RoboCopy):
-	'''Run robocopy'''
-
-	def __init__(self, root):
-		'''Use robocopy to get tree'''
-		self.root = root.resolve()
-		super().__init__(self.root, 'NULL', '/e', '/l', '/nc')
-		self.files = list()
-		self.dirs = list()
-		for line in self.stdout:
-			if line := line.strip():
-				if line.endswith('\\'):
-					self.dirs.append(Path(line))
-				else:
-					self.files.append(Path(line))
-
-	def get_relative_files(self):
-		'''Relative file paths'''
-		return {path: path.relative_to(self.root) for path in self.files}
-
-	def get_relative_dirs(self):
-		'''Relative dir paths'''
-		return {path: path.relative_to(self.root) for path in self.dirs}

@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-02-05'
+__version__ = '0.5.3_2025-02-13'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -18,7 +18,7 @@ from lib.pathutils import PathUtils
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
 from lib.hashes import HashThread
-from lib.winutils import RoboWalk, RoboCopy
+from lib.winutils import RoboCopy
 
 class HashedRoboCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
@@ -32,71 +32,87 @@ class HashedRoboCopy:
 		else:
 			self.available = False
 
-	def copy(self, sources, destination, filename=None, outdir=None, hashes=['md5'], log=None):
+	def copy(self, sources, destination=None, filename=None, outdir=None, hashes=['md5'], log=None):
 		'''Copy multiple sources'''
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = PathUtils.mkdir(outdir)
 		self.tsv_path = self.outdir / f'{self.filename}_files.tsv'
 		self.log = log if log else Logger(
 			filename=self.filename, outdir=self.outdir, head='hashedrobocopy.HashedRoboCopy', echo=self.echo)
-		self.errors = 0
-		self.src_files = set()
+		self.warnings = 0
+		self.src_files = dict()
 		self.src_dirs = set()
 		for source in sources:
-			if source.is_file():
-				self.src_files.add(Path(source).resolve())
-			elif source.is_dir():
-				self.src_dirs.add(Path(source).resolve())
-			elif source.exists():
-				self.log.error(f'Source {source} is neither a file nor a directory')
+			abs_path = Path(source).absolute()
+			if abs_path.is_file():
+				self.src_files[abs_path] = abs_path.stat().st_size
+			elif abs_path.is_dir():
+				self.src_dirs.add(abs_path)
+			elif abs_path.exists():
+				self.log.warning(f'Source {abs_path} is neither a file nor a directory')
 			else:
-				self.log.error(f'Source {source} does not exist')
-		self.destination = Path(destination).resolve()
-		if self.destination.exists() and not self.destination.is_dir():
-			self.log.error('Destination {self.destination} exits and is not a directory')
+				self.log.error(f'Source {abs_path} does not exist')
+		if destination:
+			self.destination = Path(destination).absolute()
+			if self.destination.exists() and not self.destination.is_dir():
+				self.log.error('Destination {self.destination} exits and is not a directory')
+		else:
+			if not hashes:
+				self.log.error('No destination specified and no hashes to calculate')
+			self.destination = None
 		files2hash = self.src_files.copy()
 		dirs2log = self.src_dirs.copy()
-		quantity = len(self.src_files)
 		for src_dir in self.src_dirs:
-			robowalk = RoboWalk(src_dir)
-			files2hash.update(robowalk.files)
-			dirs2log.update(robowalk.dirs)
-			quantity += len(robowalk.files)
+			for path in src_dir.rglob('*'):
+				if path.is_file():
+					files2hash[path] = path.stat().st_size
+				elif path.is_dir():
+					dirs2log.add(path)
 		self.hash_algs = hashes
 		if self.hash_algs:
 			hash_thread = HashThread(files2hash, algorithms=self.hash_algs)
 			hash_thread.start()
-		start = 1
-		for src_file in self.src_files:
-			self.log.info(f'Using Robocopy.exe to copy {src_file} to {self.destination}', echo=True)
-			robocopy = RoboCopy(src_file.parent, self.destination, src_file.name, '/fp', '/ns', '/ndl')
-			self._log_robocopy(robocopy.wait(echo=self.echo, quantity=quantity, start=start))
-			start = robocopy.counter + 1
-		for src_dir in self.src_dirs:
-			self.log.info(f'Using Robocopy.exe to copy {src_dir} to {self.destination}', echo=True)
-			robocopy = RoboCopy(src_dir, self.destination / src_dir.name, '/e', '/fp', '/ns', '/ndl')
-			self._log_robocopy(robocopy.wait(echo=self.echo, quantity=quantity, start=start))
-			start = robocopy.counter + 1
+		if self.destination:
+			for src_file in self.src_files:
+				self.log.info(f'Using Robocopy.exe to copy {src_file} to {self.destination}', echo=True)
+				robocopy = RoboCopy(src_file.parent, self.destination, src_file.name)
+				self._log_robocopy(robocopy.wait(echo=self.echo))
+			for src_dir in self.src_dirs:
+				self.log.info(f'Using Robocopy.exe to copy {src_dir} to {self.destination}', echo=True)
+				robocopy = RoboCopy(src_dir, self.destination / src_dir.name, '/e')
+				self._log_robocopy(robocopy.wait(echo=self.echo))
+		head = 'Source\tBytes/Type'
 		if self.hash_algs:
 			self.hashes = hash_thread.wait(echo=self.echo)
+			head += f'\t{"\t".join(self.hash_algs)}'
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
-			print(f'Source\tType\t{"\t".join(self.hash_algs)}', file=fh)
+			print(head, file=fh)
 			cols2add = '\t-' * len(self.hash_algs)
 			for path in dirs2log:
-				print(f'{path}\tdir\t{cols2add}', file=fh)
-			for path, hashes in self.hashes.items():
-				print(f'{path}\tfile\t{"\t".join(hashes[alg] for alg in self.hash_algs)}', file=fh)
-		self.log.info(f'Done, file hashes are listed in {self.tsv_path}', echo=True)
-		if self.errors:
-			self.log.warning(f'Robocopy.exe reported problems')
+				print(f'{path}\tdir{cols2add}', file=fh)
+			for path, size in files2hash.items():
+				line = f'{path}\t{size}'
+				for alg in self.hash_algs:
+					line += f'\t{self.hashes[path][alg]}'
+				print(line, file=fh)
+		if self.destination:
+			for path, size in files2hash.items():
+				dst_path = self.destination / path.relative_to(src_dir)
+				print(dst_path)
+				dst_size = dst_path.stat().st_size
+				if dst_size != size:
+					self.log.warning(f'File size of {dst_path} differs from source {path} ({dst_size} / {size})')
+			self.log.info(f'Done, paths are listed in {self.tsv_path}', echo=True)
+		if self.warnings:
+			self.log.warning(f'{self.warnings} warning(s) were thrown, check {self.log.path}')
 		else:
-			self.log.info('Finished copy process without Errors', echo=True)
+			self.log.info('Finished without errors', echo=True)
 
 	def _log_robocopy(self, returncode):
 		'''Log robocopy returncode'''
-		if returncode > 5:
-			self.log.warning(f'Robocopy.exe failed with returncode {returncode}')
-			self.errors += 1
+		if returncode > 3:
+			self.log.warning(f'Robocopy.exe gave returncode {returncode}')
+			self.warnings += 1
 		else:
 			self.log.info(f'Robocopy.exe finished with returncode {returncode}', echo=True)
 
@@ -109,17 +125,14 @@ class HashedRoboCopyCli(ArgumentParser):
 		self.add_argument('-a', '--algorithms', type=str,
 			help='Algorithms to hash seperated by colon (e.g. "md5,sha256", no hashing: "none", default: "md5")', metavar='STRING'
 		)
-		self.add_argument('-d', '--destination', type=Path, required=True,
-			help='Destination root (required)', metavar='DIRECTORY'
+		self.add_argument('-d', '--destination', type=Path,
+			help='Destination root (hash only if not given)', metavar='DIRECTORY'
 		)
 		self.add_argument('-f', '--filename', type=str,
-			help='Filename to generated (without extension)', metavar='STRING'
+			help='Filename to generate for log and file list (without extension)', metavar='STRING'
 		)
 		self.add_argument('-o', '--outdir', type=Path,
 			help='Directory to write log and file list (default: current)', metavar='DIRECTORY'
-		)
-		self.add_argument('-p', '--processes', type=int,
-			help='Number of parallel processes to hash (default: CPU cores / 2)', metavar='INTEGER'
 		)
 		self.add_argument('sources', nargs='+', type=Path,
 			help='Source files or directories to copy', metavar='FILE/DIRECTORY'
@@ -132,7 +145,7 @@ class HashedRoboCopyCli(ArgumentParser):
 		self.sources = args.sources
 		if args.algorithms:
 			if args.algorithms.lower() == 'none':
-				self.algorithms = list()
+				self.algorithms = None
 			else:
 				self.algorithms = [alg.strip() for alg in args.algorithms.split(',')]
 		else:
@@ -144,7 +157,8 @@ class HashedRoboCopyCli(ArgumentParser):
 	def run(self):
 		'''Run the tool'''
 		hrc = HashedRoboCopy(echo=self.echo)
-		hrc.copy(self.sources, self.destination,
+		hrc.copy(self.sources,
+			destination = self.destination,
 			filename = self.filename,
 			outdir = self.outdir,
 			hashes = self.algorithms
