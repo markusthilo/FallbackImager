@@ -4,6 +4,7 @@
 from hashlib import file_digest
 from threading import Thread
 from time import sleep
+from pathlib import Path
 
 class FileHash:
 	'''Calculate hashes of files'''
@@ -28,10 +29,12 @@ class HashThread(Thread):
 
 	def run(self):
 		'''Calculate all hashes (multiple algorithms) in parallel - this method launches the worker'''
-		self.hashes = {path: dict() for path in self._paths}
-		for alg in self._algs:
-			for path in self._paths:
-				self.hashes[path][alg] = FileHash.hashsum(path, algorithm=alg)
+		self.hashes = [[FileHash.hashsum(path, algorithm=alg) for alg in self._algs] for path in self._paths]
+
+		#self.hashes = {path: dict() for path in self._paths}
+		#for alg in self._algs:
+		#	for path in self._paths:
+		#		self.hashes[path][alg] = FileHash.hashsum(path, algorithm=alg)
 
 	def wait(self, echo=print):
 		'''Wait for worker to finish and return results'''

@@ -40,14 +40,14 @@ class HashedRoboCopy:
 		self.log = log if log else Logger(
 			filename=self.filename, outdir=self.outdir, head='hashedrobocopy.HashedRoboCopy', echo=self.echo)
 		self.warnings = 0
-		self.src_files = dict()
-		self.src_dirs = set()
+		src_files = set()
+		src_dirs = set()
 		for source in sources:
 			abs_path = Path(source).absolute()
 			if abs_path.is_file():
-				self.src_files[abs_path] = abs_path.stat().st_size
+				src_files.add(abs_path)
 			elif abs_path.is_dir():
-				self.src_dirs.add(abs_path)
+				src_dirs.add(abs_path)
 			elif abs_path.exists():
 				self.log.warning(f'Source {abs_path} is neither a file nor a directory')
 			else:
@@ -60,40 +60,43 @@ class HashedRoboCopy:
 			if not hashes:
 				self.log.error('No destination specified and no hashes to calculate')
 			self.destination = None
-		files2hash = self.src_files.copy()
-		dirs2log = self.src_dirs.copy()
-		for src_dir in self.src_dirs:
-			for path in src_dir.rglob('*'):
+		self.dirs = list(src_dirs)
+		self.files = [(path, path.relative_to(path.parent), path.stat().st_size) for path in src_files]
+		for dir_path in src_dirs:
+			for path in dir_path.rglob('*'):
 				if path.is_file():
-					files2hash[path] = path.stat().st_size
+					self.files.append((path, path.relative_to(dir_path.parent), path.stat().st_size))
 				elif path.is_dir():
-					dirs2log.add(path)
+					self.dirs.append(path)
+				else:
+					self.log.warning(f'{path} is neither a file nor a directory and will be ignored')
 		self.hash_algs = hashes
 		if self.hash_algs:
-			hash_thread = HashThread(files2hash, algorithms=self.hash_algs)
+			hash_thread = HashThread((tpl[0] for tpl in self.files), algorithms=self.hash_algs)
 			hash_thread.start()
 		if self.destination:
-			for src_file in self.src_files:
-				self.log.info(f'Using Robocopy.exe to copy {src_file} to {self.destination}', echo=True)
-				robocopy = RoboCopy(src_file.parent, self.destination, src_file.name)
-				self._log_robocopy(robocopy.wait(echo=self.echo))
-			for src_dir in self.src_dirs:
+			for src_dir in self.dirs:
 				self.log.info(f'Using Robocopy.exe to copy {src_dir} to {self.destination}', echo=True)
 				robocopy = RoboCopy(src_dir, self.destination / src_dir.name, '/e')
 				self._log_robocopy(robocopy.wait(echo=self.echo))
-		head = 'Source\tBytes/Type'
+			for src_file in self.files:
+				self.log.info(f'Using Robocopy.exe to copy {src_file} to {self.destination}', echo=True)
+				robocopy = RoboCopy(src_file.parent, self.destination, src_file.name)
+				self._log_robocopy(robocopy.wait(echo=self.echo))
+
+		head = 'Source\tType/File Size'
 		if self.hash_algs:
 			self.hashes = hash_thread.wait(echo=self.echo)
 			head += f'\t{"\t".join(self.hash_algs)}'
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
 			print(head, file=fh)
 			cols2add = '\t-' * len(self.hash_algs)
-			for path in dirs2log:
-				print(f'{path}\tdir{cols2add}', file=fh)
-			for path, size in files2hash.items():
+			for path in self.dirs:
+				print(f'{path}\tdirectory{cols2add}', file=fh)
+			for (abs_path, rel_path, size), hashes in zip(self.files, self.hashes):
 				line = f'{path}\t{size}'
-				for alg in self.hash_algs:
-					line += f'\t{self.hashes[path][alg]}'
+				for hash in hashes:
+					line += f'\t{hash}'
 				print(line, file=fh)
 		if self.destination:
 			for path, size in files2hash.items():
