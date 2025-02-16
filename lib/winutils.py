@@ -201,7 +201,7 @@ class RoboCopy(OpenProc):
 		cmd = ['Robocopy.exe', src, dst]
 		if args:
 			cmd.extend(args)
-		cmd.extend(['/fp', '/nc', '/ns', '/njh', '/njs', '/ndl', '/unicode'])
+		cmd.extend(['/compress', '/fp', '/nc', '/ns', '/njh', '/njs', '/ndl', '/unicode'])
 		super().__init__(cmd)
 
 	def run(self):

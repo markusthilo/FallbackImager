@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-02-13'
+__version__ = '0.5.3_2025-02-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -23,6 +23,13 @@ from lib.winutils import RoboCopy
 class HashedRoboCopy:
 	'''Tool to copy files and verify the outcome using hashes'''
 
+	@staticmethod
+	def _relative_to_anchor(path):
+		'''Convert drive or network path to name'''
+		anchor = f'{path.anchor}'
+		anchor = f'Drive_{anchor[0].upper()}' if anchor[1] == ':' else anchor.replace("\\", "_").replace("/", "_").replace(":", "_").strip("_")
+		return Path(anchor) / path.relative_to(path.anchor)
+
 	def __init__(self, echo=print):
 		'''Create object'''
 		self.robocopy_path = Path(environ['SYSTEMDRIVE'])/'\\Windows\\system32\\Robocopy.exe'
@@ -31,6 +38,14 @@ class HashedRoboCopy:
 			self.echo = echo
 		else:
 			self.available = False
+
+	def _log_robocopy(self, returncode):
+		'''Log robocopy returncode'''
+		if returncode > 3:
+			self.log.warning(f'Robocopy.exe gave returncode {returncode}')
+			self.warnings += 1
+		else:
+			self.log.info(f'Robocopy.exe finished with returncode {returncode}', echo=True)
 
 	def copy(self, sources, destination=None, filename=None, outdir=None, hashes=['md5'], log=None):
 		'''Copy multiple sources'''
@@ -63,9 +78,11 @@ class HashedRoboCopy:
 		self.dirs = list(src_dirs)
 		self.files = [(path, path.relative_to(path.parent), path.stat().st_size) for path in src_files]
 		for dir_path in src_dirs:
+			_relative = self._relative_to_anchor if dir_path == dir_path.parent else lambda path: path.relative_to(path.parent)
 			for path in dir_path.rglob('*'):
 				if path.is_file():
-					self.files.append((path, path.relative_to(dir_path.parent), path.stat().st_size))
+					self.files.append((path, _relative(path), path.stat().st_size))
+
 				elif path.is_dir():
 					self.dirs.append(path)
 				else:
@@ -75,49 +92,51 @@ class HashedRoboCopy:
 			hash_thread = HashThread((tpl[0] for tpl in self.files), algorithms=self.hash_algs)
 			hash_thread.start()
 		if self.destination:
-			for src_dir in self.dirs:
-				self.log.info(f'Using Robocopy.exe to copy {src_dir} to {self.destination}', echo=True)
-				robocopy = RoboCopy(src_dir, self.destination / src_dir.name, '/e')
+			for src_path in src_dirs:
+				if src_path == src_path.parent:
+					dst_path = self.destination / self._relative_to_anchor(src_path)
+					dst_path.mkdir(exist_ok=True)
+				else:
+					dst_path = self.destination / src_path.name
+				self.log.info(f'Using Robocopy.exe to copy directory {src_path} to {self.destination}', echo=True)
+				robocopy = RoboCopy(src_path, dst_path, '/e')
 				self._log_robocopy(robocopy.wait(echo=self.echo))
-			for src_file in self.files:
-				self.log.info(f'Using Robocopy.exe to copy {src_file} to {self.destination}', echo=True)
-				robocopy = RoboCopy(src_file.parent, self.destination, src_file.name)
+			for src_path in src_files:
+				self.log.info(f'Using Robocopy.exe to copy file {src_path} to {self.destination}', echo=True)
+				robocopy = RoboCopy(src_path.parent, self.destination, src_path.name)
 				self._log_robocopy(robocopy.wait(echo=self.echo))
-
 		head = 'Source\tType/File Size'
 		if self.hash_algs:
 			self.hashes = hash_thread.wait(echo=self.echo)
 			head += f'\t{"\t".join(self.hash_algs)}'
+			cols2add = '\t-' * len(self.hash_algs)
+		else:
+			cols2add = ''
 		with self.tsv_path.open('w', encoding='utf-8') as fh:
 			print(head, file=fh)
-			cols2add = '\t-' * len(self.hash_algs)
 			for path in self.dirs:
 				print(f'{path}\tdirectory{cols2add}', file=fh)
-			for (abs_path, rel_path, size), hashes in zip(self.files, self.hashes):
-				line = f'{path}\t{size}'
-				for hash in hashes:
-					line += f'\t{hash}'
-				print(line, file=fh)
+			if self.hash_algs:
+				for (src_path, rel_path, size), hashes in zip(self.files, self.hashes):
+					line = f'{src_path}\t{size}'
+					for hash in hashes:
+						line += f'\t{hash}'
+					print(line, file=fh)
+			else:
+				for src_path, rel_path, size in self.files:
+					print(f'{src_path}\t{size}', file=fh)
 		if self.destination:
-			for path, size in files2hash.items():
-				dst_path = self.destination / path.relative_to(src_dir)
+			for src_path, rel_path, size in self.files:
+				dst_path = self.destination / rel_path
 				print(dst_path)
 				dst_size = dst_path.stat().st_size
 				if dst_size != size:
-					self.log.warning(f'File size of {dst_path} differs from source {path} ({dst_size} / {size})')
+					self.log.warning(f'File size of {dst_path} differs from source {src_path} ({dst_size} / {size})')
 			self.log.info(f'Done, paths are listed in {self.tsv_path}', echo=True)
 		if self.warnings:
 			self.log.warning(f'{self.warnings} warning(s) were thrown, check {self.log.path}')
 		else:
 			self.log.info('Finished without errors', echo=True)
-
-	def _log_robocopy(self, returncode):
-		'''Log robocopy returncode'''
-		if returncode > 3:
-			self.log.warning(f'Robocopy.exe gave returncode {returncode}')
-			self.warnings += 1
-		else:
-			self.log.info(f'Robocopy.exe finished with returncode {returncode}', echo=True)
 
 class HashedRoboCopyCli(ArgumentParser):
 	'''CLI for the copy tool'''
