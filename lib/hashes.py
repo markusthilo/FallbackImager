@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from hashlib import file_digest
+from hashlib import algorithms_available, file_digest
 from threading import Thread
 from time import sleep
 from pathlib import Path
@@ -10,12 +10,17 @@ class FileHash:
 	'''Calculate hashes of files'''
 
 	@staticmethod
+	def get_algorithms():
+		'''Get list of available algorithms'''
+		return sorted(algorithms_available)
+
+	@staticmethod
 	def hashsum(path, algorithm='md5'):
 		'''Calculate hash of one file'''
-		if path.is_file():
+		try:
 			with path.open('rb') as fh:
 				return file_digest(fh, algorithm).hexdigest()
-		else:
+		except:
 			return ''
 
 class HashThread(Thread):
@@ -25,7 +30,7 @@ class HashThread(Thread):
 		'''Generate object to calculate hashes of files using multiprocessing pool'''
 		super().__init__()
 		self._paths = paths
-		self._algs = algorithms if algorithms else ['md5']
+		self._algs = algorithms
 
 	def run(self):
 		'''Calculate all hashes (multiple algorithms) in parallel - this method launches the worker'''
@@ -33,10 +38,12 @@ class HashThread(Thread):
 
 	def wait(self, echo=print):
 		'''Wait for worker to finish and return results'''
-		index = 0
-		while self.is_alive():
-			echo('-\\|/'[index], end='\r')
-			sleep(.25)
-			index = index + 1 if index < 3 else 0
+		if self.is_alive():
+			echo('Hash calculation is still running')
+			index = 0
+			while self.is_alive():
+				echo('-\\|/'[index], end='\r')
+				sleep(.25)
+				index = index + 1 if index < 3 else 0
 		self.join()
 		return self.hashes

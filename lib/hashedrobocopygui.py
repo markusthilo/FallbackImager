@@ -4,6 +4,7 @@
 from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.scrolledtext import ScrolledText
 from tkinter.font import nametofont
+from .hashes import FileHash
 from .guiconfig import GuiConfig
 from .guilabeling import HashedCopyLabels
 from .guielements import DirSelector, FilenameSelector, OutDirSelector
@@ -59,12 +60,12 @@ class HashedRoboCopyGui(HashedCopyLabels):
 				self.root.settings.init_boolvar(alg.upper()),
 				f'{alg}       ',
 				tip = f'{self.TIP_CALCULATE} {alg}',
-				column = i*2 + 3,
-				incrow = False
+				column = (i%8)*2 + 3,
+				incrow = i%8 == 7
 			))
-			for i, alg in enumerate(('md5', 'sha1', 'sha256', 'sha512', 'sha3_256', 'sha3_512', 'shake_128', 'shake_256'))
+			for i, alg in enumerate(FileHash.get_algorithms())
 		]
-		AddJobButton(frame, 'HashedCopy', self._add_job)
+		AddJobButton(frame, 'HashedRoboCopy', self._add_job)
 
 	def _add_files(self):
 		'''Add source file(s)'''
@@ -86,9 +87,6 @@ class HashedRoboCopyGui(HashedCopyLabels):
 		destination = self.destination.get()
 		outdir = self.outdir.get()
 		filename = self.filename.get()
-		if not destination:
-			MissingEntry(self.DESTINATION_REQUIRED)
-			return
 		if not outdir:
 			MissingEntry(self.LOGGING_DIR_REQUIRED)
 			return
@@ -101,11 +99,13 @@ class HashedRoboCopyGui(HashedCopyLabels):
 		if not sources:
 			MissingEntry(self.SOURCE_REQUIRED)
 			return
-		cmd = f'hashedcopy --destination "{destination}" --outdir "{outdir}"'
+		cmd = f'hashedrobocopy --outdir "{outdir}"'
 		if filename:
 			cmd += f' --filename "{filename}"'
+		if destination:
+			cmd += f' --destination "{destination}"'
 		hash_algs = [alg for alg, var in self.calc_hashes if var.get()]
 		if hash_algs:
-			cmd += f' --hash-algs {",".join(hash_algs)}'
+			cmd += f' --algorithms {",".join(hash_algs)}'
 		cmd += sources
 		self.root.append_job(cmd)

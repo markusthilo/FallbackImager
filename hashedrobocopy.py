@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-02-16'
+__version__ = '0.6.0_2025-02-18'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,11 +17,11 @@ from argparse import ArgumentParser
 from lib.pathutils import PathUtils
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.hashes import HashThread
+from lib.hashes import FileHash, HashThread
 from lib.winutils import RoboCopy
 
 class HashedRoboCopy:
-	'''Tool to copy files and verify the outcome using hashes'''
+	'''Tool to copy files using RoboCopy and build hashes'''
 
 	@staticmethod
 	def _relative_to_anchor(path):
@@ -49,6 +49,8 @@ class HashedRoboCopy:
 
 	def copy(self, sources, destination=None, filename=None, outdir=None, hashes=['md5'], log=None):
 		'''Copy multiple sources'''
+		available_algs = FileHash.get_algorithms()
+		self.hash_algs = None if not hashes or 'none' in hashes else [alg for alg in hashes if alg in available_algs]
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = PathUtils.mkdir(outdir)
 		self.tsv_path = self.outdir / f'{self.filename}_files.tsv'
@@ -76,19 +78,25 @@ class HashedRoboCopy:
 				self.log.error('No destination specified and no hashes to calculate')
 			self.destination = None
 		self.dirs = list(src_dirs)
-		self.files = [(path, path.relative_to(path.parent), path.stat().st_size) for path in src_files]
+		self.files = list()
+		self.total_bytes = 0
+		for path in src_files:
+			size = path.stat().st_size
+			self.files.append((path, path.relative_to(path.parent), size))
+			self.total_bytes += size
 		for dir_path in src_dirs:
-			_relative = self._relative_to_anchor if dir_path == dir_path.parent else lambda path: path.relative_to(path.parent)
+			_relative = self._relative_to_anchor if dir_path == dir_path.parent else lambda path: path.relative_to(dir_path.parent)
 			for path in dir_path.rglob('*'):
 				if path.is_file():
-					self.files.append((path, _relative(path), path.stat().st_size))
-
+					size = path.stat().st_size
+					self.files.append((path, _relative(path), size))
+					self.total_bytes += size
 				elif path.is_dir():
 					self.dirs.append(path)
 				else:
 					self.log.warning(f'{path} is neither a file nor a directory and will be ignored')
-		self.hash_algs = hashes
 		if self.hash_algs:
+			self.log.info(f'Start calculating hashe(s) for {len(self.files)} file(s)', echo=True)
 			hash_thread = HashThread((tpl[0] for tpl in self.files), algorithms=self.hash_algs)
 			hash_thread.start()
 		if self.destination:
@@ -98,11 +106,11 @@ class HashedRoboCopy:
 					dst_path.mkdir(exist_ok=True)
 				else:
 					dst_path = self.destination / src_path.name
-				self.log.info(f'Using Robocopy.exe to copy directory {src_path} to {self.destination}', echo=True)
+				self.log.info(f'Using Robocopy.exe to copy entire directory {src_path} recursivly into {self.destination}', echo=True)
 				robocopy = RoboCopy(src_path, dst_path, '/e')
 				self._log_robocopy(robocopy.wait(echo=self.echo))
 			for src_path in src_files:
-				self.log.info(f'Using Robocopy.exe to copy file {src_path} to {self.destination}', echo=True)
+				self.log.info(f'Using Robocopy.exe to copy file {src_path} into {self.destination}', echo=True)
 				robocopy = RoboCopy(src_path.parent, self.destination, src_path.name)
 				self._log_robocopy(robocopy.wait(echo=self.echo))
 		head = 'Source\tType/File Size'
@@ -144,11 +152,12 @@ class HashedRoboCopyCli(ArgumentParser):
 	def __init__(self, echo=print):
 		'''Define CLI using argparser'''
 		super().__init__(description=__description__.strip(), prog=__app_name__.lower())
-		self.add_argument('-a', '--algorithms', type=str,
-			help='Algorithms to hash seperated by colon (e.g. "md5,sha256", no hashing: "none", default: "md5")', metavar='STRING'
+		self.add_argument('-a', '--algorithms',
+			help=f'''Algorithms to hash seperated by colon (e.g. "md5,sha256", no hashing: "none", default: "md5",
+available algorithms: {', '.join(FileHash.get_algorithms())})''', metavar='STRING'
 		)
 		self.add_argument('-d', '--destination', type=Path,
-			help='Destination root (hash only if not given)', metavar='DIRECTORY'
+			help='Destination root (only calculate hashes if no destination is given)', metavar='DIRECTORY'
 		)
 		self.add_argument('-f', '--filename', type=str,
 			help='Filename to generate for log and file list (without extension)', metavar='STRING'
