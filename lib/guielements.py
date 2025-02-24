@@ -191,7 +191,20 @@ class GridScrolledText(ScrolledText):
 		if incrow:
 			parent.row += 1
 
-	def echo(self, *msg, end=True, overwrite=False):
+	#def echo(self, *msg, end=True, overwrite=False):
+
+	def echo(self, *arg, end=None):
+		'''Write message to info field (ScrolledText)'''
+		msg = ' '.join(arg)
+		self.info_text.configure(state='normal')
+		if not self.info_newline:
+			self.info_text.delete('end-2l', 'end-1l')
+		self.info_text.insert('end', f'{msg}\n')
+		self.info_text.configure(state='disabled')
+		if self.info_newline:
+			self.info_text.yview('end')
+		self.info_newline = end != '\r'
+
 		'''Append message in info box'''
 		self.configure(state='normal')
 		if overwrite:
