@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.6.0_2025-02-18'
+__version__ = '0.6.0_2025-02-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -53,7 +53,7 @@ class HashedRoboCopy:
 		self.hash_algs = None if not hashes or 'none' in hashes else [alg for alg in hashes if alg in available_algs]
 		self.filename = TimeStamp.now_or(filename)
 		self.outdir = PathUtils.mkdir(outdir)
-		self.tsv_path = self.outdir / f'{self.filename}_files.tsv'
+		self.tsv_path = self.outdir / f'{self.filename}_listing.tsv'
 		self.log = log if log else Logger(
 			filename=self.filename, outdir=self.outdir, head='hashedrobocopy.HashedRoboCopy', echo=self.echo)
 		self.warnings = 0

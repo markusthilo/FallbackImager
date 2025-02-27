@@ -164,12 +164,12 @@ for server/client implementations)'''
 	ALTERNATIVE = 'Alternative method to execute SQL file ignoring commands that do not work with SQLite'
 	DUMP_SCHEMA = 'Dump database schema'
 	DUMP_CONTENT = 'Dump content - all or select table/column'
-	TABLE = 'Dump table'
-	TIP_TABLE = '''Select table of DB to dump
-(leave empty to dump all)'''
-	COLUMN = 'Dump column'
-	TIP_COLUMN = '''Select column of the DB table to dump
-(leave empty to dump all)'''
+	SELECT = 'Select table/column'
+	TIP_SELECT = '''Select table to dump or column to dump (leave
+both fields empty to dump the entire database or
+column filed to get every column of choosen table)'''
+	TABLE = 'Table'
+	COLUMN = 'Column'
 	FIRST_CHOOSE_DB = 'First choose SQLite database file (.db)'
 	SCHEMA = 'Schema'
 	SQL_FILE_REQUIRED = 'File with SQL statements is required'

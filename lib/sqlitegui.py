@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
+from tkinter import StringVar
+from tkinter.ttk import Entry
 from .guilabeling import SQLiteLabels
-from .guielements import NotebookFrame, GridLabel, FilenameSelector, ExpandedFrame
+from .guielements import NotebookFrame, GridLabel, FilenameSelector, ExpandedFrame, GridButton
 from .guielements import GridSeparator, OutDirSelector, FileSelector, ExpandedTree
 from .guielements import StringRadiobuttons, StringSelector, GridLabel, LeftButton
 from .guielements import AddJobButton, Error, ChildWindow, MissingEntry, RightButton
+from .guiconfig import GuiConfig
 from .sqliteutils import SQLiteReader
 
 class SQLiteGui(SQLiteLabels):
@@ -50,6 +53,24 @@ class SQLiteGui(SQLiteLabels):
 		GridLabel(frame, self.ALTERNATIVE, column=1)
 		GridLabel(frame, self.DUMP_SCHEMA, column=1)
 		GridLabel(frame, self.DUMP_CONTENT, column=1)
+		self.select_buttton = GridButton(
+			frame,
+			self.SELECT,
+			self._list_schema,
+			column = 1,
+			incrow = False,
+			tip = self.TIP_SELECT
+		)
+		self.table = StringVar()
+		self.column = StringVar()
+		GridLabel(frame, self.TABLE, column=2, columnspan=1, incrow=False)
+		Entry(frame, textvariable=self.table, width=GuiConfig.MAX_ENTRY_WIDTH).grid(
+			row=frame.row, column=3, sticky='w', padx=frame.padding)
+		GridLabel(frame, self.COLUMN, column=4, columnspan=1, incrow=False)
+		Entry(frame, textvariable=self.column, width=GuiConfig.MAX_ENTRY_WIDTH).grid(
+			row=frame.row, column=5, sticky='w', padx=frame.padding)
+		frame.row += 1
+		'''
 		self.table = StringSelector(
 			frame,
 			self.root.settings.init_stringvar('Table'),
@@ -64,13 +85,12 @@ class SQLiteGui(SQLiteLabels):
 			command = self._list_schema,
 			tip = self.TIP_COLUMN
 		)
+		'''
 		AddJobButton(frame, 'SQLite', self._add_job)
 		self.root.child_win_active = False
 
 	def _list_schema(self):
 		'''Show database schema'''
-		if self.root.child_win_active:
-			return
 		sqlite_db = self.sqlite_db.get()
 		if not sqlite_db:
 			Error(self.FIRST_CHOOSE_DB)
@@ -80,16 +100,22 @@ class SQLiteGui(SQLiteLabels):
 		except Exception as e:
 			Error(repr(e))
 			return
-		self.child_window = ChildWindow(self.root, self.SCHEMA)
+		self.child_window = ChildWindow(self.root, self.SCHEMA, button=self.select_buttton)
 		frame = ExpandedFrame(self.child_window)
-		self.tree = Tree(frame, text=sqlite_db)
+		self.tree = ExpandedTree(frame, GuiConfig.TREE_WIDTH, GuiConfig.TREE_HEIGHT,
+			text=sqlite_db, doubleclick=self._double_click)
 		for table_name, column_names in reader.list_tables():
 			table = self.tree.insert('', 'end', text=table_name, iid=f'{table_name}\t')
 			for column_name in column_names:
 				self.tree.insert(table, 'end', text=column_name, iid=f'{table_name}\t{column_name}')
 		frame = ExpandedFrame(self.child_window)
 		LeftButton(frame, self.SELECT, self._get_selected)
-		RightButton(frame, self.QUIT, self.child_window.destroy)
+		RightButton(frame, self.QUIT, self.child_window.quit)
+
+	def _double_click(self, dummy_event):
+		'''Get selected root'''
+		
+		self._get_selected()
 
 	def _get_selected(self):
 		'''Get the selected root'''
@@ -100,7 +126,7 @@ class SQLiteGui(SQLiteLabels):
 		else:
 			self.table.set(table)
 			self.column.set(column)
-		self.child_window.destroy()
+		self.child_window.quit()
 
 	def _add_job(self):
 		'''Generate command line'''

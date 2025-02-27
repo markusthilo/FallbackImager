@@ -190,30 +190,19 @@ class GridScrolledText(ScrolledText):
 			self.configure(state='disabled')
 		if incrow:
 			parent.row += 1
-
-	#def echo(self, *msg, end=True, overwrite=False):
+		self.info_newline = True
 
 	def echo(self, *arg, end=None):
 		'''Write message to info field (ScrolledText)'''
 		msg = ' '.join(arg)
-		self.info_text.configure(state='normal')
-		if not self.info_newline:
-			self.info_text.delete('end-2l', 'end-1l')
-		self.info_text.insert('end', f'{msg}\n')
-		self.info_text.configure(state='disabled')
-		if self.info_newline:
-			self.info_text.yview('end')
-		self.info_newline = end != '\r'
-
-		'''Append message in info box'''
 		self.configure(state='normal')
-		if overwrite:
-			self.delete('end-2l', 'end')
-			self.insert('end', '\n')
-		self.insert('end', ' '.join(f'{string}' for string in msg) + '\n')
+		if not self.info_newline:
+			self.delete('end-2l', 'end-1l')
+		self.insert('end', f'{msg}\n')
 		self.configure(state='disabled')
-		if end:
+		if self.info_newline:
 			self.yview('end')
+		self.info_newline = end != '\r'
 
 class NotebookFrame(ExpandedFrame):
 	'''To start a module'''
@@ -443,7 +432,6 @@ class ChildWindow(Toplevel):
 			self.protocol('WM_DELETE_WINDOW', destroy)
 		else:
 			self.protocol('WM_DELETE_WINDOW', self.quit)
-		self.root.child_win_active = True
 		self.row = 0
 		self.rowconfigure(0, weight=1)
 		self.columnconfigure(0, weight=1)

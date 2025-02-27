@@ -115,16 +115,14 @@ class SQLite:
 					if not column in reader.get_columns(table):
 						self.log.info(f'Table {table} does not have {column}', echo=True)
 						continue
-					with ExtPath.child(f'{self.filename}_{table}_{column}.txt', parent=self.outdir
-						).open(mode='w', encoding='utf-8') as fh:
+					with self.outdir.joinpath(f'{self.filename}_{table}_{column}.txt').open(mode='w', encoding='utf-8') as fh:
 						for value in reader.fetch_table(table, column=column):
 							print(value, file=fh)
 					continue
 				columns = tuple(col for col in reader.get_columns(table))
 				types = tuple(reader.get_printable(table, col) for col in columns)
 				self.log.info(f'Creating file for table {table}', echo=True)
-				with ExtPath.child(f'{self.filename}_{table}.csv', parent=self.outdir
-					).open(mode='w', encoding='utf-8') as fh:
+				with self.outdir.joinpath(f'{self.filename}_{table}.csv').open(mode='w', encoding='utf-8') as fh:
 					print('\t'.join(columns), file=fh)
 					for row in reader.fetch_table(table, columns=columns):
 						line = list()
@@ -145,8 +143,7 @@ class SQLite:
 		self.start_log()
 		self.log.info('Write database schema to text/CSV file')
 		reader = SQLiteReader(self.db_path)
-		with ExtPath.child(f'{self.filename}_schema.txt', parent=self.outdir
-			).open(mode='w', encoding='utf-8') as fh:
+		with self.outdir.joinpath(f'{self.filename}_schema.txt').open(mode='w', encoding='utf-8') as fh:
 			print('table (rows):\tcolumns (type)\t...', file=fh)
 			for table, columns in reader.list_tables():
 				line = f'{table} ({reader.count(table)}):'
