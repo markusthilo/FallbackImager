@@ -3,7 +3,7 @@
 
 __app_name__ = 'ZipImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-25'
+__version__ = '0.6.0_2025-03-07'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
