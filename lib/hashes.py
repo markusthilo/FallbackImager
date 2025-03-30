@@ -15,6 +15,21 @@ class FileHash:
 		return sorted(algorithms_available)
 
 	@staticmethod
+	def parse_algorithms(arg):
+		'''Parse algorithms given from command line as arguments, None will return md5 as default'''
+		if arg:
+			if arg.lower() == 'none':
+				return None
+			algs = list()
+			for alg in arg.split(','):
+				alg_lower = alg.lower()
+				if not alg_lower in algorithms_available:
+					raise ValueError(f'Algorithm {alg} is not available with hashlib')
+				algs.append(alg_lower)
+		else:
+			return ['md5']
+
+	@staticmethod
 	def hashsum(path, algorithm='md5'):
 		'''Calculate hash of one file'''
 		try:

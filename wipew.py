@@ -103,10 +103,6 @@ class WipeW:
 			cmd += ' -a'
 		elif extra:
 			cmd += ' -x'
-		if self.echo == print:
-			echo = lambda msg: print(f'\r{msg}', end='')
-		else:
-			echo = lambda msg: self.echo(f'\n{msg}', overwrite=True)
 		self.zd_error = False
 		for target in targets:
 			self.echo()
@@ -114,7 +110,7 @@ class WipeW:
 			for line in proc.stdout:
 				msg = line.strip()
 				if msg.startswith('...'):
-					echo(msg)
+					self.echo(msg, end='\r')
 				elif msg == '':
 					self.echo('')
 				else:

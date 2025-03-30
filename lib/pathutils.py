@@ -128,7 +128,7 @@ class Progressor:
 		if isinstance(root_or_quant, int):
 			self.quantitiy = root_or_quant
 		else:
-			self.quantitiy = Path.quantitiy(root_or_quant)
+			self.quantitiy = PathUtils.quantitiy(root_or_quant)
 		self.counter = 0
 		self.percent = 0
 		self.factor = 100/self.quantitiy
@@ -139,4 +139,4 @@ class Progressor:
 		percent = int(self.factor*self.counter)
 		if percent > self.percent:
 			self.percent = percent
-			self.echo(f'{self.percent}%, processing {self.item} {self.counter} of {self.quantitiy}')
+			self.echo(f'{self.percent}%, processing {self.item} {self.counter} of {self.quantitiy}', end='\r')

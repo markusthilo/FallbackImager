@@ -1,4 +1,4 @@
-/bin/env python3
+#/bin/env python3
 # -*- coding: utf-8 -*-
 
 __app_name__ = 'Reporter'

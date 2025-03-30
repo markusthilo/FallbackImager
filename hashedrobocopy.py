@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedRoboCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.6.0_2025-02-27'
+__version__ = '0.6.0_2025-03-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -174,13 +174,7 @@ available algorithms: {', '.join(FileHash.get_algorithms())})''', metavar='STRIN
 		'''Parse arguments'''
 		args = super().parse_args(*cmd)
 		self.sources = args.sources
-		if args.algorithms:
-			if args.algorithms.lower() == 'none':
-				self.algorithms = None
-			else:
-				self.algorithms = [alg.strip() for alg in args.algorithms.split(',')]
-		else:
-			self.algorithms = ['md5']
+		self.algorithms = FileHash.parse_algorithms(args.algorithms)
 		self.destination = args.destination
 		self.filename = args.filename
 		self.outdir = args.outdir

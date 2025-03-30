@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager for Windows'
 __author__ = 'Markus Thilo'
-__version__ = '0.6.0_2025-03-27'
+__version__ = '0.6.0_2025-03-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -54,8 +54,8 @@ class Gui(GuiBase):
 		super().__init__(
 			__app_name__,
 			__version__,
-			__parent_path__,
-			[(Cli, Gui) for Module, Cli, Gui in CANDIDATES if Module().available],
+			parent_path,
+			[(Cli, Gui) for Module, Cli, Gui in self.CANDIDATES if Module().available],
 			Settings(config) if config else Settings(parent_path / 'config.json'),
 			debug = debug
 		)
