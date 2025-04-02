@@ -3,7 +3,7 @@
 
 __app_name__ = 'HashedCopy'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2025-01-11'
+__version__ = '0.6.0_2025-04-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 from lib.pathutils import PathUtils, Progressor
 from lib.timestamp import TimeStamp
 from lib.logger import Logger
-from lib.hashes import FileHashes
+from lib.hashes import FileHash
 try:
 	from os import sync as os_sync
 	def sync(): os_sync()

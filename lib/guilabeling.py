@@ -72,6 +72,7 @@ click to auto generate (if empty)'''
 	NOT_ADMIN = 'No admin privileges'
 	YES = 'Yes'
 	NO = 'No'
+	CALCULATE_HASHES = 'Calculate hash(es)'
 
 class SettingsLabels(BasicLabels):
 	SUDO = 'Get admin privileges'
@@ -138,6 +139,7 @@ The executable has to be placed in the bin-subfolder.'''
 
 class ZipImagerLabels(BasicLabels):
 	TIP_SOURCE = 'Select source root to build ZIP file from'
+	TIP_HASHES = 'Select hash(es) that will be calculated for the ZIP file'
 
 class HashedCopyLabels(BasicLabels):
 	ADD_FILES = 'Add file(s)'
@@ -146,8 +148,7 @@ class HashedCopyLabels(BasicLabels):
 	TIP_ADD_DIR = 'Select a directory to copy'
 	SELECT_DESTINATION = 'Select destination to copy to'
 	TIP_DESTINATION = 'Destination directory (or device/volume) to copy to'
-	CALCULATE_HASHES = 'Calculate hash(es)'
-	TIP_CALCULATE = 'Calculate'
+	TIP_HASHES = 'Select hash(es) that will be calculated for every file'
 
 class SQLiteLabels(BasicLabels):
 	SQLITE_DB = 'SQLite DB'

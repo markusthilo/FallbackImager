@@ -59,7 +59,7 @@ class HashedRoboCopyGui(HashedCopyLabels):
 				frame,
 				self.root.settings.init_boolvar(alg.upper()),
 				f'{alg}       ',
-				tip = f'{self.TIP_CALCULATE} {alg}',
+				tip = f'{self.TIP_HASHES} {alg}',
 				column = (i%8)*2 + 3,
 				incrow = i%8 == 7
 			))
@@ -107,5 +107,7 @@ class HashedRoboCopyGui(HashedCopyLabels):
 		hash_algs = [alg for alg, var in self.calc_hashes if var.get()]
 		if hash_algs:
 			cmd += f' --algorithms {",".join(hash_algs)}'
+		else:
+			cmd += ' --algorithms none'
 		cmd += sources
 		self.root.append_job(cmd)

@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager for Windows'
 __author__ = 'Markus Thilo'
-__version__ = '0.6.0_2025-03-30'
+__version__ = '0.6.0_2025-04-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
