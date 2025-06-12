@@ -7,51 +7,17 @@ __version__ = '0.6.0_2025-04-02'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = '''
-This is a modular utility for forensic work as a complement
-or fallback to the commercial and/or established tools.
-The modules write log files into given output directory,
-calculate hashes and/or lists of copied files etc.
-Multiple jobs can be generated and executed sequentially.
-This is the GUI but I would recommand the CLI tools that
-are provided alongside. This is work in progress.
-'''
+__description__ = 'GUI for libewf'
 
-from os import name as __os_name__
 from pathlib import Path
 from argparse import ArgumentParser
-from lib.settings import Settings
-from lib.guibase import GuiBase
-from ewfimager import EwfImager, EwfImagerCli
-from lib.ewfimagergui import EwfImagerGui
-from ewfchecker import EwfChecker, EwfCheckerCli
-from lib.ewfcheckergui import EwfCheckerGui
-from hashedcopy import HashedCopy, HashedCopyCli
-from lib.hashedcopygui import HashedCopyGui
-from zipimager import ZipImager, ZipImagerCli
-from lib.zipimagergui import ZipImagerGui
-from sqlite import SQLite, SQLiteCli
-from lib.sqlitegui import SQLiteGui
-from reporter import Reporter, ReporterCli
-from lib.reportergui import ReporterGui
-from axchecker import AxChecker, AxCheckerCli
-from lib.axcheckergui import AxCheckerGui
-from wiper import WipeR, WipeRCli
-from lib.wipergui import WipeRGui
+from lib.config import Config
+from lib.gui import Gui
 
 class Gui(GuiBase):
 	'''Define the GUI'''
 
-	CANDIDATES = (
-		(EwfImager, EwfImagerCli, EwfImagerGui),
-		(EwfChecker, EwfCheckerCli, EwfCheckerGui),
-		(HashedCopy, HashedCopyCli, HashedCopyGui),
-		(ZipImager, ZipImagerCli, ZipImagerGui),
-		(SQLite, SQLiteCli, SQLiteGui),
-		(Reporter, ReporterCli, ReporterGui),
-		(AxChecker, AxCheckerCli, AxCheckerGui),
-		(WipeR, WipeRCli, WipeRGui)
-	)
+
 
 	def __init__(self, config=None, debug=False):
 		'''Build GUI'''
@@ -69,4 +35,11 @@ if __name__ == '__main__':  # start here
 	argp.add_argument('-c', '--config', type=Path, help='Config file (default: ~/.config/fallbackimager.conf.json)')
 	argp.add_argument('-d', '--debug', default=False, action='store_true', help='Debug mode')
 	args = argp.parse_args()
-	Gui(debug=args.debug).mainloop()
+	parent_path = Path(__file__).parent
+	Gui(
+		__version__,
+		Config(config if config else __parent_path__ / 'config.json'),
+		Config(__parent_path__ / 'gui.json'),
+		Config(__parent_path__ / 'labels.json'),
+		debug = args.debug
+	).mainloop()
