@@ -12,257 +12,11 @@ The Sqlite module uses the Python library sqlite3. It can show the structure of 
 '''
 
 from sqlite3 import connect as SqliteConnect
+from re import compile as re_compile
+from sys import stderr
 from pathlib import Path
 from argparse import ArgumentParser
-
-
-class SQLiteReader:
-	'''Read SQLite files'''
-
-	NO_QUOTE_TYPES = ('INTEGER', 'REAL', 'NUMERIC')
-	IGNORED_TYPES = ('BLOB',)
-
-	def __init__(self, path):
-		'''Open database'''
-		self._db = SqliteConnect(path)
-		self._cursor = self.db.cursor()
-
-	def commit(self):
-		'''Commit to SQLite database'''
-		self.db.commit()
-
-	def close(self):
-		'''Close database'''
-		self.commit()
-		self._db.close()
-
-	def __del__(self):
-		'''Close database'''
-		self.close()
-	
-	def try_execute(self, statement):
-		'''Rey to execute SQL statement, return Exception or None for success'''
-		try:
-			self._cursor.execute(statement)
-		except Exception as ex:
-			return ex
-		return
-
-	def get_tables(self):
-		'''List tables from scheme'''
-		self.cursor.execute(f'SELECT name FROM sqlite_schema WHERE type="table"')
-		for table in self.cursor.fetchall():
-			yield table[0]
-
-	def get_columns(self, table):
-		'''Get column names for one table'''
-		self.cursor.execute(f'SELECT name FROM pragma_table_info("{table}");')
-		return (res[0] for res in self.cursor.fetchall())
-
-	def count(self, table):
-		'''Get number of lines in a table'''
-		self.cursor.execute(f'SELECT COUNT(*) FROM "{table}"')
-		return self.cursor.fetchone()[0]
-
-	def get_type(self, table, column):
-		'''Get column type'''
-		self.cursor.execute(f'SELECT typeof("{column}") FROM "{table}"')
-		try:
-			return self.cursor.fetchone()[0]
-		except:
-			return None
-		
-	def get_printable(self, table, column):
-		'''Return non printable type, quotes or no quotes'''
-		tp = self.get_type(table, column).upper()
-		if tp in self.NO_QUOTE_TYPES:
-			return ''
-		if tp in self.IGNORED_TYPES:
-			return tp.upper()
-		return '"'
-
-	def list_tables(self):
-		'''List tables with column names from scheme'''
-		for table in self.get_tables():
-			yield table, self.get_columns(table)
-
-	def fetch_table(self, table, column=None, columns=None, where=None):
-		'''Fetch one table row by row'''
-		if column and columns:
-			raise ValueError('Argument "column=" or "columns=" is possible, not both')
-		cmd = 'SELECT '
-		if column:
-			cmd += f'"{column}"'
-		elif columns:
-			cmd += ', '.join(f'"{column}"' for column in columns)
-		else:
-			cmd += '*'
-		cmd += f' FROM "{table}"'
-		if where:
-			cmd += f' WHERE {where}'
-		if column:
-			for row in self.cursor.execute(cmd):
-				yield row[0]
-		else:
-			for row in self.cursor.execute(cmd):
-				yield row
-
-
-
-
-class SQLite:
-	'''The easy way to work with SQLite'''
-
-	def __init__(self, echo=print):
-		'''Generate object'''
-		self.available = True
-		self.echo = echo
-
-	def open(self, db,
-		filename = None,
-		outdir = None,
-		log = None
-	):
-		'''Prepare to create zip file'''
-		self.db_path = Path(db)
-		self.filename = TimeStamp.now_or(filename)
-		self.outdir = PathUtils.mkdir(outdir)
-		self.log = log
-
-	def start_log(self):
-		'''Start logging'''
-		if not self.log:
-			self.log = Logger(filename=self.filename, outdir=self.outdir,
-				head='sqlite.SQLite', echo=self.echo)
-
-	def trans_ex(self, sql_path, executor):
-		'''Read statements from file, translate and execute'''
-		sqldump = SQLDump(sql_path)
-		for cmd_str, values in sqldump.translate_all():
-			try:
-				executor.cursor.execute(cmd_str, values)
-			except Exception as ex:
-				yield ex
-			yield None
-
-	def execute(self, sql_path, alternative=False):
-		'''Execute statements from SQL file'''
-		self.start_log()
-		self.log.info('Executing statements from SQL file', echo=True)
-		executor = SQLiteExec(self.db_path)
-		executed_cnt = 0
-		warning_cnt = 0
-		if alternative:
-			gen_ex = self.trans_ex(sql_path, executor)
-		else:
-			gen_ex = executor.from_file(sql_path)
-		if self.echo == print:
-			echo = lambda msg: print(f'\r{msg}', end='')
-		else:
-			echo = lambda msg: self.echo(msg, overwrite=True)
-		echo(1)
-		for warning in gen_ex:
-			if warning:
-				self.log.warning(warning, echo=False)
-				warning_cnt += 1
-				continue
-			executed_cnt += 1
-			if executed_cnt % 10000 == 0:
-				echo(executed_cnt)
-				if msg := executor.commit():
-					self.log.warning(msg, echo=False)
-					warning_cnt += 1
-		echo('')
-		if msg := executor.commit():
-			self.log.warning(msg)
-			warning_cnt += 1 
-		executor.close()
-		self.log.info(f'Applied {executed_cnt} statement(s) to {self.db_path}', echo=True)
-		if warning_cnt > 0:
-			self.log.warning(f'SQLite library threw {warning_cnt} exception(s)')
-		self.log.close()
-
-	def dump(self, table=None, column=None, sort=False, uniq=False):
-		'''Dump to text file'''
-		self.start_log()
-		self.log.info('Dumping to text/CSV file')
-		reader = SQLiteReader(self.db_path)
-		if table:
-			tables = (table,)
-		else:
-			tables = reader.get_tables()
-		for table in tables:
-			try:
-				len_table = reader.count(table)
-			except Exception as ex:
-				self.log.error(ex)
-			if len_table == 0:
-				self.log.info(f'Skipping table {table} - no items', echo=True)
-			else:
-				if column:
-					tp = reader.get_printable(table, column)
-					if tp != '' and tp != '"':
-						self.log.info(f'{column} of {table} contains {len_table} of type {tp}')
-						continue
-					if not column in reader.get_columns(table):
-						self.log.info(f'Table {table} does not have {column}', echo=True)
-						continue
-					with self.outdir.joinpath(f'{self.filename}_{table}_{column}.txt').open(mode='w', encoding='utf-8') as fh:
-						for value in reader.fetch_table(table, column=column):
-							print(value, file=fh)
-					continue
-				columns = tuple(col for col in reader.get_columns(table))
-				types = tuple(reader.get_printable(table, col) for col in columns)
-				self.log.info(f'Creating file for table {table}', echo=True)
-				with self.outdir.joinpath(f'{self.filename}_{table}.csv').open(mode='w', encoding='utf-8') as fh:
-					print('\t'.join(columns), file=fh)
-					for row in reader.fetch_table(table, columns=columns):
-						line = list()
-						for i, item in enumerate(row):
-							if types[i] == '':
-								line.append(f'{item}')
-							elif types[i] == '"':
-								line.append(f'"{item}"')
-							else:
-								line.append(types[i])
-						print('\t'.join(line), file=fh)
-		self.log.info('Done', echo=True)
-		reader.close()
-		self.log.close()
-
-	def schema(self):
-		'''Get database schema'''
-		self.start_log()
-		self.log.info('Write database schema to text/CSV file')
-		reader = SQLiteReader(self.db_path)
-		with self.outdir.joinpath(f'{self.filename}_schema.txt').open(mode='w', encoding='utf-8') as fh:
-			print('table (rows):\tcolumns (type)\t...', file=fh)
-			for table, columns in reader.list_tables():
-				line = f'{table} ({reader.count(table)}):'
-				for column in columns:
-					if col_type := reader.get_type(table, column):
-						line += f'\t{column} ({col_type})'
-					else:
-						line += f'\t{column}'
-				print(line, file=fh)
-		self.log.info('Done', echo=True)
-		reader.close()
-		self.log.close()
-
-	def list_tables(self):
-		'''Get tables with columns'''
-		reader = SQLiteReader(self.db_path)
-		for name, columns in reader.list_tables():
-			yield name, columns
-
-	def get_schema(self):
-		'''Get short version of database schema and print/echo'''
-		schema = ''
-		for name, columns in self.list_tables():
-			schema += f'{name}: {", ".join(columns)}\n'
-		return schema
-
-
+import sys
 
 class SqlFile:
 	'''Reader for files with SQL statements'''
@@ -314,6 +68,40 @@ class SqlFile:
 					yield statement + ';'
 					statement = ''
 
+class Translator(SqlFile):
+	'''Translate SQL statements to SQLite compatible'''
+
+	def __init__(self, path):
+		'''Set path to SQL file and compile regular expressions'''
+		super().__init__(path)
+		self._remove = tuple(
+			re_compile(pattern) for pattern in (
+				r'(?i)AUTO_INCREMENT',
+				r'(?i)ENGINE\s*=\s*\w+',
+				r'(?i)DEFAULT\s+CHARACTER\s+SET\s+\w+',
+				r'(?i)CHARACTER\s+SET\s+\w+',
+				r'(?i)DEFAULT\s+CHARSET\s*=\s*\w+',
+				r'(?i)COLLATE\s+\w+',
+				r'(?i)DEFAULT\s+COLLATE\s+\w+',
+				r'(?i)UNSIGNED',
+				r'(?i)ON\s+UPDATE\s+CURRENT_TIMESTAMP',
+				r'(?i)COMMENT\s*=\s*\'.*?\'',
+				r'(?i)ROW_FORMAT\s*=\s*\w+',
+				r'(?i)KEY_BLOCK_SIZE\s*=\s*\d+',
+				r'(?i)USING\s+BTREE',
+				r'(?i)USING\s+HASH',
+			)
+		)
+		
+	def read(self):
+		'''Read and make statements compatible with SQLite'''
+		for raw_statement in super().read():
+			statement = raw_statement.strip()
+			for remove in self._remove:
+				statement = remove.sub('', statement)
+			if statement:
+				yield statement
+
 class SqliteDb:
 	'''Work with the SQLite database'''
 
@@ -334,60 +122,197 @@ class SqliteDb:
 		self._db.close()
 	
 	def execute(self, statement):
-		'''Rey to execute SQL statement, return Exception or None for success'''
+		'''Execute SQL statement, return Exception or None for success'''
 		self._cursor.execute(statement)
 
-	def try_execute(self, statement):
-		'''Rey to execute SQL statement, return Exception or None for success'''
-		try:
-			self.execute(statement)
-		except Exception as ex:
-			return ex
-		return
+	def get_tables(self):
+		'''Get tables from scheme'''
+		self.execute(f'SELECT name FROM sqlite_schema WHERE type="table"')
+		for res in self._cursor.fetchall():
+			yield res[0]
 
-class Workers:
+	def get_columns(self, table):
+		'''Get column names for one table'''
+		self.execute(f'SELECT name FROM pragma_table_info("{table}");')
+		for res in self._cursor.fetchall():
+			yield res[0]
+			
+	def count_column(self, table):
+		'''Get number of columns in a table'''
+		self.execute(f'SELECT COUNT(*) FROM pragma_table_info("{table}")')
+		return self._cursor.fetchone()[0]
+
+	def count_rows(self, table):
+		'''Get number of lines in a table'''
+		self.execute(f'SELECT COUNT(*) FROM "{table}"')
+		return self._cursor.fetchone()[0]
+
+	def get_type(self, table, column):
+		'''Get column type'''
+		self.execute(f'SELECT typeof("{column}") FROM "{table}"')
+		try:
+			return self._cursor.fetchone()[0]
+		except:
+			return 'NULL'
+
+	def fetch_table(self, table):
+		'''Fetch one table row by row'''
+		self.execute(f'SELECT * FROM "{table}"')
+		for res in self._cursor.fetchall():
+			yield res
+
+	def fetch_column(self, table, column):
+		'''Fetch one column of one table row by row'''
+		self.execute(f'SELECT "{column}" FROM "{table}"')
+		for res in self._cursor.fetchall():
+			yield res[0]
+
+	def get_printable(self, table, column):
+		'''Return non printable type, quotes or no quotes'''
+		tp = self.get_type(table, column).upper()
+		if tp in self.NO_QUOTE_TYPES:
+			return ''
+		if tp in self.IGNORED_TYPES:
+			return tp.upper()
+		return '"'
+
+class Worker:
 	'''Do the work'''
 
-	@staticmethod
-	def command(db_path, statement):
+	def __init__(self, db_path, write=None, delimiter='\t', debug=False):
+		'''Prepare worker'''
+		self._db = SqliteDb(db_path)
+		self._w = write.open(mode='w', encoding='utf-8') if write else None
+		self._d = delimiter
+		self._debug = debug
+
+	def execute(self, statement):
 		'''Execute given SQL statements'''
-		db = SqliteDb(db_path)
-		db.execute(statement)
-		db.commit()
-		db.close()
+		self._db.execute(statement)
+		self._db.commit()
+		self._db.close()
 
-	@staticmethod
-	def execute(db_path, sql_path):
+	def execute_file(self, sql_path, raw=False):
 		'''Execute SQL statements from file'''
-		db = SqliteDb(db_path)
-		for statement in SqlFile(sql_path).read():
-			print(statement)
-			if ex := db.try_execute(statement):
-				print(type(ex), ex)
-		db.commit()
-		db.close()
-		
+		sql_file = SqlFile(sql_path) if raw else Translator(sql_path)
+		for statement in sql_file.read():
+			exception = None
+			try:
+				self._db.execute(statement)
+			except Exception as ex:
+				exception = ex
+			if exception:
+				print(statement)
+				if self._debug:
+					raise exception
+				print(f'{type(exception)}: {exception}', file=stderr)
+		self._db.commit()
+		self._db.close()
+
+	def schema(self):
+		'''Print database schema'''
+		#print(f'table (rows):{self._d}columns (type){self._d}...', file=sel._w)
+		for table in self._db.get_tables():
+			line = f'{table}{self._d}{self._db.count_rows(table)}'
+			for column in self._db.get_columns(table):
+				line += f'{self._d}{column}{self._d}{self._db.get_type(table, column)}'
+			print(line, file=self._w)
+
+	def table(self, table):
+		'''Print table content'''
+		#	print(f'Column {column} of table {table}:', file=self._w)
+		#	print(f'Table {table}:', file=self._w)
+		for row in self._db.fetch_table(table):
+			print(row, file=self._w)
+
+	def column(self, table, column):
+		'''Print table content, one column only'''
+		#print(f'Column {column} of table {table}:', file=self._w)
+		for col in self._db.fetch_column(table, column):
+			print(row, file=self._w)
 
 
+	def dump(self, table, columns):
+		'''Dump table'''
+		if column:
+			for row in self.fetch_table(table, columns=columns):
+				print(row[0])
+		else:
+			for row in self.fetch_table(table):
+				print('\t'.join(str(item) for item in row))
+				if column:
+					tp = reader.get_printable(table, column)
+					if tp != '' and tp != '"':
+						self.log.info(f'{column} of {table} contains {len_table} of type {tp}')
+						continue
+					if not column in reader.get_columns(table):
+						self.log.info(f'Table {table} does not have {column}', echo=True)
+						continue
+					with self.outdir.joinpath(f'{self.filename}_{table}_{column}.txt').open(mode='w', encoding='utf-8') as fh:
+						for value in reader.fetch_table(table, column=column):
+							print(value, file=fh)
+					continue
+				columns = tuple(col for col in reader.get_columns(table))
+				types = tuple(reader.get_printable(table, col) for col in columns)
+				self.log.info(f'Creating file for table {table}', echo=True)
+				with self.outdir.joinpath(f'{self.filename}_{table}.csv').open(mode='w', encoding='utf-8') as fh:
+					print('\t'.join(columns), file=fh)
+					for row in reader.fetch_table(table, columns=columns):
+						line = list()
+						for i, item in enumerate(row):
+							if types[i] == '':
+								line.append(f'{item}')
+							elif types[i] == '"':
+								line.append(f'"{item}"')
+							else:
+								line.append(types[i])
+						print('\t'.join(line), file=fh)
 
 if __name__ == '__main__':	# start here if called as application
 		arg_parser = ArgumentParser(description=__description__)
-
-		arg_parser.add_argument('-c', '--command', type=str,
-			help='Execute SQL statements and apply to database', metavar='SQL STATEMENT'
+		arg_parser.add_argument('-c', '--column', type=str,
+			help='Select column to dump a single column of a table (-t/--tabel)', metavar='COLUMN NAME / STRING'
+		)
+		arg_parser.add_argument('-d', '--delimiter', type=str,
+			help='Delimiter inbetween columns', metavar='CHAR / STRING'
+		)
+		arg_parser.add_argument('-e', '--execute', type=str,
+			help='Execute SQL statements and apply to database', metavar='SQL STATEMENT / STRING'
 		)
 		arg_parser.add_argument('-f', '--file', type=Path,
 			help='Execute SQL statements from file and apply to database', metavar='SQL FILE'
 		)
-
-
+		arg_parser.add_argument('-g', '--debug', action='store_true',
+			help='Debug mode'
+		)
+		arg_parser.add_argument('-r', '--raw', action='store_true',
+			help='Execute SQL statements without translation to SQLite compatibility'
+		)
+		arg_parser.add_argument('-s', '--schema', action='store_true',
+			help='Show database schema'
+		)
+		arg_parser.add_argument('-t', '--table', type=str,
+			help='Select table to dump', metavar='TABLE NAME / STRING'
+		)
+		arg_parser.add_argument('-w', '--write', type=Path,
+			help='Write to file instead of stdout', metavar='FILE'
+		)
 		arg_parser.add_argument('db', nargs=1, type=Path,
 			help='Database file', metavar='FILE'
 		)
 		args = arg_parser.parse_args()
-		if args.command:
-			Workers.command(args.db[0], args.command)
-		if args.file:
-			Workers.execute(args.db[0], args.execute)
-		
-
+		if args.execute and args.file:
+			raise ValueError('Argument -e/--execute is not possible with -f/--file')
+		worker = Worker(args.db[0], debug=args.debug)
+		if args.execute:
+			worker.execute(args.execute)
+		elif args.file:
+			worker.execute_file(args.file)
+		elif args.schema:
+			worker.schema()
+		if args.column and not args.table:
+			raise ValueError('Argument -c/--column is only possible with -t/--table')
+		if args.column:
+			worker.column(args.table, args.column)
+		elif args.table:
+			worker.table(args.table)
