@@ -1,3 +1,0 @@
-pyinstaller>=6.6.0
-pywin32>=306
-WMI>=1.5.1

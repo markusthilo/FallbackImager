@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.6.0_2025-04-02'
+__version__ = '0.7.0_2025-06-15'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -11,13 +11,11 @@ __description__ = 'GUI for libewf'
 
 from pathlib import Path
 from argparse import ArgumentParser
-from lib.config import Config
-from lib.gui import Gui
+#from lib.config import Config
+#from lib.gui import Gui
 
-class Gui(GuiBase):
+class Gui:
 	'''Define the GUI'''
-
-
 
 	def __init__(self, config=None, debug=False):
 		'''Build GUI'''
@@ -31,15 +29,19 @@ class Gui(GuiBase):
 		)
 
 if __name__ == '__main__':  # start here
-	argp = ArgumentParser(description=__description__.strip())
-	argp.add_argument('-c', '--config', type=Path, help='Config file (default: ~/.config/fallbackimager.conf.json)')
+	config_path = Path.home().joinpath('.config', 'fallbackimager.conf.json')
+	argp = ArgumentParser(description=__description__, epilog=f'{__author__} ({__email__}, License: {__license__})')
+	argp.add_argument('-c', '--config',
+		type = Path,
+		default = config_path,
+		help = f'Config file (default: {config_path}'
+	)
 	argp.add_argument('-d', '--debug', default=False, action='store_true', help='Debug mode')
 	args = argp.parse_args()
-	parent_path = Path(__file__).parent
+	print(config_path)
+	'''
 	Gui(
-		__version__,
-		Config(config if config else __parent_path__ / 'config.json'),
-		Config(__parent_path__ / 'gui.json'),
-		Config(__parent_path__ / 'labels.json'),
+		args.config_path,
 		debug = args.debug
 	).mainloop()
+	'''
