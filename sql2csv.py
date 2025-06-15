@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'SQL2CSV'
 __author__ = 'Markus Thilo'
-__version__ = '0.1.0_2025-06-15'
-__license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
+__version__ = '0.1.0_2025-06-15'
 __status__ = 'Testing'
-__description__ = '''
-The Sqlite module uses the Python library sqlite3. It can show the structure of a .db file or dump the content as CSV/TSV. In addition SQL code can be executed by the library. An alternative method is implemented that is designed to generate a .db file from a MySQL dump file in case sqlite3 fails.
-'''
+__license__ = 'GPL-3'
+__description__ = 'Python script to fill a SQLite DB file by SQL dump and write content as CSV.'
 
 from sqlite3 import connect as SqliteConnect
 from re import compile as re_compile
@@ -132,12 +129,22 @@ class SqliteDb:
 		self._cursor.execute(f'SELECT name FROM sqlite_schema WHERE type="table";')
 		for res in self._cursor.fetchall():
 			yield res[0]
+	
+	def table_exits(self, table):
+		'''Check if table exists'''
+		self._cursor.execute(f'SELECT name FROM sqlite_schema WHERE type="table" AND name="{table}";')
+		return bool(self._cursor.fetchone())
 
 	def get_columns(self, table):
 		'''Get column names for one table'''
 		self._cursor.execute(f'SELECT name FROM pragma_table_info("{table}");')
 		for res in self._cursor.fetchall():
 			yield res[0]
+	
+	def column_exits(self, table, column):
+		'''Check if column exists'''
+		self._cursor.execute(f'SELECT name FROM pragma_table_info("{table}") WHERE name="{column}";')
+		return bool(self._cursor.fetchone())
 
 	def count_rows(self, table):
 		'''Get number of lines in a table'''
@@ -191,18 +198,22 @@ class Worker:
 						line.append(f'{column}')
 					else:
 						line.append('')
-				print(self._d.join(line))
+				print(self._d.join(line), file=self._w)
 		else:
 			for cnt, columns in enumerate(rows):
-				print(columns)
 				if cnt == self._n:
 					break
-				print(self._d.join(columns), file=self._w)
+				print(f'{columns}', file=self._w)
 
 	def execute(self, statement):
 		'''Execute given SQL statements'''
-		for line in self._db.execute(statement):
-			print(line, file=self._w)
+		try:
+			for line in self._db.execute(statement):
+				if self._debug:
+					self._print_lines(line)
+		except Exception as ex:
+			print(statement, file=stderr)
+			raise ex
 		self._db.commit()
 
 	def execute_file(self, sql_path, raw=False):
@@ -212,11 +223,12 @@ class Worker:
 			exception = None
 			try:
 				for line in self._db.execute(statement):
-					print(line, file=self._w)
+					if self._debug:
+						self._print_lines(line)
 			except Exception as ex:
 				exception = ex
 			if exception:
-				print(statement)
+				print(statement, file=stderr)
 				if self._debug:
 					raise exception
 				print(f'{type(exception)}: {exception}', file=stderr)
@@ -261,6 +273,8 @@ class Worker:
 
 	def table(self, table):
 		'''Print table content'''
+		if not self._db.table_exits(table):
+			raise ChildProcessError(f'Table "{table}" does not exist')
 		columns = tuple(self._db.get_columns(table))
 		if not self._l:
 			print('"' + f'"{self._d}"'.join(columns) + '"', file=self._w)
@@ -270,6 +284,8 @@ class Worker:
 
 	def column(self, table, column):
 		'''Print table content, one column only'''
+		if not self._db.table_exits(table):
+			raise ChildProcessError(f'Column "{column}" does not exist in Table "{table}"')
 		if not self._l:
 			print(f'"{column}"', file=self._w)
 		self._print_lines(self._db.fetch_column(table, column),
@@ -278,15 +294,23 @@ class Worker:
 
 	def dump_all(self, dir_path):
 		'''Dump DB to folder'''
-		pass
+		for table_name in self._db.get_tables():
+			file_path = dir_path / f'{table_name}.csv'
+			with file_path.open(mode='w', encoding='utf-8') as self._w:
+				self.table(table_name)
+		self._w = None
 
 	def close(self):
 		'''Close database'''
 		self._db.close()
+		if self._w:
+			self._w.close()
 
 if __name__ == '__main__':	# start here if called as application
-		arg_parser = ArgumentParser(description=__description__)
-
+		arg_parser = ArgumentParser(
+			description = __description__,
+			epilog = f'Author: {__author__} ({__email__}), License: {__license__ }'
+		)
 		arg_parser.add_argument('-a', '--all', type=Path,
 			help='Write all tables in an empty directory, use tabel names for file names', metavar='DIRECTORY'
 		)
@@ -333,7 +357,8 @@ if __name__ == '__main__':	# start here if called as application
 			raise ValueError('Argument -c/--column is only possible with -t/--table')
 		if args.execute and (args.file or args.read):
 			raise ValueError('Only one option -e/--execute,  -f/--file or -r/--read at a time')
-		
+		if args.all and (args.write or args.table or args.column):
+			raise ValueError('Option -a/--all is not possible with -t/--table')
 		worker = Worker(args.db[0],
 			delimiter = args.delimiter,
 			headless = args.headless,
@@ -341,20 +366,26 @@ if __name__ == '__main__':	# start here if called as application
 			write = args.write,
 			debug = args.debug
 		)
-
 		if args.execute:
 			worker.execute(args.execute)
 		elif args.file:
 			worker.execute_file(args.file)
 		elif args.read:
 			worker.execute_file(args.read, raw=True)
-		
 		if args.table and args.column:
 			worker.column(args.table, args.column)
 		elif args.table:
 			worker.table(args.table)
 		elif args.all:
+			if args.all.exists():
+				if args.all.is_dir() and any(args.all.iterdir()):
+					raise FileExistsError(f'"{args.all}" is not empty')
+				else:
+					raise FileExistsError(f'"{args.all}" exits but is not a directory')
+			else:
+				args.all.mkdir(parents=True)
 			worker.dump_all(args.all)
+			worker.schema()
 		elif args.schema or not (args.execute or args.file or args.read):
 			worker.schema()
 		worker.close()
