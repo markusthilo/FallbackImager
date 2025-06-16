@@ -3,45 +3,34 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.7.0_2025-06-15'
+__version__ = '0.7.0_2025-06-16'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
-__description__ = 'GUI for libewf'
+__description__ = 'GUI for libewf and more'
 
 from pathlib import Path
 from argparse import ArgumentParser
-#from lib.config import Config
-#from lib.gui import Gui
-
-class Gui:
-	'''Define the GUI'''
-
-	def __init__(self, config=None, debug=False):
-		'''Build GUI'''
-		super().__init__(
-			__app_name__,
-			__version__,
-			Path(__file__).parent,
-			[(Cli, Gui) for Module, Cli, Gui in self.CANDIDATES if Module().available],
-			Settings(config) if config else Settings(Path.home() / '.config/fallbackimager.conf.json'),
-			debug = debug
-		)
+from classes.config import Config
+from classes.gui import Gui
 
 if __name__ == '__main__':  # start here
-	config_path = Path.home().joinpath('.config', 'fallbackimager.conf.json')
-	argp = ArgumentParser(description=__description__, epilog=f'{__author__} ({__email__}, License: {__license__})')
+	config = Config()
+	argp = ArgumentParser(description=__description__, epilog=f'{__author__} ({__email__}), License: {__license__}')
 	argp.add_argument('-c', '--config',
 		type = Path,
-		default = config_path,
-		help = f'Config file (default: {config_path}'
+		default = config.path,
+		help = f'Config file (default: {config.path}'
 	)
-	argp.add_argument('-d', '--debug', default=False, action='store_true', help='Debug mode')
+	argp.add_argument('-d', '--debug', action='store_true', help='Debug mode')
+	argp.add_argument('-l', '--lang',
+		type = str,
+		help = f'Force to use this language at start (default: English / "en")'
+	)
 	args = argp.parse_args()
-	print(config_path)
-	'''
-	Gui(
-		args.config_path,
-		debug = args.debug
-	).mainloop()
-	'''
+	config.update_path(args.config)
+	if config.load():
+		raise ex
+	config.set('app_name', __app_name__, force=True)
+	config.set('version', __version__, force=True)
+	Gui(config, lang=args.lang, debug=args.debug).mainloop()

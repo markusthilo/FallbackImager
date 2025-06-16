@@ -1,0 +1,18 @@
+{
+	"en": {
+		"blockdev_heading": ["Path", "Label", "Type", "Size", "File system", "Read only", "Specs / mount points"],
+		"yes": "yes",
+		"no": "no",
+		"blockdev_tip": "Select block device",
+		"select_target": "Select Target",
+		"quit": "Quit"
+	},
+	"de": {
+		"blockdev_heading": ["Pfad", "Label", "Typ", "Größe", "Dateisystem", "Schreibgeschützt", "Spezifikationen / Mountpoints"],
+		"yes": "ja",
+		"no": "nein",
+		"blockdev_tip": "Datenträger auswählen",
+		"select_target": "Ziel auswählen",
+		"quit": "Verlassen"
+	}
+}

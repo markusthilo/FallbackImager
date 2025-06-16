@@ -1,0 +1,19 @@
+{
+	"pad_factor": 1,
+	"x_factor": 96,
+	"y_factor": 64,
+	"row_weights": [1, 0, 0, 0, 0, 1, 0],
+	"column_weights": [0, 1, 1, 1],
+	"blockdev_tree_widths": [16, 8, 8, 8, 8, 8, 32],
+	"blockdev_tree_stretch": [1, 1, 0, 0, 0, 0, 1],
+
+
+	"green_fg": "black",
+	"green_bg": "pale green",
+	"red_fg": "black",
+	"red_bg": "coral",
+	"symbol_factor": 4,
+	"symbol_fg": "red",
+	"symbol_bg": "white",
+	"shutdown_delay": 60
+}
