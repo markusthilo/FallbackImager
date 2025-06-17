@@ -1,1 +1,1 @@
-{"app_name": "FallbackImager", "version": "0.7.0_2025-06-16", "lang": "en"}
+{"app_name": "FallbackImager", "version": "0.7.0_2025-06-17", "lang": "en", "case_no": [], "evidence_no": [], "description": [], "examiner": [], "notes": [], "media_type": "auto", "media_flag": "auto", "file_format": "encase6", "compression": "fast", "segment_size": "auto", "additional_hash": "-", "sectors_at_once": 64, "retries": 2, "granularity": 64}

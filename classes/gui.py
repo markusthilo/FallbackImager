@@ -7,14 +7,15 @@ from pathlib import Path
 from subprocess import run
 from tkinter import Tk, PhotoImage, StringVar, BooleanVar, Checkbutton, Toplevel
 from tkinter.font import nametofont
-from tkinter.ttk import Frame, Treeview, Scrollbar, Notebook, Label, Entry, Button, Combobox
-from tkinter.ttk import Spinbox, Progressbar, Sizegrip
+from tkinter.ttk import Frame, Treeview, Scrollbar, Notebook, Label, LabelFrame, Combobox, Entry
+from tkinter.ttk import Spinbox, Progressbar, Sizegrip, Button
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showerror, askokcancel, askyesno, showwarning
 from idlelib.tooltip import Hovertip
 from classes.config import GuiDefs, LangPackage
 from classes.coreutils import CoreUtils
+from tkinter import IntVar
 
 class WorkThread(Thread):
 	'''The worker has tu run as thread not to freeze GUI/Tk'''
@@ -68,7 +69,8 @@ class Gui(Tk):
 		self.geometry(f'{min_size_x}x{min_size_y}')
 		self.resizable(True, True)
 		self._pad = int(self._font['size'] * self._defs.pad_factor)
-		frame = Frame(self)	### block devices in tree view ###
+		###### block devices in tree view ######
+		frame = Frame(self)
 		frame.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=(self._pad,0))
 		self._blockdev_tree = Treeview(frame,
 			selectmode = 'browse',
@@ -86,108 +88,170 @@ class Gui(Tk):
 		self._blockdev_tree.configure(yscrollcommand=vsb.set)
 		Hovertip(frame, self._labels.blockdev_tip)
 		#self._drive_tree.bind('<Button-1>', self._select_blockdev)
-		self._notebook = Notebook(self, padding=self._pad)	### notebook ###
-		self._notebook.grid(row=1, column=0, columnspan=4, sticky='nsew')#, padx=self._pad, pady=self._pad)
+		###### notebook ######
+		self._notebook = Notebook(self, padding=self._pad)
+		self._notebook.grid(row=1, column=0, columnspan=4, sticky='nsew')
 		self._ewfacquire_frame = Frame(self._notebook)
-		self._notebook.add(self._ewfacquire_frame, text=' ewfaquire ')
+		self._notebook.add(self._ewfacquire_frame, text=' ewfaquire ', sticky='nswe')
 		self._ewfverify_frame = Frame(self._notebook)
-		self._notebook.add(self._ewfverify_frame, text=' ewfverify ')
+		self._notebook.add(self._ewfverify_frame, text=' ewfverify ', sticky='nswe')
 		self._wipe_frame = Frame(self._notebook)
-		self._notebook.add(self._wipe_frame, text=' wipe ')
-
-		return
-		self._case_no = stringvar(value='CaseNo'),
-		self._case_no = stringvar(value='CaseNo'),
-		
-
-		self.evidence_no = (stringvar(value='EvidenceNo'))
-		self.description = StringSelector(
-			frame,
-			self.root.settings.init_stringvar('Description'),
-			self.DESCRIPTION,
-			command = self._set_def_description,
-			tip = self.TIP_METADATA
-		)
-		self.examiner_name = StringSelector(
-			frame,
-			self.root.settings.init_stringvar('ExaminerName'),
-			self.EXAMINER_NAME,
-			command = self._set_def_examiner_name,
-			tip = self.TIP_METADATA
-		)
-		self.notes_select = StringRadiobuttons(
-			frame,
-			self.root.settings.init_stringvar('Notes', default='A'),
-			'ABC'
-		)
-		self.notes = dict()
-		for index in 'ABC':
-			self.notes[index] = StringSelector(
-				frame,
-				self.root.settings.init_stringvar(f'Note{index}'),
-				f'{self.NOTES} {index}',
-				command = partial(self._select_notes, index),
-				tip = self.TIP_NOTE
-			)
-		self.segment_size = StringSelector(
-			frame,
-			self.root.settings.init_stringvar('SegmentSize', default=self.DEF_SIZE),
-			self.SEGMENT_SIZE,
-			width = GuiConfig.SMALL_FIELD_WIDTH,
-			command = self._set_def_size,
-			columnspan = 2,
-			incrow = False,
-			tip=self.TIP_SEGMENT_SIZE
-		)
-		self.compression = GridMenu(
-			frame,
-			self.root.settings.init_stringvar('Compression', default='fast'),
-			self.COMPRESSION,
-			('fast', 'best', 'none'),
-			column = 3,
-			incrow = False,
-			tip = self.TIP_COMPRESSION
-		)
-		self.media_type = GridMenu(
-			frame,
-			self.root.settings.init_stringvar('MediaType', default='fixed'),
-			self.MEDIA_TYPE,
-			('auto', 'fixed', 'removable', 'optical'),
-			column = 5,
-			incrow = False,
-			tip = self.TIP_METADATA
-		)
-		self.media_flag = GridMenu(
-			frame,
-			self.root.settings.init_stringvar('MediaFlag', default='physical'),
-			self.MEDIA_FLAG,
-			('auto', 'logical', 'physical'),
-			column = 7,
-			tip = self.TIP_METADATA
-		)
-
-		
-		return
-
-		frame = Frame(self)	### source selector
-		frame.grid(row=0, column=0, sticky='nw')
-		self._source_dir_button = Button(frame, text=self._labels.directory, command=self._select_source_dir)	# source dir button #
-		self._source_dir_button.pack(anchor='nw', padx=self._pad, pady=self._pad)
-		Hovertip(self._source_dir_button, self._labels.source_dir_tip)
-		self._source_files_button = Button(frame, text=self._labels.files, command=self._select_source_files)	# souce file button
-		self._source_files_button.pack(anchor='nw', padx=self._pad, pady=self._pad)
-		Hovertip(self._source_files_button, self._labels.source_files_tip)
-		self._source_multiple_button = Button(frame, text=self._labels.multiple, command=self._select_multiple)	# multiple button #
-		self._source_multiple_button.pack(anchor='nw', padx=self._pad, pady=self._pad)
-		Hovertip(self._source_multiple_button, self._labels.source_multiple_tip)
-		self._source_text = ScrolledText(self, # source field
+		self._notebook.add(self._wipe_frame, text=' wipe ', sticky='nswe')
+		####### EWFACQUIRE #######
+		for col in range(4):
+			self._ewfacquire_frame.columnconfigure(col, weight=1)
+		source_frame = LabelFrame(self._ewfacquire_frame, text=self._labels.source)	### source selector
+		source_frame.grid(row=0, column=0, columnspan=5, sticky='nswe')
+		Hovertip(source_frame, self._labels.source_tip)
+		self._source_text = ScrolledText(source_frame,
 			font = (self._font['family'], self._font['size']),
 			wrap = "none",
-			padx = self._pad,
-			pady = self._pad
+			padx = self._pad // 2,
+			pady = self._pad // 4,
+			height = 2
 		)
-		self._source_text.grid(row=0, column=1, columnspan=3, sticky='nswe', ipadx=self._pad, ipady=self._pad, padx=self._pad, pady=self._pad)
-		Hovertip(self._source_text, self._labels.source_text_tip)
+		self._source_text.pack(side='left', expand=True, fill='both', padx=self._pad, pady=(0, self._pad))
+		Hovertip(self._source_text, self._labels.source_tip)
+		button = Button(source_frame, text=self._labels.add_source_files, command=self._select_source_files)
+		button.pack(side='right', fill='y', padx=(0, self._pad), pady=(0, self._pad))
+		Hovertip(button, self._labels.add_source_files_tip)
+		self._case_no = StringVar()	### case numnber ###
+		self._dropdown_entry(
+			self._ewfacquire_frame,
+			self._labels.case_no,
+			self._case_no,
+			'case_no',
+			self._labels.ewf_metadata_tip
+		).grid(row=1, column=0, columnspan=2, sticky='ew', padx=self._pad, pady=(self._pad, 0))
+		self._evidence_no = StringVar()	### evidence numnber ###
+		self._dropdown_entry(
+			self._ewfacquire_frame,
+			self._labels.evidence_no,
+			self._evidence_no,
+			'evidence_no',
+			self._labels.ewf_metadata_tip
+		).grid(row=1, column=2, columnspan=2, sticky='ew', padx=(0, self._pad), pady=(self._pad, 0))
+		self._description = StringVar()	### description ###
+		self._dropdown_entry(
+			self._ewfacquire_frame,
+			self._labels.description,
+			self._description,
+			'description',
+			self._labels.ewf_metadata_tip
+		).grid(row=2, column=0, columnspan=4, sticky='ew', padx=self._pad,)
+		self._examiner = StringVar()	### examiner ###
+		self._dropdown_entry(
+			self._ewfacquire_frame,
+			self._labels.examiner,
+			self._examiner,
+			'examiner',
+			self._labels.ewf_metadata_tip
+		).grid(row=3, column=0, columnspan=4, sticky='ew', padx=self._pad)
+		self._notes = StringVar()	### notes ###
+		self._dropdown_entry(
+			self._ewfacquire_frame,
+			self._labels.notes,
+			self._notes,
+			'notes',
+			self._labels.ewf_metadata_tip
+		).grid(row=4, column=0, columnspan=5, sticky='ew', padx=self._pad)
+		self._media_type = StringVar(value=self._config.get('media_type', default='auto'))	### media type ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.media_type,
+			self._media_type,
+			('auto', 'fixed', 'removable', 'optical'),
+			self._labels.ewf_metadata_tip
+		).grid(row=1, column=4, sticky='ew', padx=self._pad, pady=(self._pad, 0))
+		self._media_flag = StringVar(value=self._config.get('media_flag', default='auto'))	### media flag ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.media_flag,
+			self._media_type,
+			('auto', 'logical', 'physical'),
+			self._labels.ewf_metadata_tip
+		).grid(row=2, column=4, sticky='ew', padx=self._pad)
+		self._file_format = StringVar(value=self._config.get('file_format', default='encase6'))	### file format ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.file_format,
+			self._file_format,
+			('ewf', 'smart', 'ftk', 'encase1', 'encase2', 'encase3', 'encase4', 'encase5', 'encase6', 'linen5', 'linen6', 'ewfx'),
+			self._labels.file_format_tip
+		).grid(row=3, column=4, sticky='ew', padx=self._pad)
+		self._compression = StringVar(value=self._config.get('compression', default='fast'))	### compression ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.compression,
+			self._compression,
+			('fast', 'best', 'empty-block', 'none'),
+			self._labels.compression_tip
+		).grid(row=5, column=0, sticky='ew', padx=self._pad)
+		self._segment_size = StringVar(value=self._config.get('segment_size', default='auto'))	### segment size ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.segment_size,
+			self._segment_size,
+			('auto', '1-file', '1.4GiB', '4GiB', '8GiB', '16GiB', '32GiB', '256GiB', '512GiB', '1TiB'),
+			self._labels.segment_size_tip
+		).grid(row=5, column=1, sticky='ew', padx=(0, self._pad))
+		self._additional_hash = StringVar(value=self._config.get('additional_hash', default='-'))	### additional hash ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.additional_hash,
+			self._additional_hash,
+			('-', 'sha1', 'sha256'),
+			self._labels.additional_hash_tip
+		).grid(row=5, column=2, sticky='ew', padx=(0, self._pad))
+		self._bytes_per_sector = IntVar(value=512)	### bytes per sector ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.bytes_per_sector,
+			self._bytes_per_sector,
+			tuple(2 ** p for p in range(9, 17)),
+			self._labels.bytes_per_sector_tip
+		).grid(row=5, column=3, sticky='ew', padx=(0, self._pad))
+		self._sectors_at_once = IntVar(value=self._config.get('sectors_at_once', default=64))	### sectors at once ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.sectors_at_once,
+			self._sectors_at_once,
+			tuple(2 ** p for p in range(4, 16)),
+			self._labels.sectors_at_once_tip
+		).grid(row=5, column=4, sticky='ew', padx=self._pad)
+		self._retries = IntVar(value=self._config.get('retries', default=2))	### retries on error ###
+		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.retries)
+		frame.grid(row=6, column=0, sticky='ew', padx=self._pad, pady=(0, self._pad))
+		spinbox = Spinbox(frame, from_=0, to=255, textvariable=self._retries)
+		spinbox.pack(padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, self._labels.retries_tip)
+		Hovertip(spinbox, self._labels.retries_tip)
+
+		self._granularity = IntVar(value=self._config.get('granularity', default=64))	### error granularity ###
+		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.granularity)
+		frame.grid(row=6, column=1, sticky='ew', padx=(0, self._pad), pady=(0, self._pad))
+		spinbox = Spinbox(frame, from_=1, to=64, textvariable=self._granularity)
+		spinbox.pack(padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, self._labels.granularity_tip)
+		Hovertip(spinbox, self._labels.granularity_tip)
+
+		self._mimic_encase = BooleanVar(value=False)	### mimic encase like behavior ###
+		#(mimic EnCase like behavior) (yes, no) [no]: 
+
+		self._offset = IntVar(value=0)	### offset ###
+		self._bytes_to_acquire = StringVar(value='all')	### bytes to aquire ###
+
+		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
+		#	-A:     codepage of header section, options: ascii (default),
+	    #    windows-874, windows-932, windows-936, windows-949,
+	    #    windows-950, windows-1250, windows-1251, windows-1252,
+	    #    windows-1253, windows-1254, windows-1255, windows-1256,
+	    #    windows-1257 or windows-1258
+		#	-s:     swap byte pairs of the media data (from AB to BA) (use this for big to little endian conversion and vice versa)
+		#-2:     specify the secondary target file (without extension) to writeto
+
+		return
+
 		self._destination_button = Button(self, text=self._labels.destination, command=self._select_destination)	### destination selector
 		self._destination_button.grid(row=1, column=0, sticky='nswe', padx=self._pad, pady=(0, self._pad))
 		self._destination = StringVar()
@@ -263,6 +327,47 @@ class Gui(Tk):
 		Sizegrip(self).grid(row=2, column=3, sticky='se')
 		self._init_warning()
 
+	def _dropdown_entry(self, parent, text, textvariable, key, hovertip):
+		'''Combobox with LabelFrame and Buttons'''
+		def _store():
+			if value := textvariable.get():
+				values = self._config.get(key)
+				if not value in values:
+					values.append(value)
+					values.sort()
+					textvariable.set(value)
+					self._config.set(key, values)
+		def _remove():
+			if value := textvariable.get():
+				values = self._config.get(key)
+				if value in values:
+					values.remove(value)
+					textvariable.set(values[0] if values else '')
+					entry['values'] = values
+					self._config.set(key, values)
+		frame = LabelFrame(parent, text=text)
+		button_remove = Button(frame, text='\u274C', width=2, command=_remove)
+		button_remove.pack(side='right', padx=(0, self._pad), pady=(0, self._pad))
+		button_store = Button(frame, text='\u272A', width=2, command=_store)
+		button_store.pack(side='right', padx=(0, self._pad), pady=(0, self._pad))
+		entry = Combobox(frame, textvariable=textvariable, values=self._config.get(key, default=list()))
+		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, hovertip)
+		Hovertip(entry, hovertip)
+		Hovertip(button_store, self._labels.store_value_tip)
+		Hovertip(button_remove, self._labels.remove_value_tip)
+		return frame
+
+	def _dropdown_selector(self, parent, text, textvariable, values, hovertip):
+		'''Combobox with LabelFrame'''
+		frame = LabelFrame(parent, text=text)
+		entry = Combobox(frame, textvariable=textvariable, values=values, state='readonly')
+		entry.pack(expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, hovertip)
+		Hovertip(entry, hovertip)
+		return frame
+
+
 	def _clean(self, info):
 		'''Clean info text'''
 		if info == None:
@@ -298,6 +403,11 @@ class Gui(Tk):
 				),
 				open = True
 			)
+
+	def _select_case_no(self):
+		'''Select case number'''
+		if case_no := askstring(title=self._labels.case_no, prompt=self._labels.case_no_prompt):
+			self._case_no.set(value=case_no)
 
 	def _read_source_paths(self):
 		'''Read paths from text field'''
