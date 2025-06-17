@@ -15,6 +15,7 @@
 		"notes": "Notes",
 		"media_type": "Media type",
 		"media_flag": "Media characteristics",
+		"codepage": "Codepage",
 		"compression": "Compression",
 		"compression_tip": "Select compression (default is \"fast\".",
 		"file_format": "EWF file format",
@@ -32,7 +33,10 @@
 		"retries_tip": "Specify the number of retries when\na read error occurs (default is 2).", 
 		"granularity": "Granularity",
 		"granularity_tip": "Specify the number of sectors to be used as error granularity.",
-
+		"offset": "Offset",
+		"offset_tip": "Specify the offset to start to acquire (default is 0)",
+		"bytes_to_acquire": "Bytes to acquire",
+		"bytes_to_acquire_tip": "Specify the number of bytes\nto acquire (default is 0 = all).",
 
 		"quit": "Quit",
 		"store_value_tip": "Store this value in list.",
@@ -55,6 +59,7 @@
 		"notes": "Notizen",
 		"media_type": "Medientyp",
 		"media_flag": "Medieneigenschaft",
+		"codepage": "Codepage",
 		"compression": "Komprimierung",
 		"compression_tip": "Komprimierung auswählen.",
 		"file_format": "EWF-Dateiformat",
@@ -72,7 +77,10 @@
 		"retries_tip": "(Standard ist 2).", 
 		"granularity": "Granularität",
 		"granularity_tip": "Geben Sie die Anzahl der Sektoren an, die als\nFehlergranularität verwendet werden sollen(Standard ist 64).",
-
+		"offset": "Offset",
+		"offest_tip": "Geben Sie den Offset an, ab dem die\nSicherung beginnen soll (Standard ist 0).",
+		"bytes_to_acquire": "Zu sichernde Bytes",
+		"bytes_to_acquiret_tip": "Anzahl an Bytes, die ausgelesen werden (Standard ist 0 = alle).",
 
 		"quit": "Verlassen",
 		"store_value_tip": "Diesen Wert in Liste speichern.",

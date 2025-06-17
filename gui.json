@@ -1,5 +1,5 @@
 {
-	"pad_factor": 1,
+	"pad_factor": 0.25,
 	"x_factor": 96,
 	"y_factor": 64,
 	"row_weights": [1, 0, 0, 0, 0, 1, 0],

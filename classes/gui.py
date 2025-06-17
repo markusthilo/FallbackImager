@@ -71,7 +71,7 @@ class Gui(Tk):
 		self._pad = int(self._font['size'] * self._defs.pad_factor)
 		###### block devices in tree view ######
 		frame = Frame(self)
-		frame.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=(self._pad,0))
+		frame.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._blockdev_tree = Treeview(frame,
 			selectmode = 'browse',
 			columns = ('label', 'type', 'size', 'fstype', 'ro', 'info'),
@@ -106,14 +106,14 @@ class Gui(Tk):
 		self._source_text = ScrolledText(source_frame,
 			font = (self._font['family'], self._font['size']),
 			wrap = "none",
-			padx = self._pad // 2,
-			pady = self._pad // 4,
+			padx = self._pad,
+			pady = self._pad,
 			height = 2
 		)
-		self._source_text.pack(side='left', expand=True, fill='both', padx=self._pad, pady=(0, self._pad))
+		self._source_text.pack(side='left', expand=True, fill='both', padx=self._pad, pady=self._pad)
 		Hovertip(self._source_text, self._labels.source_tip)
 		button = Button(source_frame, text=self._labels.add_source_files, command=self._select_source_files)
-		button.pack(side='right', fill='y', padx=(0, self._pad), pady=(0, self._pad))
+		button.pack(side='right', fill='y', padx=self._pad, pady=self._pad)
 		Hovertip(button, self._labels.add_source_files_tip)
 		self._case_no = StringVar()	### case numnber ###
 		self._dropdown_entry(
@@ -122,7 +122,7 @@ class Gui(Tk):
 			self._case_no,
 			'case_no',
 			self._labels.ewf_metadata_tip
-		).grid(row=1, column=0, columnspan=2, sticky='ew', padx=self._pad, pady=(self._pad, 0))
+		).grid(row=1, column=0, columnspan=2, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._evidence_no = StringVar()	### evidence numnber ###
 		self._dropdown_entry(
 			self._ewfacquire_frame,
@@ -130,7 +130,7 @@ class Gui(Tk):
 			self._evidence_no,
 			'evidence_no',
 			self._labels.ewf_metadata_tip
-		).grid(row=1, column=2, columnspan=2, sticky='ew', padx=(0, self._pad), pady=(self._pad, 0))
+		).grid(row=1, column=2, columnspan=2, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._description = StringVar()	### description ###
 		self._dropdown_entry(
 			self._ewfacquire_frame,
@@ -138,7 +138,7 @@ class Gui(Tk):
 			self._description,
 			'description',
 			self._labels.ewf_metadata_tip
-		).grid(row=2, column=0, columnspan=4, sticky='ew', padx=self._pad,)
+		).grid(row=2, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._examiner = StringVar()	### examiner ###
 		self._dropdown_entry(
 			self._ewfacquire_frame,
@@ -146,7 +146,7 @@ class Gui(Tk):
 			self._examiner,
 			'examiner',
 			self._labels.ewf_metadata_tip
-		).grid(row=3, column=0, columnspan=4, sticky='ew', padx=self._pad)
+		).grid(row=3, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._notes = StringVar()	### notes ###
 		self._dropdown_entry(
 			self._ewfacquire_frame,
@@ -154,7 +154,7 @@ class Gui(Tk):
 			self._notes,
 			'notes',
 			self._labels.ewf_metadata_tip
-		).grid(row=4, column=0, columnspan=5, sticky='ew', padx=self._pad)
+		).grid(row=4, column=0, columnspan=5, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._media_type = StringVar(value=self._config.get('media_type', default='auto'))	### media type ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
@@ -162,7 +162,7 @@ class Gui(Tk):
 			self._media_type,
 			('auto', 'fixed', 'removable', 'optical'),
 			self._labels.ewf_metadata_tip
-		).grid(row=1, column=4, sticky='ew', padx=self._pad, pady=(self._pad, 0))
+		).grid(row=1, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._media_flag = StringVar(value=self._config.get('media_flag', default='auto'))	### media flag ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
@@ -170,15 +170,19 @@ class Gui(Tk):
 			self._media_type,
 			('auto', 'logical', 'physical'),
 			self._labels.ewf_metadata_tip
-		).grid(row=2, column=4, sticky='ew', padx=self._pad)
-		self._file_format = StringVar(value=self._config.get('file_format', default='encase6'))	### file format ###
+		).grid(row=2, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._codepage = StringVar(value=self._config.get('codepage', default='ascii'))	### codepage ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
-			self._labels.file_format,
-			self._file_format,
-			('ewf', 'smart', 'ftk', 'encase1', 'encase2', 'encase3', 'encase4', 'encase5', 'encase6', 'linen5', 'linen6', 'ewfx'),
-			self._labels.file_format_tip
-		).grid(row=3, column=4, sticky='ew', padx=self._pad)
+			self._labels.codepage,
+			self._codepage,
+			('ascii', 'windows-874', 'windows-932', 'windows-936', 'windows-949',
+				'windows-950', 'windows-1250', 'windows-1251', 'windows-1252',
+				'windows-1253', 'windows-1254', 'windows-1255', 'windows-1256',
+				'windows-1257', 'windows-1258'
+			),
+			self._labels.ewf_metadata_tip
+		).grid(row=3, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._compression = StringVar(value=self._config.get('compression', default='fast'))	### compression ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
@@ -186,15 +190,18 @@ class Gui(Tk):
 			self._compression,
 			('fast', 'best', 'empty-block', 'none'),
 			self._labels.compression_tip
-		).grid(row=5, column=0, sticky='ew', padx=self._pad)
-		self._segment_size = StringVar(value=self._config.get('segment_size', default='auto'))	### segment size ###
+		).grid(row=5, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._segment_size = StringVar(value=self._config.get('segment_size', default='size/40'))	### segment size ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
 			self._labels.segment_size,
 			self._segment_size,
-			('auto', '1-file', '1.4GiB', '4GiB', '8GiB', '16GiB', '32GiB', '256GiB', '512GiB', '1TiB'),
-			self._labels.segment_size_tip
-		).grid(row=5, column=1, sticky='ew', padx=(0, self._pad))
+			(' file size', 'size/10', 'size/20', 'size/40', 'size/80',
+				'1.4GiB', '4GiB', '8GiB', '16GiB', '32GiB', '256GiB', '512GiB', '1TiB'
+			),
+			self._labels.segment_size_tip,
+			state = 'normal'
+		).grid(row=5, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._additional_hash = StringVar(value=self._config.get('additional_hash', default='-'))	### additional hash ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
@@ -202,7 +209,7 @@ class Gui(Tk):
 			self._additional_hash,
 			('-', 'sha1', 'sha256'),
 			self._labels.additional_hash_tip
-		).grid(row=5, column=2, sticky='ew', padx=(0, self._pad))
+		).grid(row=5, column=2, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._bytes_per_sector = IntVar(value=512)	### bytes per sector ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
@@ -210,7 +217,7 @@ class Gui(Tk):
 			self._bytes_per_sector,
 			tuple(2 ** p for p in range(9, 17)),
 			self._labels.bytes_per_sector_tip
-		).grid(row=5, column=3, sticky='ew', padx=(0, self._pad))
+		).grid(row=5, column=3, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._sectors_at_once = IntVar(value=self._config.get('sectors_at_once', default=64))	### sectors at once ###
 		self._dropdown_selector(
 			self._ewfacquire_frame,
@@ -218,45 +225,63 @@ class Gui(Tk):
 			self._sectors_at_once,
 			tuple(2 ** p for p in range(4, 16)),
 			self._labels.sectors_at_once_tip
-		).grid(row=5, column=4, sticky='ew', padx=self._pad)
+		).grid(row=5, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._retries = IntVar(value=self._config.get('retries', default=2))	### retries on error ###
-		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.retries)
-		frame.grid(row=6, column=0, sticky='ew', padx=self._pad, pady=(0, self._pad))
-		spinbox = Spinbox(frame, from_=0, to=255, textvariable=self._retries)
-		spinbox.pack(padx=self._pad, pady=(0, self._pad))
-		Hovertip(frame, self._labels.retries_tip)
-		Hovertip(spinbox, self._labels.retries_tip)
-
+		self._int_spinbox(
+			self._ewfacquire_frame,
+			self._labels.retries,
+			self._retries,
+			0, 255,
+			self._labels.retries_tip
+		).grid(row=6, column=0, sticky='nsew', padx=self._pad)
 		self._granularity = IntVar(value=self._config.get('granularity', default=64))	### error granularity ###
-		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.granularity)
-		frame.grid(row=6, column=1, sticky='ew', padx=(0, self._pad), pady=(0, self._pad))
-		spinbox = Spinbox(frame, from_=1, to=64, textvariable=self._granularity)
-		spinbox.pack(padx=self._pad, pady=(0, self._pad))
-		Hovertip(frame, self._labels.granularity_tip)
-		Hovertip(spinbox, self._labels.granularity_tip)
+		self._int_spinbox(
+			self._ewfacquire_frame,
+			self._labels.granularity,
+			self._granularity,
+			1, 64,
+			self._labels.granularity_tip
+		).grid(row=6, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._offset = IntVar(value=0)	### offset ###
+		self._int_spinbox(
+			self._ewfacquire_frame,
+			self._labels.offset,
+			self._offset,
+			0, (2 ** 63) - 1,
+			self._labels.offset_tip
+		).grid(row=6, column=2, sticky='nsew', padx=self._pad, pady=self._pad)
+
+		self._bytes_to_acquire = IntVar(value=0)	### bytes to aquire ###
+		self._int_spinbox(
+			self._ewfacquire_frame,
+			self._labels.bytes_to_acquire,
+			self._bytes_to_acquire,
+			0, (2 ** 63) - 1,
+			self._labels.bytes_to_acquire_tip
+		).grid(row=6, column=3, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._file_format = StringVar(value=self._config.get('file_format', default='encase6'))	### file format ###
+		self._dropdown_selector(
+			self._ewfacquire_frame,
+			self._labels.file_format,
+			self._file_format,
+			('ewf', 'smart', 'ftk', 'encase1', 'encase2', 'encase3', 'encase4', 'encase5', 'encase6', 'linen5', 'linen6', 'ewfx'),
+			self._labels.file_format_tip
+		).grid(row=6, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
 
 		self._mimic_encase = BooleanVar(value=False)	### mimic encase like behavior ###
 		#(mimic EnCase like behavior) (yes, no) [no]: 
 
-		self._offset = IntVar(value=0)	### offset ###
-		self._bytes_to_acquire = StringVar(value='all')	### bytes to aquire ###
-
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
-		#	-A:     codepage of header section, options: ascii (default),
-	    #    windows-874, windows-932, windows-936, windows-949,
-	    #    windows-950, windows-1250, windows-1251, windows-1252,
-	    #    windows-1253, windows-1254, windows-1255, windows-1256,
-	    #    windows-1257 or windows-1258
 		#	-s:     swap byte pairs of the media data (from AB to BA) (use this for big to little endian conversion and vice versa)
 		#-2:     specify the secondary target file (without extension) to writeto
 
 		return
 
 		self._destination_button = Button(self, text=self._labels.destination, command=self._select_destination)	### destination selector
-		self._destination_button.grid(row=1, column=0, sticky='nswe', padx=self._pad, pady=(0, self._pad))
+		self._destination_button.grid(row=1, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
 		self._destination = StringVar()
 		self._destination_entry = Entry(self, textvariable=self._destination)
-		self._destination_entry.grid(row=1, column=1, columnspan=3, sticky='nsew', padx=self._pad, pady=(0, self._pad))
+		self._destination_entry.grid(row=1, column=1, columnspan=3, sticky='nsew', padx=self._pad, pady=self._pad)
 		Hovertip(self._destination_button, self._labels.destination_tip)
 		self._options_var = StringVar(value=self._labels.options)	### options ###
 		self._options_selector = Combobox(self, values=self._gen_options_list(), state='readonly', textvariable=self._options_var)
@@ -287,28 +312,28 @@ class Gui(Tk):
 			text = self._labels.no_admin
 			tip = self._labels.no_admin_tip
 		self._admin_label = Label(self, text=text)
-		self._admin_label.grid(row=4, column=1, sticky='nswe', padx=self._pad, pady=(0, self._pad))
+		self._admin_label.grid(row=4, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
 		Hovertip(self._admin_label, tip)
 		self._simulate_button_text = StringVar(value=self._labels.simulate)	### simulate ###
 		self._simulate_button = Button(self, textvariable=self._simulate_button_text, command=self._simulate)
-		self._simulate_button.grid(row=4, column=2, sticky='nswe', padx=self._pad, pady=(0, self._pad))
+		self._simulate_button.grid(row=4, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
 		Hovertip(self._simulate_button, self._labels.simulate_tip)
 		self._exec_button = Button(self, text=self._labels.exec_button, command=self._execute)	### execute ###
-		self._exec_button.grid(row=4, column=3, sticky='nswe', padx=self._pad, pady=(0, self._pad))
+		self._exec_button.grid(row=4, column=3, sticky='nswe', padx=self._pad, pady=self._pad)
 		Hovertip(self._exec_button, self._labels.exec_tip)
 		self._help_button = Button(self, text=self._labels.help, command=self._echo_help)	### help ###
 		self._help_button.grid(row=5, column=0, sticky='nwe', padx=self._pad, pady=self._pad)
 		Hovertip(self._help_button, self._labels.help_tip)
 		self._info_text = ScrolledText(self, font=(self._font['family'], self._font['size']), padx=self._pad, pady=self._pad) ### info ###
 		self._info_text.grid(row=5, column=1, columnspan=3, sticky='nswe',
-			ipadx=self._pad, ipady=self._pad, padx=self._pad, pady=(0, self._pad))
+			ipadx=self._pad, ipady=self._pad, padx=self._pad, pady=self._pad)
 		self._info_text.bind('<Key>', lambda dummy: 'break')
 		self._info_text.configure(state='disabled')
 		self._info_fg = self._info_text.cget('foreground')
 		self._info_bg = self._info_text.cget('background')
 		self._info_newline = True
 		self._info_label = Label(self)
-		self._info_label.grid(row=6, column=1, sticky='nsw', padx=self._pad, pady=(0, self._pad))
+		self._info_label.grid(row=6, column=1, sticky='nsw', padx=self._pad, pady=self._pad)
 		self._label_fg = self._info_label.cget('foreground')
 		self._label_bg = self._info_label.cget('background')
 		if self._admin_rights:	### shutdown after finish
@@ -318,11 +343,11 @@ class Gui(Tk):
 				variable = self._shutdown,
 				command = self._toggle_shutdown
 			)
-			self._shutdown_button.grid(row=6, column=2, sticky='nswe', padx=self._pad, pady=(0, self._pad))
+			self._shutdown_button.grid(row=6, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
 			Hovertip(self._shutdown_button, self._labels.shutdown_tip)
 		self._quit_button_text = StringVar(value=self._labels.quit)	### quit/abort ###
 		self._quit_button = Button(self, textvariable=self._quit_button_text, command=self._quit_app)
-		self._quit_button.grid(row=6, column=3, sticky='nse', padx=self._pad, pady=(0, self._pad))
+		self._quit_button.grid(row=6, column=3, sticky='nse', padx=self._pad, pady=self._pad)
 		Hovertip(self._quit_button, self._labels.quit_tip)
 		Sizegrip(self).grid(row=2, column=3, sticky='se')
 		self._init_warning()
@@ -336,6 +361,7 @@ class Gui(Tk):
 					values.append(value)
 					values.sort()
 					textvariable.set(value)
+					entry['values'] = values
 					self._config.set(key, values)
 		def _remove():
 			if value := textvariable.get():
@@ -347,26 +373,34 @@ class Gui(Tk):
 					self._config.set(key, values)
 		frame = LabelFrame(parent, text=text)
 		button_remove = Button(frame, text='\u274C', width=2, command=_remove)
-		button_remove.pack(side='right', padx=(0, self._pad), pady=(0, self._pad))
+		button_remove.pack(side='right', padx=self._pad, pady=(0, self._pad))
 		button_store = Button(frame, text='\u272A', width=2, command=_store)
-		button_store.pack(side='right', padx=(0, self._pad), pady=(0, self._pad))
+		button_store.pack(side='right', padx=self._pad, pady=(0, self._pad))
 		entry = Combobox(frame, textvariable=textvariable, values=self._config.get(key, default=list()))
-		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
+		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=self._pad)
 		Hovertip(frame, hovertip)
 		Hovertip(entry, hovertip)
 		Hovertip(button_store, self._labels.store_value_tip)
 		Hovertip(button_remove, self._labels.remove_value_tip)
 		return frame
 
-	def _dropdown_selector(self, parent, text, textvariable, values, hovertip):
+	def _dropdown_selector(self, parent, text, textvariable, values, hovertip, state='readonly'):
 		'''Combobox with LabelFrame'''
 		frame = LabelFrame(parent, text=text)
-		entry = Combobox(frame, textvariable=textvariable, values=values, state='readonly')
-		entry.pack(expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
+		entry = Combobox(frame, textvariable=textvariable, values=values, state=state)
+		entry.pack(expand=True, fill='x', padx=self._pad, pady=self._pad)
 		Hovertip(frame, hovertip)
 		Hovertip(entry, hovertip)
 		return frame
 
+	def _int_spinbox(self, parent, text, textvariable, from_, to, hovertip):
+		'''Spinbox with LabelFrame'''
+		frame = LabelFrame(parent, text=text)
+		spinbox = Spinbox(frame, from_=from_, to=to, textvariable=textvariable)
+		spinbox.pack(fill='x', padx=self._pad, pady=self._pad)
+		Hovertip(frame, hovertip)
+		Hovertip(spinbox, hovertip)
+		return frame
 
 	def _clean(self, info):
 		'''Clean info text'''
