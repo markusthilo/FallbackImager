@@ -5,10 +5,10 @@ from threading import Thread, Event
 from json import load, dump
 from pathlib import Path
 from subprocess import run
-from tkinter import Tk, PhotoImage, StringVar, BooleanVar, Checkbutton, Toplevel
+from tkinter import Tk, PhotoImage, StringVar, BooleanVar, Checkbutton, Toplevel, Menu
 from tkinter.font import nametofont
 from tkinter.ttk import Frame, Treeview, Scrollbar, Notebook, Label, LabelFrame, Combobox, Entry
-from tkinter.ttk import Spinbox, Progressbar, Sizegrip, Button
+from tkinter.ttk import Spinbox, Menubutton, Progressbar, Sizegrip, Button
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showerror, askokcancel, askyesno, showwarning
@@ -250,7 +250,6 @@ class Gui(Tk):
 			0, (2 ** 63) - 1,
 			self._labels.offset_tip
 		).grid(row=6, column=2, sticky='nsew', padx=self._pad, pady=self._pad)
-
 		self._bytes_to_acquire = IntVar(value=0)	### bytes to aquire ###
 		self._int_spinbox(
 			self._ewfacquire_frame,
@@ -267,22 +266,38 @@ class Gui(Tk):
 			('ewf', 'smart', 'ftk', 'encase1', 'encase2', 'encase3', 'encase4', 'encase5', 'encase6', 'linen5', 'linen6', 'ewfx'),
 			self._labels.file_format_tip
 		).grid(row=6, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
+		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.more_options)	### more options ###
+		frame.grid(row=7, column=4, sticky='nswe', padx=self._pad, pady=self._pad)
+		self._more_options_text = StringVar(value='\u2610')
+		button = Menubutton(frame, textvariable=self._more_options_text)
+		button.pack(fill='x', padx=self._pad, pady=self._pad)
+		menu = Menu(button)
+		button.config(menu=menu)
+		self._mimic_encase = IntVar(value=self._config.get('mimic_encase', default=0))	### mimic encase like behavior ###
+		menu.add_checkbutton(label=self._labels.mimic_encase, onvalue=1, offvalue=0, variable=self._mimic_encase)
+		self._swap_bytes = IntVar(value=self._config.get('swap_bytes', default=0))	### swap byte pairs ###
+		menu.add_checkbutton(label=self._labels.swap_bytes, onvalue=1, offvalue=0, variable=self._swap_bytes)
+		self._resume_activity = IntVar(value=self._config.get('resume_activity', default=0))	### resume activity ###
+		menu.add_checkbutton(label=self._labels.resume_activity, onvalue=1, offvalue=0, variable=self._resume_activity)
 
-		self._mimic_encase = BooleanVar(value=False)	### mimic encase like behavior ###
-		#(mimic EnCase like behavior) (yes, no) [no]: 
+		Hovertip(frame, self._labels.more_options_tip)
+		Hovertip(button, self._labels.more_options_tip)
 
+	
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
-		#	-s:     swap byte pairs of the media data (from AB to BA) (use this for big to little endian conversion and vice versa)
 		#-2:     specify the secondary target file (without extension) to writeto
 
 		return
 
-		self._destination_button = Button(self, text=self._labels.destination, command=self._select_destination)	### destination selector
-		self._destination_button.grid(row=1, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
-		self._destination = StringVar()
-		self._destination_entry = Entry(self, textvariable=self._destination)
-		self._destination_entry.grid(row=1, column=1, columnspan=3, sticky='nsew', padx=self._pad, pady=self._pad)
-		Hovertip(self._destination_button, self._labels.destination_tip)
+		self._destination_ewf_button = Button(self, text=self._labels.destination_ewf, command=self._select_destination)	### destination selector
+		self._destination_ewf_button.grid(row=1, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
+		self._destination_ewf = StringVar()
+		self._destination_ewf_entry = Entry(self, textvariable=self._destination_ewf)
+		self._destination_ewf_entry.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
+		Hovertip(self._destination_ewf_button, self._labels.destination_ewf_tip)
+
+		return
+
 		self._options_var = StringVar(value=self._labels.options)	### options ###
 		self._options_selector = Combobox(self, values=self._gen_options_list(), state='readonly', textvariable=self._options_var)
 		self._options_selector.grid(row=2, column=1, sticky='nswe', padx=self._pad)
@@ -384,7 +399,7 @@ class Gui(Tk):
 		Hovertip(button_remove, self._labels.remove_value_tip)
 		return frame
 
-	def _dropdown_selector(self, parent, text, textvariable, values, hovertip, state='readonly'):
+	def _dropdown_selector(self, parent, text, textvariable, values, hovertip, state='readonly', justify='left'):
 		'''Combobox with LabelFrame'''
 		frame = LabelFrame(parent, text=text)
 		entry = Combobox(frame, textvariable=textvariable, values=values, state=state)
@@ -396,7 +411,7 @@ class Gui(Tk):
 	def _int_spinbox(self, parent, text, textvariable, from_, to, hovertip):
 		'''Spinbox with LabelFrame'''
 		frame = LabelFrame(parent, text=text)
-		spinbox = Spinbox(frame, from_=from_, to=to, textvariable=textvariable)
+		spinbox = Spinbox(frame, from_=from_, to=to, textvariable=textvariable, justify='right')
 		spinbox.pack(fill='x', padx=self._pad, pady=self._pad)
 		Hovertip(frame, hovertip)
 		Hovertip(spinbox, hovertip)
