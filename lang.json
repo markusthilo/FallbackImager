@@ -47,6 +47,9 @@
 		"destination_ewf": "Destination EWF",
 		"destination_ewf_tip": "Select the destination EWF file.",
 
+		"destination_dir_tip": "Select the destination directory.",
+		"destination_file_tip": "Klick to generate file name from metadata.",
+
 		"quit": "Quit",
 		"store_value_tip": "Store this value in list.",
 		"remove_value_tip": "Remove this value from list."
@@ -99,6 +102,9 @@
 
 		"destination_ewf": "EWF-Zieldatei",
 		"destination_ewf_tip": "EWF-Zieldatei auswählen.",
+
+		"destination_dir_tip": "Klicken, um das Zielverzeichnis auzuwählen.",
+		"destination_file_tip": "Klicken, um den Dateinamen aus den Metadaten zu generieren.",
 
 		"quit": "Verlassen",
 		"store_value_tip": "Diesen Wert in Liste speichern.",

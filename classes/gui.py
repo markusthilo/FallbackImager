@@ -266,6 +266,16 @@ class Gui(Tk):
 			('ewf', 'smart', 'ftk', 'encase1', 'encase2', 'encase3', 'encase4', 'encase5', 'encase6', 'linen5', 'linen6', 'ewfx'),
 			self._labels.file_format_tip
 		).grid(row=6, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
+
+		self._destination_ewf = StringVar()
+		self._destination_selector(#parent, text, textvariable, tip):
+			self._ewfacquire_frame,
+			self._labels.destination_ewf,
+			self._destination_ewf,
+			self._labels.destination_ewf_tip
+		).grid(row=7, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
+
+
 		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.more_options)	### more options ###
 		frame.grid(row=7, column=4, sticky='nswe', padx=self._pad, pady=self._pad)
 		self._more_options_text = StringVar(value='\u2610')
@@ -279,7 +289,6 @@ class Gui(Tk):
 		menu.add_checkbutton(label=self._labels.swap_bytes, onvalue=1, offvalue=0, variable=self._swap_bytes)
 		self._resume_activity = IntVar(value=self._config.get('resume_activity', default=0))	### resume activity ###
 		menu.add_checkbutton(label=self._labels.resume_activity, onvalue=1, offvalue=0, variable=self._resume_activity)
-
 		Hovertip(frame, self._labels.more_options_tip)
 		Hovertip(button, self._labels.more_options_tip)
 
@@ -287,14 +296,8 @@ class Gui(Tk):
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
 		#-2:     specify the secondary target file (without extension) to writeto
 
-		return
 
-		self._destination_ewf_button = Button(self, text=self._labels.destination_ewf, command=self._select_destination)	### destination selector
-		self._destination_ewf_button.grid(row=1, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
-		self._destination_ewf = StringVar()
-		self._destination_ewf_entry = Entry(self, textvariable=self._destination_ewf)
-		self._destination_ewf_entry.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
-		Hovertip(self._destination_ewf_button, self._labels.destination_ewf_tip)
+
 
 		return
 
@@ -417,6 +420,20 @@ class Gui(Tk):
 		Hovertip(spinbox, hovertip)
 		return frame
 
+	def _destination_selector(self, parent, text, textvariable, tip):
+		'''Entry field with Button for destination file selector'''
+		frame = LabelFrame(parent, text=text)
+		name_button = Button(frame, text='\U0001F4CB', width=2, command=self._gen_destination_name)
+		name_button.pack(side='right', padx=self._pad, pady=(0, self._pad))
+		entry = Entry(frame, textvariable=textvariable)
+		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=self._pad)
+		dir_button = Button(frame, text='\U0001F5C2', width=2, command=self._select_destination_dir)
+		dir_button.pack(side='right', padx=self._pad, pady=(0, self._pad))
+		Hovertip(dir_button, self._labels.destination_dir_tip)
+		Hovertip(entry, tip)
+		Hovertip(name_button, self._labels.destination_file_tip)
+		return frame
+
 	def _clean(self, info):
 		'''Clean info text'''
 		if info == None:
@@ -453,10 +470,16 @@ class Gui(Tk):
 				open = True
 			)
 
-	def _select_case_no(self):
-		'''Select case number'''
-		if case_no := askstring(title=self._labels.case_no, prompt=self._labels.case_no_prompt):
-			self._case_no.set(value=case_no)
+	def _select_destination_dir(self):
+		'''Select directory to add into field'''
+		if directory := askdirectory(title=self._labels.select_dir, mustexist=True, initialdir=self._config.initial_dir):
+			path = Path(directory).absolute()
+			self._destination_ewf.set(f'{path}')
+			self._config.initial_dir = f'{path}'
+
+	def _gen_destination_name(self):
+		'''Generate destination file name'''
+		pass
 
 	def _read_source_paths(self):
 		'''Read paths from text field'''
