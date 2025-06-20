@@ -266,16 +266,13 @@ class Gui(Tk):
 			('ewf', 'smart', 'ftk', 'encase1', 'encase2', 'encase3', 'encase4', 'encase5', 'encase6', 'linen5', 'linen6', 'ewfx'),
 			self._labels.file_format_tip
 		).grid(row=6, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
-
-		self._destination_ewf = StringVar()
-		self._destination_selector(#parent, text, textvariable, tip):
+		self._destination_ewf = StringVar()	### destination ###
+		self._destination_selector(
 			self._ewfacquire_frame,
 			self._labels.destination_ewf,
 			self._destination_ewf,
 			self._labels.destination_ewf_tip
 		).grid(row=7, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
-
-
 		frame = LabelFrame(self._ewfacquire_frame, text=self._labels.more_options)	### more options ###
 		frame.grid(row=7, column=4, sticky='nswe', padx=self._pad, pady=self._pad)
 		self._more_options_text = StringVar(value='\u2610')
@@ -291,44 +288,46 @@ class Gui(Tk):
 		menu.add_checkbutton(label=self._labels.resume_activity, onvalue=1, offvalue=0, variable=self._resume_activity)
 		Hovertip(frame, self._labels.more_options_tip)
 		Hovertip(button, self._labels.more_options_tip)
-
+		self._destination2_ewf = StringVar()	### 2nd destination ###
+		self._destination_selector(
+			self._ewfacquire_frame,
+			self._labels.destination2_ewf,
+			self._destination2_ewf,
+			self._labels.destination2_ewf_tip
+		).grid(row=8, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
 	
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
 		#-2:     specify the secondary target file (without extension) to writeto
 
+		self._info_text = ScrolledText(self, font=(self._font['family'], self._font['size']), padx=self._pad, pady=self._pad) ### info ###
+		self._info_text.grid(row=2, column=0, columnspan=5, sticky='nswe',
+			ipadx=self._pad, ipady=self._pad, padx=self._pad, pady=self._pad)
+		self._info_text.bind('<Key>', lambda dummy: 'break')
+		self._info_text.configure(state='disabled')
+		self._info_fg = self._info_text.cget('foreground')
+		self._info_bg = self._info_text.cget('background')
+		self._info_newline = True
 
-
-
+		self._quit_button_text = StringVar(value=self._labels.quit)	### quit/abort ###
+		self._quit_button = Button(self, textvariable=self._quit_button_text, command=self._quit_app)
+		self._quit_button.grid(row=3, column=3, sticky='nse', padx=self._pad, pady=self._pad)
+		Hovertip(self._quit_button, self._labels.quit_tip)
+		Sizegrip(self).grid(row=3, column=4, sticky='se')
+		self._init_warning()
 		return
+		frame = LabelFrame(self, text=self._labels.sudo_password)	### sudo ###
+		frame.grid(row=3, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
+		Button(self,
+			text = '\u269C',
+			command = self._test_sudo
+			).pack(side='right', padx=self._pad, pady=(0, self._pad))
+		self._sudo_password = StringVar()
+		entry = Entry(self, textvariable=self._sudo_password, show='*')
+		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, self._labels._sudo_password_tip)
+		Hovertip(entry, self._labels._sudo_password_tip)
+		Hovertip(button, self._labels.test_sudo_tip)
 
-		self._options_var = StringVar(value=self._labels.options)	### options ###
-		self._options_selector = Combobox(self, values=self._gen_options_list(), state='readonly', textvariable=self._options_var)
-		self._options_selector.grid(row=2, column=1, sticky='nswe', padx=self._pad)
-		self._options_selector.bind('<<ComboboxSelected>>', self._options_event)
-		Hovertip(self._options_selector, self._labels.options_tip)
-		self.possible_hashes = FileHash.get_algorithms()	### hash ###
-		self._hash_var = StringVar(value=self._labels.hash)
-		self._hash_selector = Combobox(self, values=self._gen_hash_list(), state='readonly', textvariable=self._hash_var)
-		self._hash_selector.grid(row=2, column=2, sticky='nswe', padx=self._pad)
-		self._hash_selector.bind('<<ComboboxSelected>>', self._hash_event)
-		Hovertip(self._hash_selector, self._labels.hash_tip)
-		self._verify_var = StringVar(value=self._labels.verify)	### verify ###
-		self._verify_selector = Combobox(self, values=self._gen_verify_list(), state='readonly', textvariable=self._verify_var)
-		self._verify_selector.grid(row=2, column=3, sticky='nswe', padx=self._pad)
-		self._verify_selector.bind('<<ComboboxSelected>>', self._verify_event)
-		Hovertip(self._verify_selector, self._labels.verify_tip)
-		self._log_button = Button(self, text=self._labels.log, command=self._select_log)	### log ###
-		self._log_button.grid(row=3, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
-		self._log = StringVar(value=self._config.log_dir)
-		self._log_entry = Entry(self, textvariable=self._log)
-		self._log_entry.grid(row=3, column=1, columnspan=3, sticky='nswe', padx=self._pad, pady=self._pad)
-		Hovertip(self._log_button, self._labels.log_tip)
-		if self._admin_rights:	### admin label ###
-			text = self._labels.admin
-			tip = self._labels.admin_tip
-		else:
-			text = self._labels.no_admin
-			tip = self._labels.no_admin_tip
 		self._admin_label = Label(self, text=text)
 		self._admin_label.grid(row=4, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
 		Hovertip(self._admin_label, tip)
@@ -363,12 +362,6 @@ class Gui(Tk):
 			)
 			self._shutdown_button.grid(row=6, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
 			Hovertip(self._shutdown_button, self._labels.shutdown_tip)
-		self._quit_button_text = StringVar(value=self._labels.quit)	### quit/abort ###
-		self._quit_button = Button(self, textvariable=self._quit_button_text, command=self._quit_app)
-		self._quit_button.grid(row=6, column=3, sticky='nse', padx=self._pad, pady=self._pad)
-		Hovertip(self._quit_button, self._labels.quit_tip)
-		Sizegrip(self).grid(row=2, column=3, sticky='se')
-		self._init_warning()
 
 	def _dropdown_entry(self, parent, text, textvariable, key, hovertip):
 		'''Combobox with LabelFrame and Buttons'''

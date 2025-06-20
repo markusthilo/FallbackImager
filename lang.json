@@ -41,16 +41,16 @@
 		"mimic_encase": "Mimic encase",
 		"swap_bytes": "Swap byte pairs",
 		"resume_activity": "Resume activity",
-
 		"more_options_tip": "- Mimic EnCase like behavior: zero sectors on read error (default is no).\n- Swap byte pairs of the media data (for big to little endian conversion and vice versa).\n- Resume acquiry at a safe point.",
-
-		"destination_ewf": "Destination EWF",
+		"destination_ewf": "Destination EWF file",
 		"destination_ewf_tip": "Select the destination EWF file.",
-
 		"destination_dir_tip": "Select the destination directory.",
 		"destination_file_tip": "Klick to generate file name from metadata.",
+		"destination2_ewf": "2nd destination EWF file",
+		"destination2_ewf_tip": "Select a second EWF image to write or\nleave empty for only one destination.",
 
 		"quit": "Quit",
+		"quit_tip": "Quit the application.",
 		"store_value_tip": "Store this value in list.",
 		"remove_value_tip": "Remove this value from list."
 		
@@ -97,16 +97,16 @@
 		"mimic_encase": "Mimic encase",
 		"swap_bytes": "Bytepaare tauschen",
 		"resume_activity": "Aktivität fortsetzen",
-
 		"more_options_tip": "- Verhalten wie bei EnCase nachahmen: Null Sektoren bei Lesefehler (Standard ist nein).\n- Bytepaare der Mediendaten vertauschen (für die Konvertierung von Big zu Little Endian und umgekehrt).\n- Erfassung an einem sicheren Punkt fortsetzen.",
-
 		"destination_ewf": "EWF-Zieldatei",
 		"destination_ewf_tip": "EWF-Zieldatei auswählen.",
-
 		"destination_dir_tip": "Klicken, um das Zielverzeichnis auzuwählen.",
 		"destination_file_tip": "Klicken, um den Dateinamen aus den Metadaten zu generieren.",
+		"destination2_ewf": "Zweites EWF-Image",
+		"destination2_ewf_tip": "Wähle das Ziel für ein zweites Image\noder keines für nur ein Ziel.",
 
 		"quit": "Verlassen",
+		"quit_tip": "Anwendung beenden.",
 		"store_value_tip": "Diesen Wert in Liste speichern.",
 		"remove_value_tip": "Diesen Wert aus Liste entfernen."
 		
