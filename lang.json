@@ -49,8 +49,18 @@
 		"destination2_ewf": "2nd destination EWF file",
 		"destination2_ewf_tip": "Select a second EWF image to write or\nleave empty for only one destination.",
 
-		"quit": "Quit",
+		"operations_monitor": "Operations monitor",
+		"queue": "Queue",
+		"start_tip": "Start processing the queue.",
+		"stop_tip": "Stop processing.",
+		"shutdown": "Shutdown when done",
+		"shutdown_tip": "Shutdown system when all processes are finished.",
+		"info": "Info",
+
 		"quit_tip": "Quit the application.",
+		"sudo_password": "Password for sudo",
+		"sudo_password_tip": "Give sudo password to execute with root privileges",
+		"sudo_check_tip": "Check if sudo password is correct.",
 		"store_value_tip": "Store this value in list.",
 		"remove_value_tip": "Remove this value from list."
 		
@@ -105,8 +115,18 @@
 		"destination2_ewf": "Zweites EWF-Image",
 		"destination2_ewf_tip": "Wähle das Ziel für ein zweites Image\noder keines für nur ein Ziel.",
 
-		"quit": "Verlassen",
+		"operations_monitor": "Verarbeitungsmonitor",
+		"queue": "Warteschlange",
+		"start_tip": "Verarbeitung der Warteschlange starten.",
+		"stop_tip": "Verarbeitung beenden.",
+		"shutdown": "Herunterfahren, wenn fertig",
+		"shutdown_tip": "Herunterfahren, wenn alle Prozesse fertig sind.",
+		"info": "Info",
+
 		"quit_tip": "Anwendung beenden.",
+		"sudo_password": "Passwort für sudo",
+		"sudo_password_tip": "Passwort für sudo, um root_rechte zu erhalten.",
+		"sudo_check_tip": "Überprüfen, ob sudo-Passwort korrekt ist.",
 		"store_value_tip": "Diesen Wert in Liste speichern.",
 		"remove_value_tip": "Diesen Wert aus Liste entfernen."
 		

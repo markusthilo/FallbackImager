@@ -71,7 +71,7 @@ class Gui(Tk):
 		self._pad = int(self._font['size'] * self._defs.pad_factor)
 		###### block devices in tree view ######
 		frame = Frame(self)
-		frame.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
+		frame.grid(row=0, column=0, columnspan=5, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._blockdev_tree = Treeview(frame,
 			selectmode = 'browse',
 			columns = ('label', 'type', 'size', 'fstype', 'ro', 'info'),
@@ -90,13 +90,15 @@ class Gui(Tk):
 		#self._drive_tree.bind('<Button-1>', self._select_blockdev)
 		###### notebook ######
 		self._notebook = Notebook(self, padding=self._pad)
-		self._notebook.grid(row=1, column=0, columnspan=4, sticky='nsew')
+		self._notebook.grid(row=1, column=0, columnspan=5, sticky='nsew')
 		self._ewfacquire_frame = Frame(self._notebook)
 		self._notebook.add(self._ewfacquire_frame, text=' ewfaquire ', sticky='nswe')
 		self._ewfverify_frame = Frame(self._notebook)
 		self._notebook.add(self._ewfverify_frame, text=' ewfverify ', sticky='nswe')
 		self._wipe_frame = Frame(self._notebook)
 		self._notebook.add(self._wipe_frame, text=' wipe ', sticky='nswe')
+		self._monitor_frame = Frame(self._notebook)
+		self._notebook.add(self._monitor_frame, text=f' {self._labels.operations_monitor} ', sticky='nswe')
 		####### EWFACQUIRE #######
 		for col in range(4):
 			self._ewfacquire_frame.columnconfigure(col, weight=1)
@@ -299,69 +301,55 @@ class Gui(Tk):
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
 		#-2:     specify the secondary target file (without extension) to writeto
 
-		self._info_text = ScrolledText(self, font=(self._font['family'], self._font['size']), padx=self._pad, pady=self._pad) ### info ###
-		self._info_text.grid(row=2, column=0, columnspan=5, sticky='nswe',
-			ipadx=self._pad, ipady=self._pad, padx=self._pad, pady=self._pad)
-		self._info_text.bind('<Key>', lambda dummy: 'break')
-		self._info_text.configure(state='disabled')
-		self._info_fg = self._info_text.cget('foreground')
-		self._info_bg = self._info_text.cget('background')
-		self._info_newline = True
-
-		self._quit_button_text = StringVar(value=self._labels.quit)	### quit/abort ###
-		self._quit_button = Button(self, textvariable=self._quit_button_text, command=self._quit_app)
-		self._quit_button.grid(row=3, column=3, sticky='nse', padx=self._pad, pady=self._pad)
-		Hovertip(self._quit_button, self._labels.quit_tip)
-		Sizegrip(self).grid(row=3, column=4, sticky='se')
-		self._init_warning()
-		return
-		frame = LabelFrame(self, text=self._labels.sudo_password)	### sudo ###
-		frame.grid(row=3, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
-		Button(self,
-			text = '\u269C',
+		self._queue_frame = LabelFrame(self._monitor_frame, text=self._labels.queue)	### queue ###
+		self._queue_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
+		self._control_frame = LabelFrame(self._monitor_frame, text='\u25AD')	### control ###
+		self._control_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
+		self._start_button = Button(self._control_frame, text='\u25B6', command=self._start)
+		self._start_button.pack(side='left', padx=self._pad, pady=(0, self._pad))
+		Hovertip(self._start_button, self._labels.start_tip)
+		self._stop_button = Button(self._control_frame, text='\u25A0', command=self._stop)
+		self._stop_button.pack(side='left', padx=self._pad, pady=(0, self._pad))
+		Hovertip(self._stop_button, self._labels.stop_tip)
+		self._quit_button = Button(self._control_frame, text='\u2716', width=2, command=self._quit_app)
+		self._quit_button.pack(side='right', padx=(0, self._pad*4), pady=(0, self._pad))
+		Hovertip(button, self._labels.quit_tip)
+		self._shutdown = BooleanVar(value=False)
+		self._shutdown_button = Checkbutton(self._control_frame,
+			text = self._labels.shutdown,
+			variable = self._shutdown,
+			command = self._toggle_shutdown
+		)
+		self._shutdown_button.pack(side='right', padx=self._pad, pady=(0, self._pad))
+		Hovertip(self._shutdown_button, self._labels.shutdown_tip)
+		button = Button(self._control_frame,	### sudo ###
+			text = self._labels.sudo_password,
 			command = self._test_sudo
-			).pack(side='right', padx=self._pad, pady=(0, self._pad))
+			)
+		button.pack(side='right', padx=self._pad, pady=(0, self._pad))
+		Hovertip(button, self._labels.sudo_check_tip)
 		self._sudo_password = StringVar()
-		entry = Entry(self, textvariable=self._sudo_password, show='*')
+		entry = Entry(self._control_frame, textvariable=self._sudo_password, show='*')
 		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
-		Hovertip(frame, self._labels._sudo_password_tip)
-		Hovertip(entry, self._labels._sudo_password_tip)
-		Hovertip(button, self._labels.test_sudo_tip)
+		Hovertip(entry, self._labels.sudo_password_tip)
+		
 
-		self._admin_label = Label(self, text=text)
-		self._admin_label.grid(row=4, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
-		Hovertip(self._admin_label, tip)
-		self._simulate_button_text = StringVar(value=self._labels.simulate)	### simulate ###
-		self._simulate_button = Button(self, textvariable=self._simulate_button_text, command=self._simulate)
-		self._simulate_button.grid(row=4, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
-		Hovertip(self._simulate_button, self._labels.simulate_tip)
-		self._exec_button = Button(self, text=self._labels.exec_button, command=self._execute)	### execute ###
-		self._exec_button.grid(row=4, column=3, sticky='nswe', padx=self._pad, pady=self._pad)
-		Hovertip(self._exec_button, self._labels.exec_tip)
-		self._help_button = Button(self, text=self._labels.help, command=self._echo_help)	### help ###
-		self._help_button.grid(row=5, column=0, sticky='nwe', padx=self._pad, pady=self._pad)
-		Hovertip(self._help_button, self._labels.help_tip)
-		self._info_text = ScrolledText(self, font=(self._font['family'], self._font['size']), padx=self._pad, pady=self._pad) ### info ###
-		self._info_text.grid(row=5, column=1, columnspan=3, sticky='nswe',
-			ipadx=self._pad, ipady=self._pad, padx=self._pad, pady=self._pad)
+		self._info_frame = LabelFrame(self._monitor_frame, text=self._labels.info)	### info ###
+		self._info_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
+		self._info_text = ScrolledText(self._info_frame,	### info ###
+			font = (self._font['family'], self._font['size']),
+			padx = self._pad,
+			pady = self._pad
+		)
+		self._info_text.pack(expand=True, fill='both', padx=self._pad, pady=self._pad)
 		self._info_text.bind('<Key>', lambda dummy: 'break')
 		self._info_text.configure(state='disabled')
 		self._info_fg = self._info_text.cget('foreground')
 		self._info_bg = self._info_text.cget('background')
 		self._info_newline = True
-		self._info_label = Label(self)
-		self._info_label.grid(row=6, column=1, sticky='nsw', padx=self._pad, pady=self._pad)
-		self._label_fg = self._info_label.cget('foreground')
-		self._label_bg = self._info_label.cget('background')
-		if self._admin_rights:	### shutdown after finish
-			self._shutdown = BooleanVar(value=False)
-			self._shutdown_button = Checkbutton(self,
-				text = self._labels.shutdown,
-				variable = self._shutdown,
-				command = self._toggle_shutdown
-			)
-			self._shutdown_button.grid(row=6, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
-			Hovertip(self._shutdown_button, self._labels.shutdown_tip)
+
+		Sizegrip(self).grid(row=3, column=3, sticky='se', padx=self._pad, pady=self._pad)
+		self._init_warning()
 
 	def _dropdown_entry(self, parent, text, textvariable, key, hovertip):
 		'''Combobox with LabelFrame and Buttons'''
@@ -383,7 +371,7 @@ class Gui(Tk):
 					entry['values'] = values
 					self._config.set(key, values)
 		frame = LabelFrame(parent, text=text)
-		button_remove = Button(frame, text='\u274C', width=2, command=_remove)
+		button_remove = Button(frame, text='\u2421', width=2, command=_remove)
 		button_remove.pack(side='right', padx=self._pad, pady=(0, self._pad))
 		button_store = Button(frame, text='\u272A', width=2, command=_store)
 		button_store.pack(side='right', padx=self._pad, pady=(0, self._pad))
@@ -822,6 +810,28 @@ class Gui(Tk):
 		self._exec_button.configure(state='normal')
 		self._quit_button_text.set(self._labels.quit)
 		self._work_thread = None
+
+	def _test_sudo(self):
+		'''Test sudo password'''
+		if not self._coreutils.i_have_root():
+			if not self._coreutils.no_pw_sudo():
+				showerror(title=self._labels.error, message=self._labels.no_sudo)
+				return False
+			if not self._coreutils.whoami():
+				showerror(title=self._labels.error, message=self._labels.no_root)
+				return False
+			if not self._coreutils.gen_cmd('echo', 'test', sudo=True, password='test'):
+				showerror(title=self._labels.error, message=self._labels.invalid_password)
+				return False
+		return True
+
+	def _start(self):
+		'''Start queue processing'''
+		pass
+
+	def _stop(self):
+		'''Stop queue processing'''
+		pass
 
 	def _quit_app(self):
 		'''Quit app or ask to abort process'''
