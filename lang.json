@@ -48,6 +48,43 @@
 		"destination_file_tip": "Klick to generate file name from metadata.",
 		"destination2_ewf": "2nd destination EWF file",
 		"destination2_ewf_tip": "Select a second EWF image to write or\nleave empty for only one destination.",
+		"target": "Target",
+		"wipe_target_tip": "Target block device to wipe",
+		"value": "Byte to write",
+		"value_tip": "Select the byte value to overwrite with (or to verify).\nHexadecimal notation is used.",
+		"blocksize": "Block size",
+		"blocksize_tip": "Select the block size for reading and writing.\nFor SSDs this should match the size of a\nmemory page (4096 bytes usually works well).",
+		"maxbadblocks": "Max. bad blocks",
+		"maxbadblocks_tip": "Select the maximum number of bad\nblocks before aborting the process.",
+		"maxretries": "Max. retries",
+		"maxretries_tip": "Select the maximum number of retries\nfor failed read or write operations\nbefore considered bad block.",
+		"task": "Task",
+		"wipe_tasks": {
+			"selective": "Wipe used blocks/pages",
+			"full": "Overwrite every byte",
+			"extra": "2-pass wipe",
+			"verify": "Do not wipe but verify"
+		},
+		"wipe_task_tip": "Select the wipe method (or just verify).\nThe first option is designed for SSDs.\nEvery block (or memory page) is checked\nand will only be overwritten if data is present.",
+		"create_table": "Create MBR partition table",
+		"partition_tables": {
+			"gpt": "Create GPT partition table",
+			"mbr": "Create MBR partition table",
+			"none": "Do nothing after wiping"
+		},
+		"create_tip": "Select partition table to create after wiping.\n'Create GPT partition table' uses the modern standard.\n'Create MBR partition table' is a legacy method for\ndrives up to 3TB maximum.",
+		"fs": {
+			"ntfs": "Format to NTFS",
+			"fat32": "Format to FAT32",
+			"exfat": "Format to exFAT",
+			"none": "Do not format"
+		},
+		"fs_tip": "Choose file system for the new partition.\nNTFS is the Windows standard file system.\nexFAT works for most other operating systems.\nFAT32 is a legacy file system and might be a\ngood choice for SD cards or smaller USB drives.",
+		"label": "Volume label",
+		"label_tip": "Enter the volume label if you want\nto format the wiped drive",
+
+
+
 
 		"operations_monitor": "Operations monitor",
 		"queue": "Queue",
@@ -114,6 +151,41 @@
 		"destination_file_tip": "Klicken, um den Dateinamen aus den Metadaten zu generieren.",
 		"destination2_ewf": "Zweites EWF-Image",
 		"destination2_ewf_tip": "Wähle das Ziel für ein zweites Image\noder keines für nur ein Ziel.",
+		"target": "Ziel",
+		"wipe_target_tip": "Wähle Ziel-Block-Device",
+		"value": "Zu schreibendes Byte",
+		"value_tip": "Wählen Sie den Bytewert zum Überschreiben (oder zur Überprüfung).\nHexadezimale Schreibweise wird verwendet.",
+		"blocksize": "Blockgröße",
+		"blocksize_tip": "Wählen Sie die Blockgröße für Lese- und Schreibzuzgirffe\nFür SSDs sollte dies der Größe einer Speicherseite/Page\nentsprechen (4096 Bytes funktionieren in der Regel gut).",
+		"maxbadblocks": "Max. fehlerhafte Blöcke",
+		"maxbadblocks_tip": "Wählen Sie die maximale Anzahl fehlerhafter\nBlöcke, bevor der Prozess abgebrochen wird.",
+		"maxretries": "Max. Wiederholungen",
+		"maxretries_tip": "Wählen Sie die maximale Anzahl an Wiederholungen\nfür fehlgeschlagene Lese- oder Schreibzugriffe,\nbevor der Block als fehlerhaft erachtet wird.",
+		"label": "Volumebezeichnung",
+		"label_tip": "Geben Sie die Volumebezeichnung ein, wenn Sie\ndas gelöschte Laufwerk formatieren möchten",
+		"tasks": {
+			"selective": "Selectiv Blöcke löschen",
+			"full": "Jedes Byte überschreiben",
+			"extra": "2 Löschdurchläufe",
+			"verify": "Nicht löschen, nur überprüfen"
+		},
+		"task_tip": "Wählen Sie die Löschmethode (oder nur Überprüfung).\nDie erste Option ist für SSDs konzipiert.\nJeder Block (oder Speicherseite) wird überprüft\nund nur überschrieben, wenn Daten vorhanden sind.",
+		"create": {
+			"gpt": "GPT-Partitionstabelle erstellen",
+			"mbr": "MBR-Partitionstabelle erstellen",
+			"none": "Erstelle kein Partitionstabelle"
+		},
+		"create_tip": "Wählen Sie die nach dem Löschen oder Verifizieren zu erstellende Partitionstabelle.\n'GPT-Partitionstabelle erstellen' verwendet den modernen Standard.\n'MBR-Partitionstabelle erstellen' ist eine ältere Methode für Laufwerke bis maximal 3TB.",
+			"fs": {
+			"ntfs": "Zu NTFS formatieren",
+			"fat32": "Zu FAT32 formatieren",
+			"exfat": "Zu exFAT formatieren",
+			"none": "Nicht formatieren"
+		},
+		"fs_tip": "Wählen Sie das Dateisystem für die neue Partition.\nNTFS ist das Windows-Standarddateisystem.\nexFAT funktioniert für die meisten anderen Betriebssysteme.\nFAT32 ist ein älteres Dateisystem und könnte eine\ngute Wahl für SD-Karten oder kleinere USB-Laufwerke sein.",
+
+
+
 
 		"operations_monitor": "Verarbeitungsmonitor",
 		"queue": "Warteschlange",
