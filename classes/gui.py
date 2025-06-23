@@ -5,7 +5,7 @@ from threading import Thread, Event
 from json import load, dump
 from pathlib import Path
 from subprocess import run
-from tkinter import Tk, PhotoImage, StringVar, BooleanVar, Checkbutton, Toplevel, Menu
+from tkinter import Tk, PhotoImage, StringVar, BooleanVar, Checkbutton, Toplevel, Menu, Text
 from tkinter.font import nametofont
 from tkinter.ttk import Frame, Treeview, Scrollbar, Notebook, Label, LabelFrame, Combobox, Entry
 from tkinter.ttk import Spinbox, Menubutton, Progressbar, Sizegrip, Button
@@ -16,6 +16,8 @@ from idlelib.tooltip import Hovertip
 from classes.config import GuiDefs, LangPackage
 from classes.coreutils import CoreUtils
 from tkinter import IntVar
+from tkinter.ttk import Progressbar
+from tkinter.ttk import Treeview
 
 class WorkThread(Thread):
 	'''The worker has tu run as thread not to freeze GUI/Tk'''
@@ -299,10 +301,121 @@ class Gui(Tk):
 		).grid(row=8, column=0, columnspan=4, sticky='nsew', padx=self._pad, pady=self._pad)
 	
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
-		#-2:     specify the secondary target file (without extension) to writeto
+
+		###### WIPE ######
+		self._wipe_frame.columnconfigure(0, weight=1)
+		self._wipe_target = StringVar()	### target ###
+		frame = LabelFrame(self._wipe_frame, text=self._labels.target)
+		frame.grid(row=0, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
+		entry = Entry(frame, textvariable=self._wipe_target)
+		entry.pack(expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, self._labels.wipe_target_tip)
+		Hovertip(entry, self._labels.wipe_target_tip)
+		frame = LabelFrame(self._wipe_frame, text=self._labels.value)	### value ###
+		frame.grid(row=0, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		self._wipe_value = StringVar(value=self._config.get('value', default='00'))
+		spinbox = Spinbox(frame,
+			values = tuple(f'{b:02x}' for b in range(0x100)),
+			textvariable = self._wipe_value,
+			justify = 'right'
+		)
+		spinbox.pack(expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
+		Hovertip(frame, self._labels.value_tip)
+		Hovertip(spinbox, self._labels.value_tip)
+		frame = LabelFrame(self._wipe_frame, text=self._labels.blocksize)	### blocksize ###
+		frame.grid(row=0, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
+		self._blocksize_box = Spinbox(frame,
+			values = (0x200, 0x400, 0x800) + tuple(0x1000 * p for p in range(1, 201)),
+			justify='right'
+		)
+		self._blocksize_box.pack(padx=self._pad, pady=(0, self._pad))
+		self._blocksize_box.set(self._config.get('blocksize', default=0x1000))
+		Hovertip(frame, self._labels.blocksize_tip)
+		Hovertip(self._blocksize_box, self._labels.blocksize_tip)
+		self._maxbadblocks = IntVar(value=self._config.get('maxbadblocks', default=200))	### maxbadblocks ###
+		self._int_spinbox(self._wipe_frame,
+			self._labels.maxbadblocks,
+			self._maxbadblocks, 0, 0xffff,
+			self._labels.maxbadblocks_tip
+		).grid(row=0, column=3, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._maxretries = IntVar(value=self._config.get('maxretries', default=200))	### maxretries ###
+		self._int_spinbox(self._wipe_frame,
+			self._labels.maxretries,
+			self._maxretries, 0, 0xffff,
+			self._labels.maxretries_tip
+		).grid(row=0, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
+
+		'''
+
+		self._wipe_task = StringVar(value=self._config.get('wipe_taks', default='selective'))	### wipe task ###
+		selector = self._dropdown_selector(self._wipe_frame,
+			self._labels.task,
+			self._wipe_task,
+			tuple(self._labels.wipe_tasks.values()),
+			self._labels.wipe_task_tip
+		).grid(row=1, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._create_table = StringVar(value=self.[self._config.create])	### create ###
+		self._create_selector = Combobox(self,
+			textvariable = self._create,
+			values = tuple(self._labels.create.values()),
+			state = 'readonly'
+		)
+		
+		
+
+		self._create = StringVar(value=self._labels.create[self._config.create])	### create ###
+		self._create_selector = Combobox(self,
+			textvariable = self._create,
+			values = tuple(self._labels.create.values()),
+			state = 'readonly'
+		)
+		self._create_selector.grid(row=3, column=0, sticky='nwe', padx=self._pad, pady=self._pad)
+		Hovertip(self._create_selector, self._labels.create_tip)
+		self._rev_create = dict(zip(self._labels.create.values(), self._labels.create))
+		self._fs = StringVar(value=self._labels.fs[self._config.fs])	### fs ###
+		self._fs_selector = Combobox(self,
+			textvariable = self._fs,
+			values = tuple(self._labels.fs.values()),
+			state = 'readonly'
+		)
+		self._fs_selector.grid(row=3, column=1, sticky='nwe', padx=self._pad, pady=self._pad)
+		Hovertip(self._fs_selector, self._labels.fs_tip)
+		self._rev_fs = dict(zip(self._labels.fs.values(), self._labels.fs))
+		label = Label(self, text=f'{self._labels.label}:')	### label ###
+		label.grid(row=4, column=0, sticky='nw', padx=self._pad)
+		self._label = StringVar(value=self._config.label)
+		self._label_entry = Entry(self, textvariable=self._label)
+		self._label_entry.grid(row=4, column=1, sticky='nwe', padx=self._pad)
+		Hovertip(label, self._labels.label_tip)
+		Hovertip(self._label_entry, self._labels.label_tip)
+		'''		
+
 
 		self._queue_frame = LabelFrame(self._monitor_frame, text=self._labels.queue)	### queue ###
-		self._queue_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
+		self._queue_frame.pack(fill='both', padx=self._pad, pady=self._pad)
+		self._queue_frame.columnconfigure(1, weight=1)
+		self._progress_position = IntVar(value=0)
+		Progressbar(self._queue_frame,
+			mode = 'determinate',
+			orient = 'vertical',
+			maximum = 5,
+			variable = self._progress_position
+		).grid(row=0, column=0, sticky='ns', padx=(self._pad, 0))
+		hsc = Scrollbar(self._queue_frame, orient='horizontal')
+		vsc = Scrollbar(self._queue_frame, orient='vertical')
+		self._queue_tree = Treeview(self._queue_frame,
+			show = 'tree',
+			selectmode = 'browse',
+			height = 5,
+			xscrollcommand=hsc.set,
+			yscrollcommand=vsc.set
+		)
+		self._queue_tree.grid(row=0, column=1, sticky='nsew')
+		hsc.grid(row=1, column=1, sticky='ew', pady=(0, self._pad))
+		hsc.config(command=self._queue_tree.xview)
+		vsc.grid(row=0, column=2, sticky='ns', padx=(0, self._pad))
+		vsc.config(command=self._queue_tree.yview)
+
 		self._control_frame = LabelFrame(self._monitor_frame, text='\u25AD')	### control ###
 		self._control_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
 		self._start_button = Button(self._control_frame, text='\u25B6', command=self._start)
@@ -332,14 +445,13 @@ class Gui(Tk):
 		entry = Entry(self._control_frame, textvariable=self._sudo_password, show='*')
 		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
 		Hovertip(entry, self._labels.sudo_password_tip)
-		
-
 		self._info_frame = LabelFrame(self._monitor_frame, text=self._labels.info)	### info ###
-		self._info_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
+		self._info_frame.pack(fill='both', padx=self._pad, pady=self._pad)
 		self._info_text = ScrolledText(self._info_frame,	### info ###
 			font = (self._font['family'], self._font['size']),
 			padx = self._pad,
-			pady = self._pad
+			pady = self._pad,
+			height = 10
 		)
 		self._info_text.pack(expand=True, fill='both', padx=self._pad, pady=self._pad)
 		self._info_text.bind('<Key>', lambda dummy: 'break')
@@ -347,9 +459,9 @@ class Gui(Tk):
 		self._info_fg = self._info_text.cget('foreground')
 		self._info_bg = self._info_text.cget('background')
 		self._info_newline = True
-
 		Sizegrip(self).grid(row=3, column=3, sticky='se', padx=self._pad, pady=self._pad)
 		self._init_warning()
+
 
 	def _dropdown_entry(self, parent, text, textvariable, key, hovertip):
 		'''Combobox with LabelFrame and Buttons'''
@@ -376,7 +488,7 @@ class Gui(Tk):
 		button_store = Button(frame, text='\u272A', width=2, command=_store)
 		button_store.pack(side='right', padx=self._pad, pady=(0, self._pad))
 		entry = Combobox(frame, textvariable=textvariable, values=self._config.get(key, default=list()))
-		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=self._pad)
+		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
 		Hovertip(frame, hovertip)
 		Hovertip(entry, hovertip)
 		Hovertip(button_store, self._labels.store_value_tip)
@@ -387,7 +499,7 @@ class Gui(Tk):
 		'''Combobox with LabelFrame'''
 		frame = LabelFrame(parent, text=text)
 		entry = Combobox(frame, textvariable=textvariable, values=values, state=state)
-		entry.pack(expand=True, fill='x', padx=self._pad, pady=self._pad)
+		entry.pack(expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
 		Hovertip(frame, hovertip)
 		Hovertip(entry, hovertip)
 		return frame
@@ -396,7 +508,7 @@ class Gui(Tk):
 		'''Spinbox with LabelFrame'''
 		frame = LabelFrame(parent, text=text)
 		spinbox = Spinbox(frame, from_=from_, to=to, textvariable=textvariable, justify='right')
-		spinbox.pack(fill='x', padx=self._pad, pady=self._pad)
+		spinbox.pack(fill='x', padx=self._pad, pady=(0, self._pad))
 		Hovertip(frame, hovertip)
 		Hovertip(spinbox, hovertip)
 		return frame
@@ -414,6 +526,65 @@ class Gui(Tk):
 		Hovertip(entry, tip)
 		Hovertip(name_button, self._labels.destination_file_tip)
 		return frame
+
+	def _job_box(self, parent, cmd):
+		'''Job box with text field'''
+		frame = LabelFrame(parent, text=cmd[0])
+		frame.columnconfigure(0, weight=1)
+		hsc = Scrollbar(frame, orient='horizontal')
+		text = Text(frame,
+			font = (self._font['family'], self._font['size']),
+			wrap = "none",
+			padx = self._pad,
+			pady = self._pad,
+			height = 1,
+			xscrollcommand=hsc.set)
+		text.grid(row=0, column=0, sticky='nsew', padx=self._pad)
+		text.insert('end', ' '.join(cmd))
+		hsc.grid(row=1, column=0, sticky='ew', padx=self._pad, pady=(0, self._pad))
+		hsc.config(command=text.xview)
+		Button(frame, text='\u25B6').grid(row=0, column=1, rowspan=2, sticky='nsew', padx=self._pad, pady=self._pad)
+		return frame
+
+	def _make_draggable(self, widget):
+		'''Make widget draggable for reordering'''
+		widget.bind('<Button-1>', lambda e: self._start_drag(e, widget))
+		widget.bind('<B1-Motion>', lambda e: self._on_drag(e, widget))
+		widget.bind('<ButtonRelease-1>', lambda e: self._end_drag(e, widget))
+		widget.bind('<Enter>', lambda e: widget.config(cursor='hand2'))
+		widget.bind('<Leave>', lambda e: widget.config(cursor=''))
+
+	def _start_drag(self, event, widget):
+		'''Start drag operation'''
+		self._drag_data = {'widget': widget, 'y': event.y_root}
+
+	def _on_drag(self, event, widget):
+		'''Handle drag motion'''
+		if hasattr(self, '_drag_data'):
+			delta_y = event.y_root - self._drag_data['y']
+			if abs(delta_y) > 20:
+				self._reorder_widgets(widget, delta_y > 0)
+				self._drag_data['y'] = event.y_root
+
+	def _end_drag(self, event, widget):
+		'''End drag operation'''
+		if hasattr(self, '_drag_data'):
+			del self._drag_data
+
+	def _reorder_widgets(self, widget, move_down):
+		'''Reorder widgets in the jobs frame'''
+		children = list(self._jobs_frame.winfo_children())
+		if widget in children:
+			idx = children.index(widget)
+			new_idx = idx + 1 if move_down else idx - 1
+			if 0 <= new_idx < len(children):
+				widget.pack_forget()
+				if new_idx == 0:
+					widget.pack(fill='both', padx=self._pad, pady=self._pad, before=children[0])
+				else:
+					widget.pack(fill='both', padx=self._pad, pady=self._pad, after=children[new_idx])
+
+
 
 	def _clean(self, info):
 		'''Clean info text'''
