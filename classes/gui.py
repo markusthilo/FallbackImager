@@ -97,6 +97,10 @@ class Gui(Tk):
 		self._notebook.add(self._ewfacquire_frame, text=' ewfaquire ', sticky='nswe')
 		self._ewfverify_frame = Frame(self._notebook)
 		self._notebook.add(self._ewfverify_frame, text=' ewfverify ', sticky='nswe')
+
+		self._cp_frame = Frame(self._notebook)
+		self._notebook.add(self._cp_frame, text=' cp ', sticky='nswe')
+
 		self._wipe_frame = Frame(self._notebook)
 		self._notebook.add(self._wipe_frame, text=' wipe ', sticky='nswe')
 		self._monitor_frame = Frame(self._notebook)
@@ -303,16 +307,24 @@ class Gui(Tk):
 		#	-T:     specify the file containing the table of contents (TOC) of an optical disc. The TOC file must be in the CUE format.
 
 		###### WIPE ######
-		self._wipe_frame.columnconfigure(0, weight=1)
+		#self._wipe_frame.columnconfigure(2, weight=1)
 		self._wipe_target = StringVar()	### target ###
 		frame = LabelFrame(self._wipe_frame, text=self._labels.target)
-		frame.grid(row=0, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
+		frame.grid(row=0, column=0, columnspan=2, sticky='nswe', padx=self._pad, pady=self._pad)
 		entry = Entry(frame, textvariable=self._wipe_target)
 		entry.pack(expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
 		Hovertip(frame, self._labels.wipe_target_tip)
 		Hovertip(entry, self._labels.wipe_target_tip)
+		self._wipe_task = StringVar(value=self._config.get('wipe_task', default='ssd'))	### wipe task ###
+		self._dropdown_selector(
+			self._wipe_frame,
+			self._labels.task,
+			self._wipe_task,
+			('ssd', 'all', 'extra', 'verify'),
+			self._labels.wipe_task_tip
+		).grid(row=1, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
 		frame = LabelFrame(self._wipe_frame, text=self._labels.value)	### value ###
-		frame.grid(row=0, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		frame.grid(row=2, column=0, sticky='nswe', padx=self._pad, pady=self._pad)
 		self._wipe_value = StringVar(value=self._config.get('value', default='00'))
 		spinbox = Spinbox(frame,
 			values = tuple(f'{b:02x}' for b in range(0x100)),
@@ -323,7 +335,7 @@ class Gui(Tk):
 		Hovertip(frame, self._labels.value_tip)
 		Hovertip(spinbox, self._labels.value_tip)
 		frame = LabelFrame(self._wipe_frame, text=self._labels.blocksize)	### blocksize ###
-		frame.grid(row=0, column=2, sticky='nswe', padx=self._pad, pady=self._pad)
+		frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
 		self._blocksize_box = Spinbox(frame,
 			values = (0x200, 0x400, 0x800) + tuple(0x1000 * p for p in range(1, 201)),
 			justify='right'
@@ -337,58 +349,39 @@ class Gui(Tk):
 			self._labels.maxbadblocks,
 			self._maxbadblocks, 0, 0xffff,
 			self._labels.maxbadblocks_tip
-		).grid(row=0, column=3, sticky='nsew', padx=self._pad, pady=self._pad)
+		).grid(row=3, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._maxretries = IntVar(value=self._config.get('maxretries', default=200))	### maxretries ###
 		self._int_spinbox(self._wipe_frame,
 			self._labels.maxretries,
 			self._maxretries, 0, 0xffff,
 			self._labels.maxretries_tip
-		).grid(row=0, column=4, sticky='nsew', padx=self._pad, pady=self._pad)
+		).grid(row=3, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._volume_label = StringVar()	### label ###
+		self._dropdown_entry(
+			self._wipe_frame,
+			self._labels.volume_label,
+			self._volume_label,
+			'volume_label',
+			self._labels.volume_label_tip,
+			width = 32
+		).grid(row=4, column=0, columnspan=3, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._create_partition_table = StringVar(value=self._config.get('partition_table', default='gpt'))	### partition table ###
+		self._dropdown_selector(
+			self._wipe_frame,
+			self._labels.create_partition_table,
+			self._create_partition_table,
+			('gpt', 'mbr', '-'),
+			self._labels.create_partition_table_tip
+		).grid(row=5, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
+		self._file_system = StringVar(value=self._config.get('file_system', default='ntfs'))	### file system ###
+		self._dropdown_selector(
+			self._wipe_frame,
+			self._labels.file_system,
+			self._file_system,
+			('ntfs', 'exfat', 'fat32', 'ext4'),
+			self._labels.file_system_tip
+		).grid(row=5, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
 
-		'''
-
-		self._wipe_task = StringVar(value=self._config.get('wipe_taks', default='selective'))	### wipe task ###
-		selector = self._dropdown_selector(self._wipe_frame,
-			self._labels.task,
-			self._wipe_task,
-			tuple(self._labels.wipe_tasks.values()),
-			self._labels.wipe_task_tip
-		).grid(row=1, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
-		self._create_table = StringVar(value=self.[self._config.create])	### create ###
-		self._create_selector = Combobox(self,
-			textvariable = self._create,
-			values = tuple(self._labels.create.values()),
-			state = 'readonly'
-		)
-		
-		
-
-		self._create = StringVar(value=self._labels.create[self._config.create])	### create ###
-		self._create_selector = Combobox(self,
-			textvariable = self._create,
-			values = tuple(self._labels.create.values()),
-			state = 'readonly'
-		)
-		self._create_selector.grid(row=3, column=0, sticky='nwe', padx=self._pad, pady=self._pad)
-		Hovertip(self._create_selector, self._labels.create_tip)
-		self._rev_create = dict(zip(self._labels.create.values(), self._labels.create))
-		self._fs = StringVar(value=self._labels.fs[self._config.fs])	### fs ###
-		self._fs_selector = Combobox(self,
-			textvariable = self._fs,
-			values = tuple(self._labels.fs.values()),
-			state = 'readonly'
-		)
-		self._fs_selector.grid(row=3, column=1, sticky='nwe', padx=self._pad, pady=self._pad)
-		Hovertip(self._fs_selector, self._labels.fs_tip)
-		self._rev_fs = dict(zip(self._labels.fs.values(), self._labels.fs))
-		label = Label(self, text=f'{self._labels.label}:')	### label ###
-		label.grid(row=4, column=0, sticky='nw', padx=self._pad)
-		self._label = StringVar(value=self._config.label)
-		self._label_entry = Entry(self, textvariable=self._label)
-		self._label_entry.grid(row=4, column=1, sticky='nwe', padx=self._pad)
-		Hovertip(label, self._labels.label_tip)
-		Hovertip(self._label_entry, self._labels.label_tip)
-		'''		
 
 
 		self._queue_frame = LabelFrame(self._monitor_frame, text=self._labels.queue)	### queue ###
@@ -463,7 +456,7 @@ class Gui(Tk):
 		self._init_warning()
 
 
-	def _dropdown_entry(self, parent, text, textvariable, key, hovertip):
+	def _dropdown_entry(self, parent, text, textvariable, key, hovertip, width=None):
 		'''Combobox with LabelFrame and Buttons'''
 		def _store():
 			if value := textvariable.get():
@@ -487,7 +480,7 @@ class Gui(Tk):
 		button_remove.pack(side='right', padx=self._pad, pady=(0, self._pad))
 		button_store = Button(frame, text='\u272A', width=2, command=_store)
 		button_store.pack(side='right', padx=self._pad, pady=(0, self._pad))
-		entry = Combobox(frame, textvariable=textvariable, values=self._config.get(key, default=list()))
+		entry = Combobox(frame, textvariable=textvariable, values=self._config.get(key, default=list()), width=width)
 		entry.pack(side='right', expand=True, fill='x', padx=self._pad, pady=(0, self._pad))
 		Hovertip(frame, hovertip)
 		Hovertip(entry, hovertip)

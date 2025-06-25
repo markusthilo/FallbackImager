@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'EwfImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-17'
+__version__ = '0.7.0_2025-06-25'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Use libewf to create and check an EWF/E01 image of a block device.
+Augmentation to ewfacquire from libewf. Also runs ewfverify after imaging.
 '''
 
-from os import name as __os_name__
-from os import getlogin
 from pathlib import Path
 from math import ceil
 from argparse import ArgumentParser
@@ -28,30 +25,38 @@ from ewfchecker import EwfChecker
 class EwfImager:
 	'''Acquire and verify E01/EWF image'''
 
-	def __init__(self, echo=print, utils=None):
-		'''Check if ewfacquire and ewfverify are present'''
-		self.available = False
-		if __os_name__ == 'posix' and EwfChecker().available:
-			self.ewfacquire_path = LinUtils.find_bin('ewfacquire', Path(__file__).parent)
-			if self.ewfacquire_path:
-				self.echo = echo
-				self.utils = utils
-				self.available = True
+	def __init__(self, dst_dir_path, dst_name,
+		codepage = 'ascii',
+		amount_of_sectors = 64,
+		amount_of_bytes = 0,
+		compression_type = 'none',
+		case_number = '',
+		digest_type = None,
+		description = '',
+		examiner_name = None,
+		evidence_number = '',
+		format = 'encase6',
+		media_type = None,
+		media_flags = None,
+		notes = '',
+		offset = 0,
+		process_buffer_size = 0,
+		bytes_per_sector = 512,
+		read_error_retries = 2,
+		resume = False,
+		swap_byte_pairs = False,
+		toc = None,
+		wipe_sectors = False,
+		dst_dir2_path = None,
+		dst_name = None,
+		echo = print,
+		utils = None
+	):
+		'''Define job'''
+		self.
 
-	def acquire(self, source, case_number, evidence_number, description, *args,
-			outdir = None,
-			compression_values = None,
-			examiner_name = None,
-			filename = None,
-			media_type = None,
-			media_flags = None,
-			notes = None,
-			setro = False,
-			size = None,
-			log = None,
-			sudo = None
-		):
-		'''Run ewfacquire'''
+	def run(self):
+		'''Run ewfacquire + ewfverify'''
 		self.source = Path(source)
 		self.filename = filename if filename else PathUtils.mkfname(f'{case_number}_{evidence_number}_{description}')
 		self.outdir = PathUtils.mkdir(outdir)
@@ -151,14 +156,9 @@ class EwfImager:
 				self.utils.chown(user, group, path)
 		return self.infos
 
-class EwfImagerCli(ArgumentParser):
-	'''CLI, also used for GUI of FallbackImager'''
+if __name__ == '__main__':	# start here if called as application
+	arg_parser = ArgumentParser(description=__description__)
 
-	def __init__(self, echo=print, utils=None, **kwargs):
-		'''Define CLI using argparser'''
-		self.echo = echo
-		self.utils = utils
-		super().__init__(description=__description__, **kwargs)
 		self.add_argument('-c', '--compression_values', type=str,
 			help='Compression level options: none, empty-block, fast (default) or best',
 			metavar='STRING'
@@ -249,7 +249,3 @@ class EwfImagerCli(ArgumentParser):
 		)
 		imager.log.close()
 
-if __name__ == '__main__':	# start here if called as application
-	app = EwfImagerCli()
-	app.parse()
-	app.run()
