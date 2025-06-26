@@ -251,29 +251,41 @@ if __name__ == '__main__':	# start here if called as application
 	arg_parser.add_argument('-o', '--offset', type=int,
 		help='Specify the offset to start to acquire (default is 0)', metavar='BYTES'
 	)
-
-
-
-	arg_parser.add_argument('-O', '--outdir', type=Path,
-			help='Directory to write generated files (default: current)',
-			metavar='DIRECTORY'
+	arg_parser.add_argument('-p', '--process_buffer_size', type=int,
+		help='Specify the process buffer size (default is the chunk size)', metavar='INTEGER'
+	)
+	arg_parser.add_argument('-P', '--bytes_per_sector', type=int,
+		help='Specify the number of bytes per sector (default is 512, set to override the automatic detection)',
+		metavar='BYTES'
 		)
-	arg_parser.add_argument('-S', '--size', type=str,
-			help='Segment file size in MiB or GiB or MiB number of segments (e.g. "4g", "100m", "20", default: "40")',
-			default='40', metavar='GiB/MiB/INTEGER/STRING'
+	arg_parser.add_argument('-r', '--read_error_retries', type=int,
+		help = 'Specify the number of retries when a read error occurs (default is 2)',
+		metavar='INTEGER'
+	)
+	arg_parser.add_argument('-R', '--resume', help='Resume acquiry at a safe point (if something went wrong before)')
+	arg_parser.add_argument('-s', '--swap_byte_pairs', help='Swap byte pairs of the media data (from AB to BA)')
+	arg_parser.add_argument('-S', '--segment_size', type=str,
+			help='Segment file size in MiB, GiB or n where size = source source / n (default is 40)',
+			metavar='GiB/MiB/INTEGER'
 		)
-	arg_parser.add_argument('--setro', action='store_true',
-			help='Set target block device to read only'
+	arg_parser.add_argument('-t', '--target', type=Path, required=True,
+			help='Specify the target file (without extension) to write to', metavar='FILE'
 		)
+	arg_parser.add_argument('-T', '--toc', type=Path,
+		help='Specify the file containing the table of contents (TOC) of an optical disc (CUE format)',
+		metavar='FILE'
+	)
+	arg_parser.add_argument('-w', '--zero_sectors', help='Zero sectors on read error (mimic EnCase like behavior)')
+	arg_parser.add_argument('-x', '--unbuffered', help='Use the chunk data instead of the buffered read and write functions.')
+	arg_parser.add_argument('-2', '--secondary_target', type=Path,
+		help='Specify the secondary target file (without extension) to write to', metavar='FILE'
+	)
 	arg_parser.add_argument('source', nargs='+', type=Path,
-			help='The source device, partition or anything else that works with ewfacquire',
-			metavar='BLOCKDEVICE/PARTITON/FILE'
+			help='The source file(s), device, partition or anything else that works with ewfacquire',
+			metavar='FILE'
 		)
-
-
 	args = arg_parser.parse_args()
-
-	ewfacquire = EwfAcquire(args.src_paths, args.destination.parent, args.destination.stem,
+	ewfacquire = EwfAcquire(args.src_paths, args.target.parent, args.target.stem,
 		codepage = args.codepage,
 		chunk_size = args.chunk_size,
 		bytes_to_acquire = args.bytes_to_acquire,
@@ -289,48 +301,17 @@ if __name__ == '__main__':	# start here if called as application
 		media_flags = args.media_flags,
 		notes = args.notes,
 		offset = args.offest,
-
-		process_buffer_size = None,
-		bytes_per_sector = None,
-		read_error_retries = None,
-		resume = False,
-		swap_byte_pairs = False,
-		toc_path = None,
-		wipe_sectors = False,
-		dst_dir2_path = None,
-		dst_name2 = None,
+		process_buffer_size = args.process_buffer_size,
+		bytes_per_sector = args.bytes_per_sector,
+		read_error_retries = args.read_error_retries,
+		resume = args.resume,
+		swap_byte_pairs = args.swap_byte_pairs,
+		segment_size = args.segment_size,
+		toc_path = args.toc,
+		zero_sectors = args.zero_sectors,
+		unbuffered = args.unbuffered,
+		dst_dir2_path = args.secondary_target.parent if args.secondary_target else None,
+		dst_name2 = args.secondary_target.stem if args.secondary_target else None,
 		utils = None,
 	)
 
-'''
-                  [ -o offset ] [ -p process_buffer_size ]
-                  [ -P bytes_per_sector ] [ -r read_error_retries ]
-                  [ -S segment_file_size ] [ -t target ] [ -T toc_file ]
-                  [ -2 secondary_target ] [ -hqRsuvVwx ] source
-
-	source: the source file(s) or device
-
-	-p:     specify the process buffer size (default is the chunk size)
-	-P:     specify the number of bytes per sector (default is 512)
-	        (use this to override the automatic bytes per sector detection)
-	-q:     quiet shows minimal status information
-	-r:     specify the number of retries when a read error occurs (default
-	        is 2)
-	-R:     resume acquiry at a safe point
-	-s:     swap byte pairs of the media data (from AB to BA)
-	        (use this for big to little endian conversion and vice versa)
-	-S:     specify the segment file size in bytes (default is 1.4 GiB)
-	        (minimum is 1.0 MiB, maximum is 7.9 EiB for encase6
-	        and encase7 format and 1.9 GiB for other formats)
-	-t:     specify the target file (without extension) to write to
-	-T:     specify the file containing the table of contents (TOC) of
-	        an optical disc. The TOC file must be in the CUE format.
-	-u:     unattended mode (disables user interaction)
-	-v:     verbose output to stderr
-	-V:     print version
-	-w:     zero sectors on read error (mimic EnCase like behavior)
-	-x:     use the chunk data instead of the buffered read and write
-	        functions.
-	-2:     specify the secondary target file (without extension) to write
-	        to
-'''
