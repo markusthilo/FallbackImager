@@ -3,7 +3,7 @@
 
 __app_name__ = 'FallbackImager'
 __author__ = 'Markus Thilo'
-__version__ = '0.7.0_2025-06-25'
+__version__ = '0.7.0_2025-06-26'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -29,7 +29,7 @@ if __name__ == '__main__':  # start here
 	)
 	args = argp.parse_args()
 	config.update_path(args.config)
-	if config.load():
+	if ex := config.load():
 		raise ex
 	config.set('app_name', __app_name__, force=True)
 	config.set('version', __version__, force=True)

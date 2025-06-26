@@ -10,50 +10,93 @@ __description__ = '''
 Augmentation to ewfacquire from libewf. Also runs ewfverify after imaging.
 '''
 
-from pathlib import Path
-from math import ceil
+import logging
 from argparse import ArgumentParser
-from datetime import datetime
-from json import dump
-from lib.timestamp import TimeStamp
-from lib.pathutils import PathUtils
-from lib.logger import Logger
-from lib.linutils import LinUtils, OpenProc
-from lib.stringutils import StringUtils
-from ewfchecker import EwfChecker
+from pathlib import Path
+#from math import ceil
+#from datetime import datetime
+#from json import dump
+#from lib.timestamp import TimeStamp
+#from lib.pathutils import PathUtils
 
-class EwfImager:
-	'''Acquire and verify E01/EWF image'''
+from classes.coreutils import CoreUtils
 
-	def __init__(self, dst_dir_path, dst_name,
-		codepage = 'ascii',
-		amount_of_sectors = 64,
-		amount_of_bytes = 0,
-		compression_type = 'none',
-		case_number = '',
+class EwfAcquire:
+	'''Acquire E01/EWF image'''
+
+	def __init__(self, src_paths, dst_dir_path, dst_name,
+		codepage = None,
+		number_of_sectors = None,
+		number_of_bytes = None,
+		compression_type = None,
+		case_number = None,
 		digest_type = None,
-		description = '',
+		description = None,
 		examiner_name = None,
-		evidence_number = '',
-		format = 'encase6',
+		evidence_number = None,
+		file_format = None,
 		media_type = None,
 		media_flags = None,
-		notes = '',
-		offset = 0,
-		process_buffer_size = 0,
-		bytes_per_sector = 512,
-		read_error_retries = 2,
+		notes = None,
+		offset = None,
+		process_buffer_size = None,
+		bytes_per_sector = None,
+		read_error_retries = None,
 		resume = False,
 		swap_byte_pairs = False,
-		toc = None,
+		toc_path = None,
 		wipe_sectors = False,
 		dst_dir2_path = None,
-		dst_name = None,
+		dst_name2 = None,
 		echo = print,
-		utils = None
+		utils = None,
+		kill = None
 	):
 		'''Define job'''
-		self.
+		self._dst = f'{dst_dir_path / dst_name}'
+		dst_dir_path.mkdir(parents=True, exist_ok=True)
+		self._codepage = codepage
+		self._number_of_sectors = number_of_sectors
+		self._number_of_bytes = number_of_bytes
+		self._compression_type = compression_type
+		self._case_number = case_number
+		self._digest_type = digest_type
+		self._description = description
+		self._examiner_name =examiner_name
+		self._evidence_number = evidence_number
+		self._file_format = file_format
+		self._media_type = media_type
+		self._media_flags = media_flags
+		self._notes = notes
+		self._offset = offset
+		self._process_buffer_size = process_buffer_size
+		self._bytes_per_sector = bytes_per_sector
+		self._read_error_retries = read_error_retries
+		self._resume = resume
+		self._swap_byte_pairs = swap_byte_pairs
+		self._toc_path = toc_path
+		self._wipe_sectors = wipe_sectors
+		if dst_dir2_path:
+			self._dst2 = f'{dst_dir2_path / dst_name2}'
+			dst_dir2_path.mkdir(parents=True, exist_ok=True)
+		else:
+			self._dst2 = None
+		self._src_paths = src_paths
+		self._echo = echo
+		self._utils = utils if utils else CoreUtils()
+		self._log_path = dst_dir_path / '.log.txt'	### logging ###
+		formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+		logger = logging.getLogger()
+		logger.setLevel(logging.INFO)
+		log_fh = logging.FileHandler(filename=self._log_path, mode='w')
+		log_fh.setFormatter(formatter)
+		logger.addHandler(log_fh)
+		if self._dst2:	# additional log file if 2nd destination is given
+			self._log2_path = dst_dir2_path / '.log.txt'
+			log2_fh = logging.FileHandler(filename=self._log2_path, mode='w')
+			log2_fh.setFormatter(formatter)
+			logger.addHandler(log2_fh)
+		self._json_path = dst_dir_path / '.infos.json'	### infos as json ###
 
 	def run(self):
 		'''Run ewfacquire + ewfverify'''
@@ -158,94 +201,136 @@ class EwfImager:
 
 if __name__ == '__main__':	# start here if called as application
 	arg_parser = ArgumentParser(description=__description__)
+	arg_parser.add_argument('-a', '--codepage', type=str,
+		choices=(
+			'ascii', 'windows-874', 'windows-932', 'windows-936', 'windows-949',
+			'windows-950', 'windows-1250', 'windows-1251', 'windows-1252',
+			'windows-1253', 'windows-1254', 'windows-1255', 'windows-1256',
+			'windows-1257', 'windows-1258'),
+		help='Codepage of header section (default: ascii)', metavar='STRING'
+	)
+	arg_parser.add_argument('-b', '--chunk_size', type=int,
+		choices=(16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768),
+		help='Secify the number of sectors to read at once (per chunk. default: 64)',
+		metavar='INTEGER'
+	)
+	args_parser.add_argument('-B', '--bytes_to_acquire',
+		help='specify the number of bytes to acquire (default is all bytes)', metavar='BYTES'
+	)
+	arg_parser.add_argument('-c', '--compression', type=str,
+		choices=('none', 'empty-block', 'fast', 'best'),
+		help='Compression level (default: none)', metavar='STRING'
+	)
+	arg_parser.add_argument('-C', '--case_number', type=str, help='Case number', metavar='STRING')
+	argg_parser.add_argument('-d', '--digest_type', type=str, choices=('sha1', 'sha256'),
+		help='Calculate additional digest (hash) types besides md5', metavar='STRING'
+	)
+	arg_parser.add_argument('-D', '--description', type=str,
+		help='Description (required, e.g. drive number, example: "PC01_HD01")', metavar='STRING'
+	)
+	arg_parser.add_argument('-e', '--examiner_name', type=str, help='Examiner name', metavar='STRING')
+	arg_parser.add_argument('-E', '--evidence_number', type=str, help='Evidence number', metavar='STRING')
+	arg_parser.add_argument('-f', '--ewf_format', type=str,
+		choices=('ewf', 'smart', 'ftk', 'encase2', 'encase3', 'encase4', 'encase5',
+		'encase6', 'encase7', 'encase7-v2', 'linen5', 'linen6', 'linen7', 'ewfx'),
+		help='Specify the EWF file format to write to (default: encase6)', metavar='STRING'
+	)
+	arg_parser.add_argument('-g', '--error_granularity', type=int,
+		help='specify the number of sectors to be used as error granularity', metavar='INTEGER'
+	)
+	arg_parser.add_argument('-m', '--media_type', type=str, choices=('fixed', 'removable', 'optical', 'memory'),
+		help='Media type (try to detect if not set)', metavar='STRING'
+	)
+	arg_parser.add_argument('-M', '--media_flags', type=str, choices=('logical', 'physical'),
+		help='Specify the media flags, options: logical, physical (try to detect if not set)',
+		metavar='STRING'
+	)
+	arg_parser.add_argument('-N', '--notes', type=str,
+		help='Notes, e.g. used write blocker', metavar='STRING'
+	)
+	arg_parser.add_argument('-o', '--offset', type=int,
+		help='Specify the offset to start to acquire (default is 0)', metavar='BYTES'
+	)
 
-		self.add_argument('-c', '--compression_values', type=str,
-			help='Compression level options: none, empty-block, fast (default) or best',
-			metavar='STRING'
-		)
-		self.add_argument('-C', '--case_number', type=str, required=True,
-			help='Case number (required)',
-			metavar='STRING'
-		)
-		self.add_argument('-D', '--description', type=str, required=True,
-			help='Description (required, e.g. drive number, example: "PC01_HD01")',
-			metavar='STRING'
-		)
-		self.add_argument('-e', '--examiner_name', type=str,
-			help='Examiner name (required)',
-			metavar='STRING'
-		)
-		self.add_argument('-E', '--evidence_number', type=str, required=True,
-			help='Evidence number (required)',
-			metavar='STRING'
-		)
-		self.add_argument('-f', '--filename', type=str,
-			help='Image filename (without extension) to write to (default is assembled by case number etc.)',
-			metavar='STRING'
-		)
-		self.add_argument('-m', '--media_type', type=str,
-			choices=['fixed', 'removable', 'optical', 'memory'],
-			help='Media type, options: fixed, removable, optical, memory (auto if not set)',
-			metavar='STRING'
-		)
-		self.add_argument('-M', '--media_flags', type=str,
-			choices=['logical', 'physical'],
-			help='Specify the media flags, options: logical, physical (auto if not set)',
-			metavar='STRING'
-		)
-		self.add_argument('-N', '--notes', type=str,
-			help='Notes, e.g. used write blocker (default is "-")',
-			metavar='STRING'
-		)
-		self.add_argument('-O', '--outdir', type=Path,
+
+
+	arg_parser.add_argument('-O', '--outdir', type=Path,
 			help='Directory to write generated files (default: current)',
 			metavar='DIRECTORY'
 		)
-		self.add_argument('-S', '--size', type=str,
+	arg_parser.add_argument('-S', '--size', type=str,
 			help='Segment file size in MiB or GiB or MiB number of segments (e.g. "4g", "100m", "20", default: "40")',
 			default='40', metavar='GiB/MiB/INTEGER/STRING'
 		)
-		self.add_argument('--setro', action='store_true',
+	arg_parser.add_argument('--setro', action='store_true',
 			help='Set target block device to read only'
 		)
-		self.add_argument('source', nargs=1, type=Path,
+	arg_parser.add_argument('source', nargs='+', type=Path,
 			help='The source device, partition or anything else that works with ewfacquire',
 			metavar='BLOCKDEVICE/PARTITON/FILE'
 		)
 
-	def parse(self, *cmd):
-		'''Parse arguments'''
-		args = super().parse_args(*cmd)
-		self.source = args.source[0]
-		self.compression_values = args.compression_values
-		self.case_number = args.case_number
-		self.description = args.description
-		self.examiner_name = args.examiner_name
-		self.evidence_number = args.evidence_number
-		self.filename = args.filename
-		self.media_type = args.media_type
-		self.notes = args.notes
-		self.outdir = args.outdir
-		self.size = args.size
-		self.setro = args.setro
 
-	def run(self):
-		'''Run EwfImager and EwfVerify'''
-		imager = EwfImager(echo=self.echo, utils=self.utils)
-		hashes = imager.acquire(self.source, self.case_number, self.evidence_number, self.description,
-			compression_values = self.compression_values,
-			examiner_name = self.examiner_name,
-			filename = self.filename,
-			media_type = self.media_type,
-			notes = self.notes,
-			setro = self.setro,
-			size = self.size,
-			outdir = self.outdir,
-		)
-		EwfChecker(echo=self.echo).check(imager.image_path,
-			outdir = self.outdir,
-			log = imager.log,
-			hashes = hashes
-		)
-		imager.log.close()
+	args = arg_parser.parse_args()
 
+	ewfacquire = EwfAcquire(args.src_paths, args.destination.parent, args.destination.stem,
+		codepage = args.codepage,
+		chunk_size = args.chunk_size,
+		bytes_to_acquire = args.bytes_to_acquire,
+		compression = args.compression,
+		case_number = args.case_number,
+		digest_type= args.digest_type,
+		description = args.description,
+		examiner_name = args.examiner_name,
+		evidence_number = args.evidence_number,
+		ewf_format = args.ewf_format,
+		error_granularity = args.error_granularity,
+		media_type = args.media_type,
+		media_flags = args.media_flags,
+		notes = args.notes,
+		offset = args.offest,
+
+		process_buffer_size = None,
+		bytes_per_sector = None,
+		read_error_retries = None,
+		resume = False,
+		swap_byte_pairs = False,
+		toc_path = None,
+		wipe_sectors = False,
+		dst_dir2_path = None,
+		dst_name2 = None,
+		utils = None,
+	)
+
+'''
+                  [ -o offset ] [ -p process_buffer_size ]
+                  [ -P bytes_per_sector ] [ -r read_error_retries ]
+                  [ -S segment_file_size ] [ -t target ] [ -T toc_file ]
+                  [ -2 secondary_target ] [ -hqRsuvVwx ] source
+
+	source: the source file(s) or device
+
+	-p:     specify the process buffer size (default is the chunk size)
+	-P:     specify the number of bytes per sector (default is 512)
+	        (use this to override the automatic bytes per sector detection)
+	-q:     quiet shows minimal status information
+	-r:     specify the number of retries when a read error occurs (default
+	        is 2)
+	-R:     resume acquiry at a safe point
+	-s:     swap byte pairs of the media data (from AB to BA)
+	        (use this for big to little endian conversion and vice versa)
+	-S:     specify the segment file size in bytes (default is 1.4 GiB)
+	        (minimum is 1.0 MiB, maximum is 7.9 EiB for encase6
+	        and encase7 format and 1.9 GiB for other formats)
+	-t:     specify the target file (without extension) to write to
+	-T:     specify the file containing the table of contents (TOC) of
+	        an optical disc. The TOC file must be in the CUE format.
+	-u:     unattended mode (disables user interaction)
+	-v:     verbose output to stderr
+	-V:     print version
+	-w:     zero sectors on read error (mimic EnCase like behavior)
+	-x:     use the chunk data instead of the buffered read and write
+	        functions.
+	-2:     specify the secondary target file (without extension) to write
+	        to
+'''

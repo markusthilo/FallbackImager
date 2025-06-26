@@ -1,3 +1,6 @@
+### --- Currently rewriting for Version 0.7! Download release if you want to use this tool! ---
+
+
 # FallbackImager
 This is a modular utility for forensic work as a complement or fallback to the commercial and/or established tools. The modules write log files into given output directories, calculate hashes and/or lists of copied files etc. Multiple jobs can be generated and executed sequentially.
 
