@@ -3,12 +3,14 @@
 
 from os import getuid, getenv
 from pathlib import Path
+from os import access, R_OK
 from subprocess import Popen, PIPE, STDOUT, run
 from json import loads
 from re import findall
 from time import strftime
 from hashlib import md5
 from getpass import getpass
+import shlex
 
 class CoreUtils:
 	'Wrapper for shell core utilities'
@@ -21,48 +23,24 @@ class CoreUtils:
 		return getuid() == 0
 
 	@staticmethod
+	def no_pw_sudo():
+		'''Return True if sudo does not need password'''
+		ret = run(['sudo', '-n', 'whoami'], capture_output=True, text=True)
+		return ret.stderr == ''
+
+	@staticmethod
 	def whoami():
 		'''Get username'''
 		ret = run(['whoami'], capture_output=True, text=True)
 		return ret.stdout.rstrip()
 
 	@staticmethod
-	def no_pw_sudo():
-		'''Return True if sudo does not need password'''
-		ret = run(['sudo', '-n', 'blockdev', '--report'], capture_output=True, text=True)
-		return ret.stderr == '' and len(ret.stdout.split('\n')) > 2
-
-	@staticmethod
-	def gen_cmd(*args, sudo=False, password=None):
-		'''Build a command to run as subprocess from args'''
-		if len(args) == 0:
-			return
-		if password or sudo:
-			cmd = ['sudo']
-			if password:
-					cmd.extend(['-S', '-k'])
-		else:
-			cmd = list()
-		for arg in args:
-			if isinstance(arg, list):
-				cmd.extend(arg)
-			else:
-				cmd.append(arg)
-		return cmd
-
-	@staticmethod
-	def find_bin(name, parent_path):
-		'''Find a binary'''
-		for parent in (
-			parent_path/'bin',
-			parent_path/'dist-lin/bin',
-			Path('/usr/bin/'),
-			Path('/usr/local/bin/'),
-			Path('/opt/FallbackImager/bin')
-		):
-			bin_path = parent/name
-			if bin_path.is_file():
-				return bin_path
+	def are_readable(paths):
+		'''Check if every path is readable'''
+		for path in paths:
+			if not access(path, R_OK):
+				return False
+		return True
 
 	@staticmethod
 	def get_pid(name):
@@ -124,6 +102,7 @@ class CoreUtils:
 		#	}
 		#return blkdevs
 
+
 	@staticmethod
 	def get_rootdevs():
 		'''Get root devices = block devices without partition'''
@@ -159,7 +138,6 @@ class CoreUtils:
 			dev['path'] for dev in loads(run(['lsblk', '--json', '-o', 'PATH'],
 				capture_output=True, text=True).stdout)['blockdevices']
 		]
-
 
 	@staticmethod
 	def get_physical_devs():
@@ -261,18 +239,7 @@ class CoreUtils:
 	#	except IndexError:
 	#		return
 
-	@staticmethod
-	def diskdetails(dev):
-		'''Use lsblk with JSON output to get enhanced infos about block devoce'''
-		details = dict()
-		for key, value in loads(run(
-			['lsblk', '--json', '-o', 'LABEL,SIZE,VENDOR,MODEL,REV,SERIAL', f'{dev}'],
-			capture_output=True, text=True).stdout)['blockdevices'][0].items():
-			if value:
-				details[key] = value.strip()
-			else:
-				details[key] = ''
-		return details
+
 
 	@staticmethod
 	def blkdevsize(dev):
@@ -337,43 +304,119 @@ class CoreUtils:
 
 	### root / sudo required ###
 
-	def __init__(self, sudo=True, password=None, cli=False):
+	def __init__(self):
 		'''Generate object to use shell commands that need root privileges'''
+		self._password = ''
 		if self.i_am_root():
-			self.sudo = False
-			self.password = None
+			self._sudo = False
+			self._no_pw_sudo = False
+			self._i_am_root = True
 		else:
-			self.password = password
-			self.sudo = True
-			if not self.i_have_root() and cli:
-				print('\n\nGive password for sudo')
-				self.password=getpass()
-
-	def _run(self, *args):
-		'''Run command using sudo if password was given'''
-		cmd = self.gen_cmd(*args, sudo=self.sudo, password=self.password)
-		if self.password:
-			ret = run(cmd, input=self.password, capture_output=True, text=True)
-		else:
-			ret = run(cmd, capture_output=True, text=True)
-		return ret.stdout, ret.stderr
+			self._sudo = True
+			self._i_m_root = False
+			if self.no_pw_sudo():
+				self._no_pw_sudo = True
+			else:
+				self._no_pw_sudo = False
 
 	def i_have_root(self):
 		'''Return True if sudo works'''
-		run(['faillock', '--user', getenv('USER'), '--reset'])
-		stdout, stderr = self._run('whoami')
-		return stdout.strip() == 'root' or self.i_am_root()
+		if self.i_am_root() or self._no_pw_sudo:
+			return True
+		ret = run(['sudo', '-S', '-k', 'whoami'], input=self._password, capture_output=True, text=True)
+		return ret.stdout.endswith('root\n')
+
+	def set_password(self, password):
+		'''Set sudo password'''
+		self._password = password
+		self._sudo = True
+		self._no_pw_sudo = False
+
+	def read_password(self):
+		'''Get sudo password on command line'''
+		print('\nGive password for sudo')
+		self.set_password(getpass())
+		if not self.i_have_root():
+			raise PermissionError('Unable to become root')
+
+	def gen_cmd(self, cmd):
+		'''Build a command to run as subprocess from args'''
+		new_cmd = list()
+		cmd_str = ''
+		if len(cmd) > 0:
+			if self._sudo:
+				new_cmd.append('sudo')
+				if self._password:
+					new_cmd.extend(['-S', '-k'])
+			new_cmd.append(cmd[0])
+			cmd_str = f'{cmd[0]}'
+			for arg in cmd[1:]:
+				arg_str = f'{arg}'
+				new_cmd.append(arg_str)
+				cmd_str += f' {arg_str}' if isinstance(arg, int) or arg_str.startswith('-') else f' "{arg_str}"'
+		return new_cmd, cmd_str
+
+	def popen(self, cmd, start_new_session=False):
+		'''Launch process'''
+		cmd, cmd_str = self.gen_cmd(cmd)
+		if self._password:
+			proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True, start_new_session=start_new_session)
+			proc.stdin.write(password)
+		else:
+			proc = Popen(cmd, stdout=PIPE, stderr=PIPE, text=True, start_new_session=start_new_session)
+		return proc, cmd_str
+
+	def run(self, cmd):
+		'''Run command using sudo if password was given'''
+		cmd, cmd_str = self.gen_cmd(cmd)
+		if self._password:
+			ret = run(cmd, input=self.password, capture_output=True, text=True)
+		else:
+			ret = run(cmd, capture_output=True, text=True)
+		return ret.stdout, ret.stderr, cmd_str
+
+	def diskdetails(self, dev):
+		'''Use lsblk with JSON output to get enhanced infos about block devoce'''
+		details = dict()
+		stdout, stderr, cmd_str = self.run(['lsblk', '--json', '-O', '-b', f'{dev}'])
+		if stderr:
+			details
+		try:
+			for key, value in loads(stdout)['blockdevices'][0].items():
+				try:
+					details[key] = int(value)
+				except:
+					pass
+				try:
+					details[key] = value.strip()
+				except:
+					pass
+				try:
+					details[key] = value
+				except:
+					details[key] = ''
+		except IndexError:
+			pass
+		return details
+
+	def get_file_size(self, path):
+		'''Return file suze in bytes as int'''
+		stdout, stderr, cmd_str = self.run(['stat', '-c', '%s', f'{path}'])
+		try:
+			return int(stdout)
+		except:
+			return
 
 	def fdisk(self, path):
 		'''Use fdisk -l to read partition table'''
-		return self._run('fdisk', '-l', f'{path}')
+		return self.run('fdisk', '-l', f'{path}')
 
 	def mkdir(self, path, exists_ok=False):
 		'''Generate directory with root privileges'''
 		cmd = ['mkdir']
 		if exists_ok:
 			cmd.append('-p')
-		return self._run(cmd, f'{path}')
+		return self.run(cmd, f'{path}')
 
 	def mount(self, part, mnt=None):
 		'''Create dir to mount and mount given partition'''
@@ -391,7 +434,7 @@ class CoreUtils:
 		stdout, stderr = self.mkdir(mountpoint, exists_ok=True)
 		if stderr:
 			return stdout, stderr
-		stdout, stderr = self._run('mount', '-o', 'rw,umask=0000', part, mountpoint)
+		stdout, stderr = self.run('mount', '-o', 'rw,umask=0000', part, mountpoint)
 		if stderr:
 			return stdout, stderr
 		return mountpoint, ''
@@ -405,10 +448,10 @@ class CoreUtils:
 				print(mountpoint)
 			else:
 				mountpoint = target
-		umount_stdout, umount_stderr = self._run('umount', f'{target}')
+		umount_stdout, umount_stderr = self.run('umount', f'{target}')
 		if not rmdir:
 			return umount_stdout, umount_stderr
-		rmdir_stdout, rmdir_stderr = self._run('rmdir', f'{mountpoint}')
+		rmdir_stdout, rmdir_stderr = self.run('rmdir', f'{mountpoint}')
 		return umount_stdout + rmdir_stdout, umount_stderr + rmdir_stderr
 
 	def init_blkdev(self, dev, mbr=False, fs=None, name=None):
@@ -439,18 +482,18 @@ class CoreUtils:
 		else:
 			cmd.extend([fs.lower(), '-L'])
 		cmd.extend([name, part])
-		stdout, stderr = self._run(cmd)
+		stdout, stderr = self.run(cmd)
 		if stderr and not ' lowercase labels ' in stderr:
 			return stdout, stderr
 		return part, ''
 
 	def set_ro(self, dev):
 		'''Set block device to read only'''
-		return self._run('blockdev', '--setro', f'{dev}')
+		return self.run('blockdev', '--setro', f'{dev}')
 
 	def set_rw(self, dev):
 		'''Set block device to read and write access'''
-		return self._run('blockdev', '--setrw', f'{dev}')
+		return self.run('blockdev', '--setrw', f'{dev}')
 
 	def mount_rw(self, part, target):
 		'''Set partition and root device to rw and mount'''
@@ -461,57 +504,12 @@ class CoreUtils:
 
 	def chown(self, user, group, path):
 		'''Set user and group of given file or directory'''
-		return self._run('chown', f'{user}:{group}', f'{path}')
+		return self.run('chown', f'{user}:{group}', f'{path}')
 
 	def killall(self, name):
 		'''Use killall to terminate process'''
-		return self._run('killall', name)
+		return self.run('killall', name)
 
 	def poweroff(self):
 		'''Poweroff machine'''
-		return self._run('shutdown', '--poweroff')
-
-class OpenProc(Popen):
-	'''Use Popen the way it is needed here'''
-
-	def __init__(self, *args, sudo=False, password=None, indie=False, log=None):
-		'''Launch process'''
-		self.log = log
-		cmd = LinUtils.gen_cmd(*args, sudo=sudo, password=password)
-		if password:
-			super().__init__(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True, start_new_session=indie)
-			self.stdin.write(password)
-		else:
-			super().__init__(cmd, stdout=PIPE, stderr=PIPE, text=True, start_new_session=indie)
-
-	def echo_output(self, echo=print, cnt=None, skip=0):
-		'''Echo stdout, cnt: max. lines to log, skip: skip lines to log'''
-		if self.log:
-			stdout_cnt = 0
-			self.stack = list()
-			for line in self.stdout:
-				if line:
-					stdout_cnt += 1
-					stripped = line.strip()
-					self.log.echo(stripped)
-					if stdout_cnt > skip:
-						self.stack.append(stripped)
-				if cnt and len(self.stack) > cnt:
-					self.stack.pop(0)
-			if self.stack:
-				self.log.info('\n' + '\n'.join(self.stack))
-		else:
-			for line in self.stdout:
-				if line:
-					echo(line.strip())
-		self.poll()
-		return self.returncode
-
-	def grep_stack(self, *searches, delimiter=':'):
-		'''Get values by given search strings and keys from self.stack'''
-		return {
-			key:line.split(delimiter, 1)[1].strip()
-				for line in self.stack
-					for pattern, key in searches
-						if line.startswith(pattern)
-		}
+		return self.run('shutdown', '--poweroff')

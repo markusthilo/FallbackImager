@@ -24,17 +24,18 @@ from classes.coreutils import CoreUtils
 class EwfAcquire:
 	'''Acquire E01/EWF image'''
 
-	def __init__(self, src_paths, dst_dir_path, dst_name,
+	def __init__(self, src_paths, target_path,
 		codepage = None,
-		number_of_sectors = None,
-		number_of_bytes = None,
-		compression_type = None,
+		chunk_size = None,
+		bytes_to_acquire = None,
+		compression = None,
 		case_number = None,
 		digest_type = None,
 		description = None,
 		examiner_name = None,
 		evidence_number = None,
-		file_format = None,
+		ewf_format = None,
+		error_granularity = None,
 		media_type = None,
 		media_flags = None,
 		notes = None,
@@ -44,160 +45,181 @@ class EwfAcquire:
 		read_error_retries = None,
 		resume = False,
 		swap_byte_pairs = False,
-		toc_path = None,
-		wipe_sectors = False,
-		dst_dir2_path = None,
-		dst_name2 = None,
-		echo = print,
+		segment_size = '40',
+		toc = None,
+		zero_sectors = False,
+		unbuffered = False,
+		target2 = None,
 		utils = None,
+		echo = print,
 		kill = None
 	):
 		'''Define job'''
-		self._dst = f'{dst_dir_path / dst_name}'
-		dst_dir_path.mkdir(parents=True, exist_ok=True)
-		self._codepage = codepage
-		self._number_of_sectors = number_of_sectors
-		self._number_of_bytes = number_of_bytes
-		self._compression_type = compression_type
-		self._case_number = case_number
-		self._digest_type = digest_type
-		self._description = description
-		self._examiner_name =examiner_name
-		self._evidence_number = evidence_number
-		self._file_format = file_format
-		self._media_type = media_type
-		self._media_flags = media_flags
-		self._notes = notes
-		self._offset = offset
-		self._process_buffer_size = process_buffer_size
-		self._bytes_per_sector = bytes_per_sector
-		self._read_error_retries = read_error_retries
-		self._resume = resume
-		self._swap_byte_pairs = swap_byte_pairs
-		self._toc_path = toc_path
-		self._wipe_sectors = wipe_sectors
-		if dst_dir2_path:
-			self._dst2 = f'{dst_dir2_path / dst_name2}'
-			dst_dir2_path.mkdir(parents=True, exist_ok=True)
-		else:
-			self._dst2 = None
-		self._src_paths = src_paths
+		self._kill = kill
 		self._echo = echo
-		self._utils = utils if utils else CoreUtils()
-		self._log_path = dst_dir_path / '.log.txt'	### logging ###
+		self._utils = utils if utils else CoreUtils()	### utils ###
+		self.details = self._utils.diskdetails(src_paths[0])	### analyze_source
+		if self.details:
+			if len(src_paths) > 1:
+				raise ValueError('Only one blockdevice allowed as source')
+			if not media_flags and self.details['type'] != 'disk':
+				media_flags = 'logical'
+			self._size = self.details['size']
+		else:
+			if not media_flags:
+				media_flags = 'logical'
+			self._size = 0
+			self.details['files'] = list()
+			for path in src_paths:
+				size = self._utils.get_file_size(path)
+				if isinstance(size, int):
+					self._size += size
+				else:
+					raise ValueError(f'Unable to get size of {path}')
+				self.details['files'].append({'path': path.absolute(), 'size': size})
+			if toc:
+				self.details['toc'] = f'{toc.absolute()}'
+		if segment_size:	### segment size ###
+			max_segment_size = 0x80000000 if ewf_format and not ewf_format in ('encase6', 'encase7') else min(2*self._size, 0x7777777777777700)
+			segment_size = segment_size.lower().replace(' ', '')
+			if segment_size in ('max', 'maximum', 'maximal', 'm'):
+				segment_size = None
+			elif segment_size.endswith('mib') or segment_size.endswith('m'):
+				try:
+					segment_size = 0x100000 * int(segment_size.split('m', 1)[0])
+				except:
+					segment_size = None
+			elif segment_size.endswith('gib') or segment_size.endswith('g'):
+				try:
+					segment_size = 0x40000000 * int(segment_size.split('g', 1)[0])
+				except:
+					segment_size = None
+			elif segment_size.endswith('tib') or segment_size.endswith('t'):
+				try:
+					segment_size = 0x40000000000 * int(segment_size.split('t', 1)[0])
+				except:
+					segment_size = None
+			else:
+				print(self._size, segment_size)
+				try:
+					segment_size = self._size // int(segment_size)
+				except:
+					segment_size = None
+			if not segment_size or segment_size < 0x100000 or segment_size > max_segment_size:
+				segment_size = max_segment_size
+		self._target_dir_path = target_path.parent	### target ###
+		self._target_dir_path.mkdir(parents=True, exist_ok=True)
+		self._log_path = target_path.with_suffix('.log.txt')	### logging ###
 		formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 		logger = logging.getLogger()
 		logger.setLevel(logging.INFO)
 		log_fh = logging.FileHandler(filename=self._log_path, mode='w')
 		log_fh.setFormatter(formatter)
 		logger.addHandler(log_fh)
-		if self._dst2:	# additional log file if 2nd destination is given
-			self._log2_path = dst_dir2_path / '.log.txt'
+		if target2:	### secondary target ###
+			self.target2_dir_path = target2.parent
+			self.target2_dir_path.mkdir(parents=True, exist_ok=True)
+			self._log2_path = target2.with_suffix('.log.txt')	# additional log file if 2nd destination is given
 			log2_fh = logging.FileHandler(filename=self._log2_path, mode='w')
 			log2_fh.setFormatter(formatter)
 			logger.addHandler(log2_fh)
-		self._json_path = dst_dir_path / '.infos.json'	### infos as json ###
+		self._json_path = target_path.with_suffix('.infos.json')	### infos as json ###
+		self._cmd = ['ewfacquire']	### assemble command to execute ###
+		if codepage:
+			self._cmd.extend(['-A', codepage])
+		if chunk_size:
+			self._cmd.extend(['-b', chunk_size])
+		if bytes_to_acquire:
+			self._cmd.extend(['-B', bytes_to_acquire])
+		if compression:
+			self._cmd.extend(['-c', compression])
+		if case_number:
+			self._cmd.extend(['-C', case_number])
+		if digest_type:
+			self._cmd.extend(['-d', digest_type])
+		if description:
+			self._cmd.extend(['-D', description])
+		if examiner_name:
+			self._cmd.extend(['-e', examiner_name])
+		if evidence_number:
+			self._cmd.extend(['-E', evidence_number])
+		if ewf_format:
+			self._cmd.extend(['-f', ewf_format])
+		if error_granularity:
+			self._cmd.extend(['-g', error_granularity])
+		if media_type:
+			self._cmd.extend(['-m', media_type])
+		if media_flags:
+			self._cmd.extend(['-M', media_flags])
+		if notes:
+			self._cmd.extend(['-N', notes])
+		if offset:
+			self._cmd.extend(['-o', offset])
+		if process_buffer_size:
+			self._cmd.extend(['-p', process_buffer_size])
+		if bytes_per_sector:
+			self._cmd.extend(['-P', bytes_per_sector])
+		if read_error_retries:
+			self._cmd.extend(['-r', read_error_retries])
+		if resume:
+			self._cmd.append('-R')
+		if swap_byte_pairs:
+			self._cmd.append('-s')
+		if segment_size:
+			self._cmd.extend(['-S', segment_size])
+		self._cmd.extend(['-t', f'{target_path}'])
+		if toc:
+			self._cmd.extend(['-T', f'{toc}'])
+		self._cmd.append('-u')
+		if zero_sectors:
+			self._cmd.append('-w')
+		if unbuffered:
+			self._cmd.append('-x')
+		if target2:
+			self._cmd.extend(['-2', target2])
+		self._cmd.extend([f'{path}' for path in src_paths])
 
 	def run(self):
-		'''Run ewfacquire + ewfverify'''
-		self.source = Path(source)
-		self.filename = filename if filename else PathUtils.mkfname(f'{case_number}_{evidence_number}_{description}')
-		self.outdir = PathUtils.mkdir(outdir)
-		if not self.utils:
-			self.utils = LinUtils()
-		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir,
-			head='ewfimager.EwfImager', echo=self.echo)
-		now = datetime.now()
-		self.infos = {'year': f'{now.year:04d}', 'month': f'{now.month:02d}', 'day': f'{now.day:02d}'}
-		if setro:
-			stdout, stderr = LinUtils.set_ro(self.source)
-			if stderr:
-				self.log.warning(stderr)
-		self.source_size = LinUtils.blkdevsize(self.source) if self.source.is_block_device() else PathUtils.get_size(self.source)
-		if not self.source_size:
-			self.log.error(f'Unable to get size of {self.source}')
-		self.infos['source_size'] = StringUtils.bytes(self.source_size, format_k='{iec} ({b} bytes)')
-		self.source_details = LinUtils.diskdetails(self.source)
-		self.infos.update(self.source_details)
-		msg = '\n'.join(f'{key.upper()}:\t{value}' for key, value in self.source_details.items())
-		self.log.info(f'Source:\n{msg}', echo=True)
-		proc = OpenProc([f'{self.ewfacquire_path}', '-V'])
-		if proc.wait() != 0:
-			self.log.warning(proc.stderr.read())
-		self.log.info(f'Using {proc.stdout.read().splitlines()[0]}')
-		self.image_path = self.outdir/self.filename
-		self.infos['case_number'] = case_number
-		self.infos['examiner_name'] = examiner_name if examiner_name else getlogin().upper()
-		self.infos['evidence_number'] = evidence_number
-		self.infos['compression_values'] = compression_values if compression_values else 'fast'
-		self.infos['description'] = description
-		if media_type:
-			self.media_type = media_type
-			self.infos['media_type'] = f'{media_type} (set by user)'
-		else:
-			if self.infos['vendor'] == 'ATA':
-				self.media_type = 'fixed'
-				self.infos['media_type'] = 'fixed (detected/estimated)'
+		'''Run ewfacquire'''
+		proc, cmd_str = utils.popen(self._cmd)
+		head = [f'Executing {cmd_str}']
+		self._echo(head[0])
+		tail = None
+		for cnt, line in enumerate(proc.stdout):
+			stripped = line.strip()
+			if not stripped:
+				continue
+			if stripped.startswith('Status: '):
+				status = stripped.rstrip('.').split(' ')
+				status.extend(next(proc.stdout).split(' '))
+				msg = f'{status[2]}, {status[12]} {status[13]} of {status[18]} {status[19]}'
+				next_stripped = next(proc.stdout).strip()
+				if next_stripped.startswith('completion '):
+					msg += f', {next_stripped.rstrip('.')}'
+				self._echo(msg, end='\r')
 			else:
-				self.media_type = 'removable'
-				self.infos['media_type'] = 'removable (detected/estimated)'
-		if media_flags:
-			self.infos['media_flags'] = media_flags
-		else:
-			self.infos['media_flags'] = 'physical (detected/estimated)' if LinUtils.is_disk(self.source) else 'logical (detected/estimated)'
-		self.infos['notes'] = notes if notes else '-'
-		if not size:
-			size = 40
-		try:
-			size = self.segment_size = ceil(self.source_size/int(size)/1073741824) * 1073741824
-		except ValueError:
-			size = size.replace(' ', '').rstrip('bB')
-			if size[-1].lower() == 'm':
-				self.segment_size = int(size[:-1]) * 1048576
-			elif size[-1].lower() == 'g':
-				self.segment_size = int(size[:-1]) * 1073741824
-			else:
-				self.log.error(exception='Undecodable segment size')
-			if self.segment_size <= 0:
-				self.log.error(exception='Invalid segment size')
-		self.infos['segment_size'] = StringUtils.bytes(self.segment_size)
-		cmd = [f'{self.ewfacquire_path}', '-u', '-t', f'{self.image_path}', '-d', 'sha256']
-		cmd.extend(['-C', self.infos['case_number']])
-		cmd.extend(['-D', self.infos['description']])
-		cmd.extend(['-e', self.infos['examiner_name']])
-		cmd.extend(['-E', self.infos['evidence_number']])
-		cmd.extend(['-c', self.infos['compression_values']])
-		cmd.extend(['-m', f'{self.media_type}'])
-		cmd.extend(['-M', self.infos['media_flags']])
-		cmd.extend(['-N', self.infos['notes']])
-		cmd.extend(['-S', f'{self.segment_size}'])
-		for arg in args:
-			cmd.append(arg)
-		cmd.append(f'{self.source}')
-		proc = OpenProc(cmd, sudo=self.utils.sudo, log=self.log)
-		if proc.echo_output(cnt=9) != 0:
-			self.log.error(f'ewfacquire terminated with:\n{proc.stderr.read()}')
-		self.infos.update(proc.grep_stack(
-				('MD5 hash calculated over data:', 'md5'),
-				('SHA256 hash calculated over data:', 'sha256'),
-				('ewfacquire:', 'ewfacquire')
-			)
-		)
-		for line in proc.stack:
-			if line.startswith('acquired '):
-				acquired = line.rstrip('.').split(' ')
-				self.infos['size_stored'] = ' '.join(acquired[1:5])
-				self.infos['size_acquired'] = ' '.join(acquired[7:11])
-		try:
-			with self.image_path.with_suffix('.json').open('w') as fh:
-				dump(self.infos, fh)
-		except Exception as err:
-			self.log.warning(f'Unable to create JSON file:\n{err}')
-		if not LinUtils.i_am_root():
-			user, group = self.log.path.owner(), self.log.path.group()
-			for path in self.outdir.glob(f'{self.filename}.*'):
-				self.utils.chown(user, group, path)
-		return self.infos
+				self._echo(stripped)
+				if head != False:
+					if stripped.startswith('Acquiry started at: '):
+						head.append(stripped)
+						logging.info('\n'.join(head))
+						head = False
+					else:
+						head.append(stripped)
+				elif tail:
+					tail.append(stripped)
+				elif stripped.startswith('Acquiry completed at: '):
+					tail = [stripped]
+		if tail:
+			logging.info('\n'.join(tail))
+			for line in tail:
+				if line.startswith('MD5'):
+					self.details['md5'] = line.split(':')[1].strip()
+				elif line.startswith('SHA1'):
+					self.details['sha1'] = line.split(':')[1].strip()
+				elif line.startswith('SHA256'):
+					self.details['sha256'] = line.split(':')[1].strip()
+		return self.details
 
 if __name__ == '__main__':	# start here if called as application
 	arg_parser = ArgumentParser(description=__description__)
@@ -214,7 +236,7 @@ if __name__ == '__main__':	# start here if called as application
 		help='Secify the number of sectors to read at once (per chunk. default: 64)',
 		metavar='INTEGER'
 	)
-	args_parser.add_argument('-B', '--bytes_to_acquire',
+	arg_parser.add_argument('-B', '--bytes_to_acquire',
 		help='specify the number of bytes to acquire (default is all bytes)', metavar='BYTES'
 	)
 	arg_parser.add_argument('-c', '--compression', type=str,
@@ -222,7 +244,7 @@ if __name__ == '__main__':	# start here if called as application
 		help='Compression level (default: none)', metavar='STRING'
 	)
 	arg_parser.add_argument('-C', '--case_number', type=str, help='Case number', metavar='STRING')
-	argg_parser.add_argument('-d', '--digest_type', type=str, choices=('sha1', 'sha256'),
+	arg_parser.add_argument('-d', '--digest_type', type=str, choices=('sha1', 'sha256'),
 		help='Calculate additional digest (hash) types besides md5', metavar='STRING'
 	)
 	arg_parser.add_argument('-D', '--description', type=str,
@@ -239,7 +261,7 @@ if __name__ == '__main__':	# start here if called as application
 		help='specify the number of sectors to be used as error granularity', metavar='INTEGER'
 	)
 	arg_parser.add_argument('-m', '--media_type', type=str, choices=('fixed', 'removable', 'optical', 'memory'),
-		help='Media type (try to detect if not set)', metavar='STRING'
+		help='Media type (default is fixed)', metavar='STRING'
 	)
 	arg_parser.add_argument('-M', '--media_flags', type=str, choices=('logical', 'physical'),
 		help='Specify the media flags, options: logical, physical (try to detect if not set)',
@@ -265,8 +287,8 @@ if __name__ == '__main__':	# start here if called as application
 	arg_parser.add_argument('-R', '--resume', help='Resume acquiry at a safe point (if something went wrong before)')
 	arg_parser.add_argument('-s', '--swap_byte_pairs', help='Swap byte pairs of the media data (from AB to BA)')
 	arg_parser.add_argument('-S', '--segment_size', type=str,
-			help='Segment file size in MiB, GiB or n where size = source source / n (default is 40)',
-			metavar='GiB/MiB/INTEGER'
+			help='Segment file size in MiB, GiB, TiB, max or integer n where segment_size = source_size / n (default is 1.4 GiB)',
+			metavar='STRING/GiB/MiB/INTEGER'
 		)
 	arg_parser.add_argument('-t', '--target', type=Path, required=True,
 			help='Specify the target file (without extension) to write to', metavar='FILE'
@@ -285,7 +307,10 @@ if __name__ == '__main__':	# start here if called as application
 			metavar='FILE'
 		)
 	args = arg_parser.parse_args()
-	ewfacquire = EwfAcquire(args.src_paths, args.target.parent, args.target.stem,
+	utils = CoreUtils()
+	if not utils.are_readable(args.source) and not utils.i_have_root():
+		utils.read_password()
+	ewfacquire = EwfAcquire(args.source, args.target,
 		codepage = args.codepage,
 		chunk_size = args.chunk_size,
 		bytes_to_acquire = args.bytes_to_acquire,
@@ -300,18 +325,17 @@ if __name__ == '__main__':	# start here if called as application
 		media_type = args.media_type,
 		media_flags = args.media_flags,
 		notes = args.notes,
-		offset = args.offest,
+		offset = args.offset,
 		process_buffer_size = args.process_buffer_size,
 		bytes_per_sector = args.bytes_per_sector,
 		read_error_retries = args.read_error_retries,
 		resume = args.resume,
 		swap_byte_pairs = args.swap_byte_pairs,
 		segment_size = args.segment_size,
-		toc_path = args.toc,
+		toc = args.toc,
 		zero_sectors = args.zero_sectors,
 		unbuffered = args.unbuffered,
-		dst_dir2_path = args.secondary_target.parent if args.secondary_target else None,
-		dst_name2 = args.secondary_target.stem if args.secondary_target else None,
-		utils = None,
+		target2 = args.secondary_target,
+		utils = utils,
 	)
-
+	print(ewfacquire.run())
