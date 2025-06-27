@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.7.0_2025-06-25'
+__version__ = '0.7.0_2025-06-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -10,18 +10,14 @@ __description__ = '''
 Augmentation to ewfacquire from libewf. Also runs ewfverify after imaging.
 '''
 
-import logging
 from argparse import ArgumentParser
 from pathlib import Path
-#from math import ceil
-#from datetime import datetime
-#from json import dump
-#from lib.timestamp import TimeStamp
-#from lib.pathutils import PathUtils
-
+from json import dump
 from classes.coreutils import CoreUtils
+from classes.logger import Logger
+from ewfverify import EwfVerify
 
-class EwfAcquire:
+class EwfAcquire(EwfVerify):
 	'''Acquire E01/EWF image'''
 
 	def __init__(self, src_paths, target_path,
@@ -55,7 +51,6 @@ class EwfAcquire:
 		kill = None
 	):
 		'''Define job'''
-		self._kill = kill
 		self._echo = echo
 		self._utils = utils if utils else CoreUtils()	### utils ###
 		self.details = self._utils.diskdetails(src_paths[0])	### analyze_source
@@ -76,7 +71,7 @@ class EwfAcquire:
 					self._size += size
 				else:
 					raise ValueError(f'Unable to get size of {path}')
-				self.details['files'].append({'path': path.absolute(), 'size': size})
+				self.details['files'].append({'path': f'{path.absolute()}', 'size': size})
 			if toc:
 				self.details['toc'] = f'{toc.absolute()}'
 		if segment_size:	### segment size ###
@@ -100,30 +95,23 @@ class EwfAcquire:
 				except:
 					segment_size = None
 			else:
-				print(self._size, segment_size)
 				try:
 					segment_size = self._size // int(segment_size)
 				except:
 					segment_size = None
 			if not segment_size or segment_size < 0x100000 or segment_size > max_segment_size:
 				segment_size = max_segment_size
-		self._target_dir_path = target_path.parent	### target ###
-		self._target_dir_path.mkdir(parents=True, exist_ok=True)
-		self._log_path = target_path.with_suffix('.log.txt')	### logging ###
-		formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-		logger = logging.getLogger()
-		logger.setLevel(logging.INFO)
-		log_fh = logging.FileHandler(filename=self._log_path, mode='w')
-		log_fh.setFormatter(formatter)
-		logger.addHandler(log_fh)
+		self.target_path = target_path
+		self.target_dir_path = target_path.parent	### target ###
+		self.target_dir_path.mkdir(parents=True, exist_ok=True)
+		self.log = Logger(target_path.with_suffix('.log.txt'), kill=kill)	### logging ###
 		if target2:	### secondary target ###
+			self.target2_path = target2_path
 			self.target2_dir_path = target2.parent
 			self.target2_dir_path.mkdir(parents=True, exist_ok=True)
-			self._log2_path = target2.with_suffix('.log.txt')	# additional log file if 2nd destination is given
-			log2_fh = logging.FileHandler(filename=self._log2_path, mode='w')
-			log2_fh.setFormatter(formatter)
-			logger.addHandler(log2_fh)
-		self._json_path = target_path.with_suffix('.infos.json')	### infos as json ###
+			self.log.add(target2.with_suffix('.log.txt'))	# additional log file if 2nd destination is given
+		else:
+			self.target2_path = None
 		self._cmd = ['ewfacquire']	### assemble command to execute ###
 		if codepage:
 			self._cmd.extend(['-A', codepage])
@@ -181,28 +169,21 @@ class EwfAcquire:
 
 	def run(self):
 		'''Run ewfacquire'''
-		proc, cmd_str = utils.popen(self._cmd)
-		head = [f'Executing {cmd_str}']
+		self._proc, cmd_str = utils.popen(self._cmd)
+		head = [f'Executing: {cmd_str}']
 		self._echo(head[0])
 		tail = None
-		for cnt, line in enumerate(proc.stdout):
+		for line in self._proc.stdout:
+			if self.log.check_kill_signal():
+				return
 			stripped = line.strip()
 			if not stripped:
 				continue
-			if stripped.startswith('Status: '):
-				status = stripped.rstrip('.').split(' ')
-				status.extend(next(proc.stdout).split(' '))
-				msg = f'{status[2]}, {status[12]} {status[13]} of {status[18]} {status[19]}'
-				next_stripped = next(proc.stdout).strip()
-				if next_stripped.startswith('completion '):
-					msg += f', {next_stripped.rstrip('.')}'
-				self._echo(msg, end='\r')
-			else:
-				self._echo(stripped)
+			if self._echo_info(stripped):
 				if head != False:
 					if stripped.startswith('Acquiry started at: '):
 						head.append(stripped)
-						logging.info('\n'.join(head))
+						self.log.write('\n'.join(head))
 						head = False
 					else:
 						head.append(stripped)
@@ -211,14 +192,14 @@ class EwfAcquire:
 				elif stripped.startswith('Acquiry completed at: '):
 					tail = [stripped]
 		if tail:
-			logging.info('\n'.join(tail))
+			self.log.write('\n'.join(tail))
 			for line in tail:
-				if line.startswith('MD5'):
-					self.details['md5'] = line.split(':')[1].strip()
-				elif line.startswith('SHA1'):
-					self.details['sha1'] = line.split(':')[1].strip()
-				elif line.startswith('SHA256'):
-					self.details['sha256'] = line.split(':')[1].strip()
+				if line.startswith('MD5 '):
+					self.details['acquire_md5'] = line.split(':')[1].strip()
+				elif line.startswith('SHA1 '):
+					self.details['acquire_sha1'] = line.split(':')[1].strip()
+				elif line.startswith('SHA256 '):
+					self.details['acquire_sha256'] = line.split(':')[1].strip()
 		return self.details
 
 if __name__ == '__main__':	# start here if called as application
@@ -285,7 +266,7 @@ if __name__ == '__main__':	# start here if called as application
 		metavar='INTEGER'
 	)
 	arg_parser.add_argument('-R', '--resume', help='Resume acquiry at a safe point (if something went wrong before)')
-	arg_parser.add_argument('-s', '--swap_byte_pairs', help='Swap byte pairs of the media data (from AB to BA)')
+	arg_parser.add_argument('-s', '--swap_byte_pairs', action='store_true', help='Swap byte pairs of the media data (from AB to BA)')
 	arg_parser.add_argument('-S', '--segment_size', type=str,
 			help='Segment file size in MiB, GiB, TiB, max or integer n where segment_size = source_size / n (default is 1.4 GiB)',
 			metavar='STRING/GiB/MiB/INTEGER'
@@ -297,8 +278,9 @@ if __name__ == '__main__':	# start here if called as application
 		help='Specify the file containing the table of contents (TOC) of an optical disc (CUE format)',
 		metavar='FILE'
 	)
-	arg_parser.add_argument('-w', '--zero_sectors', help='Zero sectors on read error (mimic EnCase like behavior)')
-	arg_parser.add_argument('-x', '--unbuffered', help='Use the chunk data instead of the buffered read and write functions.')
+	arg_parser.add_argument('-v', '--verify', action='store_true', help='Verify image after ewfacquire has finished')
+	arg_parser.add_argument('-w', '--zero_sectors', action='store_true', help='Zero sectors on read error (mimic EnCase like behavior)')
+	arg_parser.add_argument('-x', '--unbuffered', action='store_true', help='Use the chunk data instead of the buffered read and write functions.')
 	arg_parser.add_argument('-2', '--secondary_target', type=Path,
 		help='Specify the secondary target file (without extension) to write to', metavar='FILE'
 	)
@@ -316,7 +298,7 @@ if __name__ == '__main__':	# start here if called as application
 		bytes_to_acquire = args.bytes_to_acquire,
 		compression = args.compression,
 		case_number = args.case_number,
-		digest_type= args.digest_type,
+		digest_type = args.digest_type,
 		description = args.description,
 		examiner_name = args.examiner_name,
 		evidence_number = args.evidence_number,
@@ -338,4 +320,15 @@ if __name__ == '__main__':	# start here if called as application
 		target2 = args.secondary_target,
 		utils = utils,
 	)
-	print(ewfacquire.run())
+	ewfacquire.run()
+	if args.verify:
+		ewfverify = EwfVerify([args.target.with_suffix('.E01')], ewfacquire.log,
+			codepage = args.codepage,
+			digest_type = args.digest_type,
+			#input_format = args.ewf_format,
+			process_buffer_size = args.process_buffer_size,
+			zero_sectors = args.zero_sectors,
+			unbuffered = args.unbuffered
+		)
+		ewfverify.run()
+	ewfacquire.finish()

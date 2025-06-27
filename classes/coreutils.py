@@ -12,6 +12,20 @@ from hashlib import md5
 from getpass import getpass
 import shlex
 
+class PipedPopen(Popen):
+	'''Popen piping stdout and stderr'''
+
+	def __init__(self, cmd, start_new_session=False):
+		'''Generate string from list'''
+		super().__init__(cmd, stdout=PIPE, stderr=PIPE, text=True, start_new_session=start_new_session)
+
+	def __repr__(self):
+		'''String representation'''
+		rep = self.args[0]
+		for arg in self.args[1:]:
+			rep += f' {arg}' if arg.isdigit() or arg.startswith('-') else f' "{arg}"'
+		return rep
+
 class CoreUtils:
 	'Wrapper for shell core utilities'
 

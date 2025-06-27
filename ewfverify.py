@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__app_name__ = 'EwfVerify'
 __author__ = 'Markus Thilo'
-__version__ = '0.5.3_2024-12-17'
+__version__ = '0.7.0_2025-06-27'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -12,60 +11,112 @@ Verify EWF/E01 image using ewfinfo, ewfverify and ewfmount.
 '''
 
 from pathlib import Path
-from subprocess import run
 from re import sub
 from argparse import ArgumentParser
-from lib.pathutils import PathUtils
-from lib.timestamp import TimeStamp
-from lib.linutils import LinUtils, OpenProc
-from lib.logger import Logger
+from classes.coreutils import PipedPopen
+from classes.logger import Logger
 
-class EwfChecker:
+class EwfVerify:
 	'''Verify E01/EWF image file'''
 
-	def __init__(self, echo=print):
-		'''Check if the needed binaries are present'''
-		parent_path = Path(__file__).parent
-		self.ewfverify_path = LinUtils.find_bin('ewfverify', parent_path)
-		self.ewfinfo_path = LinUtils.find_bin('ewfinfo', parent_path)
-		self.ewfmount_path = LinUtils.find_bin('ewfmount', parent_path)
-		self.available = True if self.ewfverify_path and self.ewfinfo_path and self.ewfmount_path else False
-		self.echo = echo
+	def __init__(self, ewf_paths, log,
+		codepage = None,
+		digest_type = None,
+		input_format = None,
+		process_buffer_size = None,
+		zero_sectors = False,
+		unbuffered = False,
+		details = None,
+		echo = print,
+		kill = None
+	):
+		'''Define job'''
+		self._kill = kill
+		self._echo = echo
+		self.details = details if details else {'ewf': [f'{path.absolute()}' for path in ewf_paths]}
+		self.log = Logger(log, kill=kill) if isinstance(log, Path) else log	### logging ###
+		self._cmd = ['ewfverify']	### assemble command to execute ###
+		if codepage:
+			self._cmd.extend(['-A', codepage])
+		if digest_type:
+			self._cmd.extend(['-d', digest_type])
+		if input_format:
+			self._cmd.extend(['-f', input_format])
+		if process_buffer_size:
+			self._cmd.extend(['-p', process_buffer_size])
+		if zero_sectors:
+			self._cmd.append('-w')
+		if unbuffered:
+			self._cmd.append('-x')
+		self._cmd.extend([f'{path}' for path in ewf_paths])
+
+	def _echo_info(self, stripped):
+		'''Print information or progress, return False on progress indication'''
+		if stripped.startswith('Status: '):
+			status = stripped.rstrip('.').split(' ')
+			status.extend(next(self._proc.stdout).split(' '))
+			msg = f'{status[2]}, {status[12]} {status[13]} of {status[18]} {status[19]}'
+			next_stripped = next(self._proc.stdout).strip()
+			if next_stripped.startswith('completion '):
+				msg += f', {next_stripped.rstrip('.')}'
+			self._echo(msg, end='\r')
+			return False
+		self._echo(stripped)
+		return True
+
+	def run(self):
+		'''Run ewfverify'''
+		self._proc = PipedPopen(self._cmd)
+		head = [f'Executing: {self._proc}']
+		self._echo(head[0])
+		tail = None
+		for line in self._proc.stdout:
+			if self.log.check_kill_signal():
+				return
+			stripped = line.strip()
+			if not stripped:
+				continue
+			if self._echo_info(stripped):
+				if head != False:
+					if stripped.startswith('Verify started at: '):
+						head.append(stripped)
+						self.log.write('\n'.join(head))
+						head = False
+					else:
+						head.append(stripped)
+				elif tail:
+					tail.append(stripped)
+				elif stripped.startswith('Verify completed at: '):
+					tail = [stripped]
+		if tail:
+			self.log.write('\n'.join(tail))
+			for line in tail:
+				splitted = line.split(':', 1)
+				key = splitted[0].strip()
+				value = splitted[1].strip()
+				if key.startswith('MD5 '):
+					if key.endswith('file'):
+						self.details['verify_stored_md5'] = value
+					elif key.endswith('data'):
+						self.details['verify_calculated_md5'] = value
+				elif key.startswith('SHA1 '):
+					if key.endswith('file'):
+						self.details['verify_stored_sha1'] = value
+					elif key.endswith('data'):
+						self.details['verify_calculated_sha1'] = value
+				elif key.startswith('SHA256 '):
+					if key.endswith('file'):
+						self.details['verify_stored_sha256'] = value
+					elif key.endswith('data'):
+						self.details['verify_calculated_sha256'] = value
+				elif key == 'ewfverify':
+					self.details['ewfverify'] = value
+		return self.details
+
 
 	def check(self, image, outdir=None, filename=None, echo=print, log=None, hashes=None, sudo=None):
 		'''Verify image'''
-		self.image_path = Path(image)
-		if not self.image_path.suffix:
-			self.image_path = self.image_path.with_suffix('.E01')
-		self.outdir = PathUtils.mkdir(outdir)
-		self.filename = filename if filename else self.image_path.stem
-		self.log = log if log else Logger(filename=self.filename, outdir=self.outdir, 
-			head='ewfchecker.EwfChecker', echo=self.echo)
-		self.log.info('Image informations', echo=True)
-		proc = OpenProc([f'{self.ewfinfo_path}', f'{self.image_path}'], log=self.log, sudo=sudo)
-		proc.echo_output(skip=2)
-		if proc.returncode != 0:
-			self.log.warning(proc.stderr.read())
-		self.log.info('Verifying image', echo=True)
-		proc = OpenProc([f'{self.ewfverify_path}', '-V'])
-		if proc.wait() != 0:
-			self.log.error(proc.stderr.read())
-		info = proc.stdout.read().splitlines()[0]
-		self.log.info(f'Using {info}', echo=True)
-		proc = OpenProc([f'{self.ewfverify_path}', '-d', 'sha256', f'{self.image_path}'],
-			log=self.log, sudo=sudo)
-		if proc.echo_output(cnt=8) != 0:
-			self.log.error(f'ewfverify terminated with:\n{proc.stderr.read()}')
-		self.hashes = dict()
-		for line in proc.stack:
-			if line.startswith('MD5 hash calculated over data:'):
-				self.hashes['md5'] = line.split(':', 1)[1].strip()
-			elif line.startswith('SHA256 hash calculated over data:'):
-				self.hashes['sha256'] = line.split(':', 1)[1].strip()
-		if hashes:
-			for alg, hash in self.hashes.items():
-				if hash.lower() != hashes[alg].lower():
-					selg.log.error('Mismatching hashes')
+
 		mount_path = Path(f'/tmp/{self.image_path.stem}_{self.hashes["md5"]}')
 		try:
 			mount_path.mkdir(exist_ok=True)
@@ -100,41 +151,62 @@ class EwfChecker:
 			if ret.stderr:
 				self.log.warning(ret.stderr)
 			mount_path.rmdir()
-		
-class EwfCheckerCli(ArgumentParser):
-	'''CLI for EwfVerify'''
 
-	def __init__(self, echo=print):
-		'''Define CLI using argparser'''
-		self.echo = echo
-		super().__init__(description=__description__, prog=__app_name__.lower())
-		self.add_argument('-f', '--filename', type=str,
-			help='Filename to generated (without extension)', metavar='STRING'
-		)
-		self.add_argument('-o', '--outdir', type=Path,
-			help='Directory to write generated files (default: current)', metavar='DIRECTORY'
-		)
-		self.add_argument('image', nargs=1, type=Path,
-			help='EWF/E01 image file', metavar='FILE'
-		)
 
-	def parse(self, *cmd):
-		'''Parse arguments'''
-		args = super().parse_args(*cmd)
-		self.image = args.image[0]
-		self.filename = args.filename
-		self.outdir = args.outdir
-
-	def run(self):
-		'''Run the verification'''
-		checker = EwfChecker(echo=self.echo)
-		checker.check(self.image,
-			filename = self.filename,
-			outdir = self.outdir
-		)
-		checker.log.close()
+	def finish(self):
+		'''Run to close process without verification'''
+		try:
+			with self.target_path.with_suffix('.infos.json').open('w') as f:
+				dump(self.details, f)
+		except Exception as ex:
+			self.log.exception(ex)
+		if self.target2_path:
+			try:
+				with self.target2_path.with_suffix('.infos.json').open('w') as f:
+					dump(self.details, f)
+			except Exception as ex:
+				self.log.exception(ex)
+		self.log.close()
 
 if __name__ == '__main__':	# start here if called as application
-	app = EwfCheckerCli()
-	app.parse()
-	app.run()
+	arg_parser = ArgumentParser(description=__description__)
+	arg_parser.add_argument('-a', '--codepage', type=str,
+		choices=(
+			'ascii', 'windows-874', 'windows-932', 'windows-936', 'windows-949',
+			'windows-950', 'windows-1250', 'windows-1251', 'windows-1252',
+			'windows-1253', 'windows-1254', 'windows-1255', 'windows-1256',
+			'windows-1257', 'windows-1258'),
+		help='Codepage of header section (default: ascii)', metavar='STRING'
+	)
+	arg_parser.add_argument('-b', '--chunk_size', type=int,
+		choices=(16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768),
+		help='Secify the number of sectors to read at once (per chunk. default: 64)',
+		metavar='INTEGER'
+	)
+	arg_parser.add_argument('-d', '--digest_type', type=str, choices=('sha1', 'sha256'),
+		help='Calculate additional digest (hash) types besides md5', metavar='STRING'
+	)
+	arg_parser.add_argument('-f', '--input_format', type=str, choices=('raw', 'files'),
+		help='Specify the input format (default is raw, files is restricted to logical volume files)',
+		metavar='STRING'
+	)
+	arg_parser.add_argument('-l', '--log', type=Path, required=True, help='Specify log file (required)', metavar='FILE')
+	arg_parser.add_argument('-p', '--process_buffer_size', type=int,
+		help='Specify the process buffer size (default is the chunk size)', metavar='INTEGER'
+	)
+	arg_parser.add_argument('-w', '--zero_sectors', action='store_true', help='Zero sectors on checksum error (mimic EnCase like behavior)')
+	arg_parser.add_argument('-x', '--unbuffered', action='store_true', help='Use the chunk data instead of the buffered read and write functions.')
+	arg_parser.add_argument('ewf_files', nargs='+', type=Path,
+		help='The first or the entire set of EWF segment files', metavar='FILE'
+	)
+	args = arg_parser.parse_args()
+	ewfverify = EwfVerify(args.ewf_files,
+		codepage = args.codepage,
+		digest_type= args.digest_type,
+		input_format = args.input_format,
+		log = args.log,
+		process_buffer_size = args.process_buffer_size,
+		zero_sectors = args.zero_sectors,
+		unbuffered = args.unbuffered
+	)
+	print(ewfverify.run())
