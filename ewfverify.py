@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.7.0_2025-06-27'
+__version__ = '0.7.0_2025-06-29'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
 __description__ = '''
-Verify EWF/E01 image using ewfinfo, ewfverify and ewfmount.
+Verify EWF/E01 image using ewfverify.
 '''
 
 from pathlib import Path

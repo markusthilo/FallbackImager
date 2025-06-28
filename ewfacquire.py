@@ -104,7 +104,8 @@ class EwfAcquire(EwfVerify):
 		self.target_path = target_path
 		self.target_dir_path = target_path.parent	### target ###
 		self.target_dir_path.mkdir(parents=True, exist_ok=True)
-		self.log = Logger(target_path.with_suffix('.log.txt'), kill=kill)	### logging ###
+		self.log_path = target_path.with_suffix('.log.txt')
+		self.log = Logger(self.log_path, kill=kill)	### logging ###
 		if target2:	### secondary target ###
 			self.target2_path = target2_path
 			self.target2_dir_path = target2.parent
@@ -200,6 +201,11 @@ class EwfAcquire(EwfVerify):
 					self.details['acquire_sha1'] = line.split(':')[1].strip()
 				elif line.startswith('SHA256 '):
 					self.details['acquire_sha256'] = line.split(':')[1].strip()
+		if not utils.i_am_root:
+			stat = self.log_path.stat()
+			utils.chown(stat.st_uid, stat.st_giu, f'{self.target_path}.*')
+			if self.target2_path:
+				utils.chown(stat.st_uid, stat.st_giu, f'{self.target2_path}.*')
 		return self.details
 
 if __name__ == '__main__':	# start here if called as application
