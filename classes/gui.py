@@ -402,36 +402,37 @@ class Gui(Tk):
 				self._job_boxes[row].append((job_frame, text))
 				job_frame.grid(row=row, column=col+2, sticky='nswe', padx=self._pad, pady=(0, self._pad))
 				Hovertip(job_frame, self._labels.job_tip)
-		
-		frame = LabelFrame(self, text='\u25A2')	### control frame ###
-		frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
-		panel_frame = Frame(frame)
-		panel_frame.pack(expand=True, fill='x', padx=self._pad, pady=self._pad)
-
-		self._start_button = Button(panel_frame, text='\u25B6', command=self._start)
-		self._start_button.pack(side='left', padx=self._pad, pady=(0, self._pad))
+		self._start_button = Button(frame, text='\u25B6', command=self._start)	### start button
+		self._start_button.grid(row=3, column=2, sticky='w', padx=self._pad, pady=self._pad)
 		Hovertip(self._start_button, self._labels.start_tip)
-		self._stop_button = Button(panel_frame, text='\u25A0', command=self._stop)
-		self._stop_button.pack(side='left', padx=self._pad, pady=(0, self._pad))
-		Hovertip(self._stop_button, self._labels.stop_tip)
-
-
-
-		self._quit_button = Button(panel_frame, text='\u2716', width=2, command=self._quit_app)
-		self._quit_button.pack(side='right', padx=(0, self._pad*4), pady=(0, self._pad))
-		Hovertip(button, self._labels.quit_tip)
-		self._shutdown = BooleanVar(value=False)
-		self._shutdown_button = Checkbutton(panel_frame,
+		self._shutdown = BooleanVar(value=False)	### shutdown switch
+		self._shutdown_button = Checkbutton(frame,
 			text = self._labels.shutdown,
 			variable = self._shutdown,
 			command = self._toggle_shutdown
 		)
-		self._shutdown_button.pack(side='right', padx=self._pad, pady=(0, self._pad))
+		self._shutdown_button.grid(row=3, column=3, padx=self._pad, pady=self._pad)
 		Hovertip(self._shutdown_button, self._labels.shutdown_tip)
+		self._stop_button = Button(frame, text='\u25A0', command=self._stop)	### stop button
+		self._stop_button.grid(row=3, column=4, sticky='e', padx=self._pad, pady=self._pad)
+		Hovertip(self._stop_button, self._labels.stop_tip)
+		frame = LabelFrame(self, text='blockd')	### options frame ###)
+		frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		self._blckd_text = self._info_frame(frame, height=4)
+		self._blckd_text.grid(row=0, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
 
 
-		Sizegrip(self).grid(row=3, column=1, sticky='se', padx=self._pad, pady=self._pad)
-		self._init_warning()
+		#frame = LabelFrame(self, text='\u25A2')	### control frame ###
+		#frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		#panel_frame = Frame(frame)
+		#panel_frame.pack(expand=True, fill='x', padx=self._pad, pady=self._pad)
+
+		#self._quit_button = Button(panel_frame, text='\u2716', width=2, command=self._quit_app)
+		#self._quit_button.pack(side='right', padx=(0, self._pad*4), pady=(0, self._pad))
+		#Hovertip(button, self._labels.quit_tip)
+
+		#Sizegrip(self).grid(row=3, column=1, sticky='se', padx=self._pad, pady=self._pad)
+		#self._init_warning()
 
 
 	def _dropdown_entry(self, parent, text, textvariable, key, hovertip, width=None):
@@ -544,21 +545,17 @@ class Gui(Tk):
 		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
 		Hovertip(entry, self._labels.sudo_password_tip)
 
-	def _info_frame(saelf):
-		self._info_frame = LabelFrame(self._monitor_frame, text=self._labels.info)	### info ###
-		self._info_frame.pack(fill='both', padx=self._pad, pady=self._pad)
-		self._info_text = ScrolledText(self._info_frame,	### info ###
+	def _info_frame(self, parent, height=None):
+		'''ScrolledText to show infos'''
+		text = ScrolledText(parent,
 			font = (self._font['family'], self._font['size']),
 			padx = self._pad,
 			pady = self._pad,
-			height = 10
+			height = height
 		)
-		self._info_text.pack(expand=True, fill='both', padx=self._pad, pady=self._pad)
-		self._info_text.bind('<Key>', lambda dummy: 'break')
-		self._info_text.configure(state='disabled')
-		self._info_fg = self._info_text.cget('foreground')
-		self._info_bg = self._info_text.cget('background')
-		self._info_newline = True
+		text.bind('<Key>', lambda dummy: 'break')
+		text.configure(state='disabled')
+		return text
 
 	def _make_draggable(self, widget):
 		'''Make widget draggable for reordering'''
