@@ -67,12 +67,13 @@
 		"file_system_tip": "Select the file system to format the partition with.\nNTFS is the Windows standard file system.\nexFAT works for most other operating systems.\nFAT32 is a legacy file system and might be a\ngood choice for SD cards or smaller USB drives.",
 		"volume_label": "Volume label",
 		"volume_label_tip": "Enter the volume label if you want\nto format the wiped drive",
+		"jobs": "Jobs",
+		"job": "Job",
+		"job_tip": "Jobs are added here. Jobs arranged next\nto each other are executed simultaneously. The\nhorizontal sequence is executed line by line.",
+		"add_job": "Add job",
+		"remove_job": "Remove job",
 
-
-
-
-		"operations_monitor": "Operations monitor",
-		"queue": "Queue",
+		
 		"start_tip": "Start processing the queue.",
 		"stop_tip": "Stop processing.",
 		"shutdown": "Shutdown when done",
@@ -156,11 +157,13 @@
 		"file_system_tip": "Wählen Sie das Dateisystem aus, das die Partition mit\nformatiert werden soll.\nNTFS ist das Windows-Standard-Dateisystem.\nexFAT funktioniert für alle anderen Betriebssysteme.\nFAT32 ist ein alte Dateisystem und sollte für SD-Karten oder kleineren USB-Sticks verwendet werden.",
 		"volume_label": "Name der Partition",
 		"volume_label_tip": "Geben Sie den Namen der Partition ein, wenn Sie\ndas gelöschte Laufwerk formatieren möchten",
+		"jobs": "Jobs",
+		"job": "Job",
+		"job_tip": "Jobs werden hier hinzugefügt. Nebeneinander angeordnete\nJobs werden gleichzeitig ausgeführt. Nacheinander wird\nhorizontal Linie für Linie abgearbeitet.",
+		"add_job": "Job hinzufügen",
+		"remove_job": "Job entfernen",
 
 
-
-		"operations_monitor": "Verarbeitungsmonitor",
-		"queue": "Warteschlange",
 		"start_tip": "Verarbeitung der Warteschlange starten.",
 		"stop_tip": "Verarbeitung beenden.",
 		"shutdown": "Herunterfahren, wenn fertig",

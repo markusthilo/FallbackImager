@@ -1,9 +1,7 @@
 {
 	"pad_factor": 0.25,
-	"x_factor": 128,
+	"x_factor": 144,
 	"y_factor": 80,
-	"row_weights": [1, 0, 0, 0],
-	"column_weights": [1, 1, 1, 1, 0],
 	"blockdev_tree_widths": [16, 8, 8, 8, 8, 8, 32],
 	"blockdev_tree_stretch": [1, 1, 0, 0, 0, 0, 1],
 

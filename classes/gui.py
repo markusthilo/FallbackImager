@@ -58,10 +58,8 @@ class Gui(Tk):
 		self._work_thread = None
 		super().__init__()
 		self.title(f'{self._config.get("app_name")} v{self._config.get("version")}')	### define the gui ###
-		for row, weight in enumerate(self._defs.row_weights):
-			self.rowconfigure(row, weight=weight)
-		for column, weight in enumerate(self._defs.column_weights):
-			self.columnconfigure(column, weight=weight)
+		self.rowconfigure(0, weight=1)
+		self.columnconfigure(0, weight=1)
 		self.iconphoto(True, PhotoImage(file=Path(__file__).parent.parent.joinpath('appicon.png')))
 		self.protocol('WM_DELETE_WINDOW', self._quit_app)
 		self._font = nametofont('TkTextFont').actual()
@@ -73,7 +71,7 @@ class Gui(Tk):
 		self._pad = int(self._font['size'] * self._defs.pad_factor)
 		###### block devices in tree view ######
 		frame = Frame(self)
-		frame.grid(row=0, column=0, columnspan=5, sticky='nsew', padx=self._pad, pady=self._pad)
+		frame.grid(row=0, column=0, columnspan=2, sticky='nsew', padx=self._pad, pady=self._pad)
 		self._blockdev_tree = Treeview(frame,
 			selectmode = 'browse',
 			columns = ('label', 'type', 'size', 'fstype', 'ro', 'info'),
@@ -92,7 +90,7 @@ class Gui(Tk):
 		#self._drive_tree.bind('<Button-1>', self._select_blockdev)
 		###### notebook ######
 		self._notebook = Notebook(self, padding=self._pad)
-		self._notebook.grid(row=1, column=0, columnspan=5, sticky='nsew')
+		self._notebook.grid(row=1, column=0, rowspan=3, sticky='nsew')
 		self._ewfacquire_frame = Frame(self._notebook)
 		self._notebook.add(self._ewfacquire_frame, text=' ewfaquire ', sticky='nswe')
 		self._ewfverify_frame = Frame(self._notebook)
@@ -103,8 +101,6 @@ class Gui(Tk):
 
 		self._wipe_frame = Frame(self._notebook)
 		self._notebook.add(self._wipe_frame, text=' wipe ', sticky='nswe')
-		self._monitor_frame = Frame(self._notebook)
-		self._notebook.add(self._monitor_frame, text=f' {self._labels.operations_monitor} ', sticky='nswe')
 		####### EWFACQUIRE #######
 		for col in range(4):
 			self._ewfacquire_frame.columnconfigure(col, weight=1)
@@ -381,78 +377,60 @@ class Gui(Tk):
 			('ntfs', 'exfat', 'fat32', 'ext4'),
 			self._labels.file_system_tip
 		).grid(row=5, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
-
-
-
-		self._queue_frame = LabelFrame(self._monitor_frame, text=self._labels.queue)	### queue ###
-		self._queue_frame.pack(fill='both', padx=self._pad, pady=self._pad)
-		self._queue_frame.columnconfigure(1, weight=1)
+		###### side panel ######
+		frame = LabelFrame(self, text=self._labels.jobs)	### jobs frame ###
+		frame.grid(row=1, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		Hovertip(frame, self._labels.job_tip)
 		self._progress_position = IntVar(value=0)
-		Progressbar(self._queue_frame,
+		bar = Progressbar(frame,
 			mode = 'determinate',
 			orient = 'vertical',
-			maximum = 5,
+			maximum = 3,
 			variable = self._progress_position
-		).grid(row=0, column=0, sticky='ns', padx=(self._pad, 0))
-		hsc = Scrollbar(self._queue_frame, orient='horizontal')
-		vsc = Scrollbar(self._queue_frame, orient='vertical')
-		self._queue_tree = Treeview(self._queue_frame,
-			show = 'tree',
-			selectmode = 'browse',
-			height = 5,
-			xscrollcommand=hsc.set,
-			yscrollcommand=vsc.set
 		)
-		self._queue_tree.grid(row=0, column=1, sticky='nsew')
-		hsc.grid(row=1, column=1, sticky='ew', pady=(0, self._pad))
-		hsc.config(command=self._queue_tree.xview)
-		vsc.grid(row=0, column=2, sticky='ns', padx=(0, self._pad))
-		vsc.config(command=self._queue_tree.yview)
+		bar.grid(row=0, column=0, rowspan=3, sticky='ns', padx=(self._pad, 0), pady=self._pad)
+		Hovertip(bar, self._labels.job_tip)
+		for row in range(3):
+			label = Label(frame, text=f'\u25BD')
+			label.grid(row=row, column=1, sticky='ns', padx=self._pad, pady=self._pad)
+			Hovertip(label, self._labels.job_tip)
+		self._job_boxes = list()
+		for row in range(3):
+			self._job_boxes.append(list())
+			for col in range(3):
+				job_frame, text = self._job_box(frame, row, col)
+				self._job_boxes[row].append((job_frame, text))
+				job_frame.grid(row=row, column=col+2, sticky='nswe', padx=self._pad, pady=(0, self._pad))
+				Hovertip(job_frame, self._labels.job_tip)
+		
+		frame = LabelFrame(self, text='\u25A2')	### control frame ###
+		frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		panel_frame = Frame(frame)
+		panel_frame.pack(expand=True, fill='x', padx=self._pad, pady=self._pad)
 
-		self._control_frame = LabelFrame(self._monitor_frame, text='\u25AD')	### control ###
-		self._control_frame.pack(fill='both', expand=True, padx=self._pad, pady=self._pad)
-		self._start_button = Button(self._control_frame, text='\u25B6', command=self._start)
+		self._start_button = Button(panel_frame, text='\u25B6', command=self._start)
 		self._start_button.pack(side='left', padx=self._pad, pady=(0, self._pad))
 		Hovertip(self._start_button, self._labels.start_tip)
-		self._stop_button = Button(self._control_frame, text='\u25A0', command=self._stop)
+		self._stop_button = Button(panel_frame, text='\u25A0', command=self._stop)
 		self._stop_button.pack(side='left', padx=self._pad, pady=(0, self._pad))
 		Hovertip(self._stop_button, self._labels.stop_tip)
-		self._quit_button = Button(self._control_frame, text='\u2716', width=2, command=self._quit_app)
+
+
+
+		self._quit_button = Button(panel_frame, text='\u2716', width=2, command=self._quit_app)
 		self._quit_button.pack(side='right', padx=(0, self._pad*4), pady=(0, self._pad))
 		Hovertip(button, self._labels.quit_tip)
 		self._shutdown = BooleanVar(value=False)
-		self._shutdown_button = Checkbutton(self._control_frame,
+		self._shutdown_button = Checkbutton(panel_frame,
 			text = self._labels.shutdown,
 			variable = self._shutdown,
 			command = self._toggle_shutdown
 		)
 		self._shutdown_button.pack(side='right', padx=self._pad, pady=(0, self._pad))
 		Hovertip(self._shutdown_button, self._labels.shutdown_tip)
-		button = Button(self._control_frame,	### sudo ###
-			text = self._labels.sudo_password,
-			command = self._test_sudo
-			)
-		button.pack(side='right', padx=self._pad, pady=(0, self._pad))
-		Hovertip(button, self._labels.sudo_check_tip)
-		self._sudo_password = StringVar()
-		entry = Entry(self._control_frame, textvariable=self._sudo_password, show='*')
-		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
-		Hovertip(entry, self._labels.sudo_password_tip)
-		self._info_frame = LabelFrame(self._monitor_frame, text=self._labels.info)	### info ###
-		self._info_frame.pack(fill='both', padx=self._pad, pady=self._pad)
-		self._info_text = ScrolledText(self._info_frame,	### info ###
-			font = (self._font['family'], self._font['size']),
-			padx = self._pad,
-			pady = self._pad,
-			height = 10
-		)
-		self._info_text.pack(expand=True, fill='both', padx=self._pad, pady=self._pad)
-		self._info_text.bind('<Key>', lambda dummy: 'break')
-		self._info_text.configure(state='disabled')
-		self._info_fg = self._info_text.cget('foreground')
-		self._info_bg = self._info_text.cget('background')
-		self._info_newline = True
-		Sizegrip(self).grid(row=3, column=3, sticky='se', padx=self._pad, pady=self._pad)
+
+
+		Sizegrip(self).grid(row=3, column=1, sticky='se', padx=self._pad, pady=self._pad)
 		self._init_warning()
 
 
@@ -520,24 +498,67 @@ class Gui(Tk):
 		Hovertip(name_button, self._labels.destination_file_tip)
 		return frame
 
-	def _job_box(self, parent, cmd):
+	def _job_box(self, parent, row, col):
 		'''Job box with text field'''
-		frame = LabelFrame(parent, text=cmd[0])
-		frame.columnconfigure(0, weight=1)
+		frame = LabelFrame(parent, text=self._labels.job)
+		button = Button(frame, text='\u261F', command= lambda: self._add_job(row, col))
+		button.grid(row=0, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
+		Hovertip(button, self._labels.add_job)
+		button = Button(frame, text='\u2421', width=1, command= lambda: self._remove_job(row, col))
+		button.grid(row=0, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
+		Hovertip(button, self._labels.remove_job)
 		hsc = Scrollbar(frame, orient='horizontal')
 		text = Text(frame,
 			font = (self._font['family'], self._font['size']),
 			wrap = "none",
 			padx = self._pad,
 			pady = self._pad,
-			height = 1,
+			height = 2,
+			width = 24,
 			xscrollcommand=hsc.set)
-		text.grid(row=0, column=0, sticky='nsew', padx=self._pad)
-		text.insert('end', ' '.join(cmd))
-		hsc.grid(row=1, column=0, sticky='ew', padx=self._pad, pady=(0, self._pad))
+		text.grid(row=1, column=0, columnspan=2, sticky='nswe', padx=self._pad)
+		text.bind('<Key>', lambda dummy: 'break')
+		text.configure(state='disabled')
+		hsc.grid(row=2, column=0, columnspan=2, sticky='ew', padx=self._pad)
 		hsc.config(command=text.xview)
-		Button(frame, text='\u25B6').grid(row=0, column=1, rowspan=2, sticky='nsew', padx=self._pad, pady=self._pad)
-		return frame
+		return frame, text
+
+	def _add_job(self, row, col):
+		'''Add job to jobs frmae'''
+		pass
+
+
+	def _remove_job(self, row, col):
+		'''Remove job from jobs frame'''
+		pass
+
+	def _sudo(self):
+		button = Button(self._control_frame,	### sudo ###
+			text = self._labels.sudo_password,
+			command = self._test_sudo
+			)
+		button.pack(side='right', padx=self._pad, pady=(0, self._pad))
+		Hovertip(button, self._labels.sudo_check_tip)
+		self._sudo_password = StringVar()
+		entry = Entry(self._control_frame, textvariable=self._sudo_password, show='*')
+		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
+		Hovertip(entry, self._labels.sudo_password_tip)
+
+	def _info_frame(saelf):
+		self._info_frame = LabelFrame(self._monitor_frame, text=self._labels.info)	### info ###
+		self._info_frame.pack(fill='both', padx=self._pad, pady=self._pad)
+		self._info_text = ScrolledText(self._info_frame,	### info ###
+			font = (self._font['family'], self._font['size']),
+			padx = self._pad,
+			pady = self._pad,
+			height = 10
+		)
+		self._info_text.pack(expand=True, fill='both', padx=self._pad, pady=self._pad)
+		self._info_text.bind('<Key>', lambda dummy: 'break')
+		self._info_text.configure(state='disabled')
+		self._info_fg = self._info_text.cget('foreground')
+		self._info_bg = self._info_text.cget('background')
+		self._info_newline = True
 
 	def _make_draggable(self, widget):
 		'''Make widget draggable for reordering'''
