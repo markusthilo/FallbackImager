@@ -1,5 +1,7 @@
 {
 	"en": {
+		"root_required": "Root privileges are required",
+		"enter_sudo": "Enter password for sudo:",
 		"blockdev_heading": ["Path", "Label", "Type", "Size", "File system", "Read only", "Specs / mount points"],
 		"yes": "yes",
 		"no": "no",
@@ -72,23 +74,19 @@
 		"job_tip": "Jobs are added here. Jobs arranged next\nto each other are executed simultaneously. The\nhorizontal sequence is executed line by line.",
 		"add_job": "Add job",
 		"remove_job": "Remove job",
-
-		
 		"start_tip": "Start processing the queue.",
 		"stop_tip": "Stop processing.",
 		"shutdown": "Shutdown when done",
 		"shutdown_tip": "Shutdown system when all processes are finished.",
+		"blckd_ro": "Set new block device to read only",
 		"info": "Info",
-
-		"quit_tip": "Quit the application.",
-		"sudo_password": "Password for sudo",
-		"sudo_password_tip": "Give sudo password to execute with root privileges",
-		"sudo_check_tip": "Check if sudo password is correct.",
 		"store_value_tip": "Store this value in list.",
 		"remove_value_tip": "Remove this value from list."
 		
 	},
 	"de": {
+		"root_required": "Root-Berechtigungen sind erforderlich",
+		"enter_sudo": "Passwort für sudo eingeben:",
 		"blockdev_heading": ["Pfad", "Label", "Typ", "Größe", "Dateisystem", "Schreibgeschützt", "Spezifikationen / Mountpoints"],
 		"yes": "ja",
 		"no": "nein",
@@ -162,18 +160,12 @@
 		"job_tip": "Jobs werden hier hinzugefügt. Nebeneinander angeordnete\nJobs werden gleichzeitig ausgeführt. Nacheinander wird\nhorizontal Linie für Linie abgearbeitet.",
 		"add_job": "Job hinzufügen",
 		"remove_job": "Job entfernen",
-
-
 		"start_tip": "Verarbeitung der Warteschlange starten.",
 		"stop_tip": "Verarbeitung beenden.",
 		"shutdown": "Herunterfahren, wenn fertig",
 		"shutdown_tip": "Herunterfahren, wenn alle Prozesse fertig sind.",
+		"blckd_ro": "Setze neuen Block-Device auf schreibgeschützt",
 		"info": "Info",
-
-		"quit_tip": "Anwendung beenden.",
-		"sudo_password": "Passwort für sudo",
-		"sudo_password_tip": "Passwort für sudo, um root_rechte zu erhalten.",
-		"sudo_check_tip": "Überprüfen, ob sudo-Passwort korrekt ist.",
 		"store_value_tip": "Diesen Wert in Liste speichern.",
 		"remove_value_tip": "Diesen Wert aus Liste entfernen."
 		

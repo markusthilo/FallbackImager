@@ -5,6 +5,7 @@ from os import getuid, getenv
 from pathlib import Path
 from os import access, R_OK
 from subprocess import Popen, PIPE, STDOUT, run
+from threading import Thread
 from json import loads
 from re import findall
 from time import strftime
@@ -388,6 +389,16 @@ class CoreUtils:
 		else:
 			ret = run(cmd, capture_output=True, text=True)
 		return ret.stdout, ret.stderr, cmd_str
+
+	def thread(self, cmd, event):
+		'''Run command in thread'''
+		def _stdout(proc, event):
+			for line in proc.stdout:
+				event(line.strip())
+		proc, cmd_str = self.popen(cmd)
+		thread = Thread(target=_stdout, args=(proc, event))
+		thread.start()
+		return thread, proc
 
 	def diskdetails(self, dev):
 		'''Use lsblk with JSON output to get enhanced infos about block devoce'''

@@ -8,7 +8,7 @@
 /* blockdev --setro */
 
 /* Version */
-const char *VERSION = "0.0.1_2025-06-29";
+const char *VERSION = "0.0.1_2025-06-30";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +35,7 @@ void help(const int r) {
 	printf("blckd [OPTION]\n\n");
 	printf("OPTION:\n");
 	printf("    -h / --help  : print this help\n");
-	printf("    -r / --setro : set new block devices to res only\n\n");
+	printf("    -r / --setro : set new block devices to read only\n\n");
 	printf("Default: print new devices to stdout, do not set to read only\n\n");
 	printf("Disclaimer:\n");
 	printf("The author is not responsible for any loss of data.\n");
@@ -94,28 +94,28 @@ int main(int argc, char **argv) {
 	FILE *fh;
 	fh = fopen(DISKSTATS, "r");
 	char olddevs[LISTLEN][STRLEN], devs[LISTLEN][STRLEN], newdevs[LISTLEN][STRLEN];
-	int old, n, new;
+	int old, n;
 	old = lsblk(olddevs, fh);
 	if ( old == -1 ) { fprintf(stderr, "ERROR while running lsblk\n"); exit(-1); }
 	while ( 1 ) {
-		new = 0;
+		usleep(SLEEP);
 		n = lsblk(devs, fh);
-		if ( n == -1 ) { printf("WARNING: a problem occured while running lsblk"); n = old; }
-		if ( n == old ) { usleep(SLEEP); continue; }
-		if ( n > old )
+		if ( n < 0 ) {
+			fprintf(stderr, "ERROR: a problem occured while reading %s", DISKSTATS);
+			exit(n);
+		}
+		if ( n < old ) printf("Block device had been detached\n");
+		else if ( n > old )
 			for (int i=0; i<n; i++)
-				if ( inarray(devs[i], olddevs, old) == -1 ) {
-					if ( ro_flag == 0 ) {
-						printf("New block device %s\n", devs[i]);
-						fflush(stdout);
-					} else if ( setro(devs[i]) != 0 ) {
-						fprintf(stderr, "WARNING: could not set %s to read-only\n", devs[i]);
-						fflush(stderr);
-					} else {
-						printf("Setting new block device %s to read-only\n", devs[i]);
-						fflush(stdout);
+				if ( inarray(devs[i], olddevs, old) == -1 )
+					if ( ro_flag == 0 ) printf("New block device %s\n", devs[i]);
+					else {
+						if ( setro(devs[i]) != 0 ) {
+							fprintf(stderr, "WARNING: could not set %s to read-only\n", devs[i]);
+							fflush(stderr);
+						} else printf("Setting new block device %s to read-only\n", devs[i]);
 					}
-				}
+		fflush(stdout);
 		old = arraycpy(olddevs, devs, n);
 	}
 }

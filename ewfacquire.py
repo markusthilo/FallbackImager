@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = 'Markus Thilo'
-__version__ = '0.7.0_2025-06-27'
+__version__ = '0.7.0_2025-06-30'
 __license__ = 'GPL-3'
 __email__ = 'markus.thilo@gmail.com'
 __status__ = 'Testing'
@@ -51,6 +51,7 @@ class EwfAcquire(EwfVerify):
 		kill = None
 	):
 		'''Define job'''
+		self._kill = kill
 		self._echo = echo
 		self._utils = utils if utils else CoreUtils()	### utils ###
 		self.details = self._utils.diskdetails(src_paths[0])	### analyze_source
@@ -101,18 +102,17 @@ class EwfAcquire(EwfVerify):
 					segment_size = None
 			if not segment_size or segment_size < 0x100000 or segment_size > max_segment_size:
 				segment_size = max_segment_size
-		self.target_path = target_path
-		self.target_dir_path = target_path.parent	### target ###
-		self.target_dir_path.mkdir(parents=True, exist_ok=True)
+		self.target_path = target_path	### target ###
+		self.target_dir_path = target_path.parent
 		self.log_path = target_path.with_suffix('.log.txt')
-		self.log = Logger(self.log_path, kill=kill)	### logging ###
 		if target2:	### secondary target ###
 			self.target2_path = target2_path
 			self.target2_dir_path = target2.parent
-			self.target2_dir_path.mkdir(parents=True, exist_ok=True)
-			self.log.add(target2.with_suffix('.log.txt'))	# additional log file if 2nd destination is given
+			self.log2_path = target2.with_suffix('.log.txt')
 		else:
 			self.target2_path = None
+			self.target2_dir_path = None
+			self.log2_path = None
 		self._cmd = ['ewfacquire']	### assemble command to execute ###
 		if codepage:
 			self._cmd.extend(['-A', codepage])
@@ -170,7 +170,13 @@ class EwfAcquire(EwfVerify):
 
 	def run(self):
 		'''Run ewfacquire'''
-		self._proc, cmd_str = utils.popen(self._cmd)
+		self.log = Logger(self.log_path, kill=self._kill)	### logging ###
+		if self.log2_path:	# additional log file if 2nd destination is given
+			self.log.add(target2.with_suffix('.log.txt'))
+		self.target_dir_path.mkdir(parents=True, exist_ok=True)	# target dir
+		if self.target2_dir_path:	# 2nd target dir if given
+			self.target2_dir_path.mkdir(parents=True, exist_ok=True)
+		self._proc, cmd_str = utils.popen(self._cmd)	### launch ewfacquire process
 		head = [f'Executing: {cmd_str}']
 		self._echo(head[0])
 		tail = None

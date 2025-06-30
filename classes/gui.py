@@ -5,19 +5,17 @@ from threading import Thread, Event
 from json import load, dump
 from pathlib import Path
 from subprocess import run
-from tkinter import Tk, PhotoImage, StringVar, BooleanVar, Checkbutton, Toplevel, Menu, Text
+from tkinter import Tk, PhotoImage, StringVar, BooleanVar, IntVar, Checkbutton, Toplevel, Menu, Text
 from tkinter.font import nametofont
 from tkinter.ttk import Frame, Treeview, Scrollbar, Notebook, Label, LabelFrame, Combobox, Entry
 from tkinter.ttk import Spinbox, Menubutton, Progressbar, Sizegrip, Button
 from tkinter.scrolledtext import ScrolledText
+from tkinter.simpledialog import askstring
 from tkinter.filedialog import askopenfilenames, askdirectory
 from tkinter.messagebox import showerror, askokcancel, askyesno, showwarning
 from idlelib.tooltip import Hovertip
 from classes.config import GuiDefs, LangPackage
 from classes.coreutils import CoreUtils
-from tkinter import IntVar
-from tkinter.ttk import Progressbar
-from tkinter.ttk import Treeview
 
 class WorkThread(Thread):
 	'''The worker has tu run as thread not to freeze GUI/Tk'''
@@ -55,6 +53,7 @@ class Gui(Tk):
 		self._config = config
 		self._defs = GuiDefs()
 		self._labels = LangPackage(lang, self._config)
+		self._utils = CoreUtils()
 		self._work_thread = None
 		super().__init__()
 		self.title(f'{self._config.get("app_name")} v{self._config.get("version")}')	### define the gui ###
@@ -90,7 +89,7 @@ class Gui(Tk):
 		#self._drive_tree.bind('<Button-1>', self._select_blockdev)
 		###### notebook ######
 		self._notebook = Notebook(self, padding=self._pad)
-		self._notebook.grid(row=1, column=0, rowspan=3, sticky='nsew')
+		self._notebook.grid(row=1, column=0, rowspan=2, sticky='nsew')
 		self._ewfacquire_frame = Frame(self._notebook)
 		self._notebook.add(self._ewfacquire_frame, text=' ewfaquire ', sticky='nswe')
 		self._ewfverify_frame = Frame(self._notebook)
@@ -378,8 +377,14 @@ class Gui(Tk):
 			self._labels.file_system_tip
 		).grid(row=5, column=1, sticky='nsew', padx=self._pad, pady=self._pad)
 		###### side panel ######
+		self._blckd_ro = BooleanVar(value=self._config.get('blckd_ro', default=True))	### blockd read only ###
+		Checkbutton(self,
+			text = self._labels.blckd_ro,
+			variable = self._blckd_ro,
+			command = self._toggle_ro,
+		).grid(row=1, column=1, sticky='se', padx=self._pad)
 		frame = LabelFrame(self, text=self._labels.jobs)	### jobs frame ###
-		frame.grid(row=1, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
+		frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
 		Hovertip(frame, self._labels.job_tip)
 		self._progress_position = IntVar(value=0)
 		bar = Progressbar(frame,
@@ -413,27 +418,19 @@ class Gui(Tk):
 		)
 		self._shutdown_button.grid(row=3, column=3, padx=self._pad, pady=self._pad)
 		Hovertip(self._shutdown_button, self._labels.shutdown_tip)
-		self._stop_button = Button(frame, text='\u25A0', command=self._stop)	### stop button
+		self._stop_button = Button(frame, text='\u25A0', command=self._stop, state='disabled')	### stop button
 		self._stop_button.grid(row=3, column=4, sticky='e', padx=self._pad, pady=self._pad)
 		Hovertip(self._stop_button, self._labels.stop_tip)
-		frame = LabelFrame(self, text='blockd')	### options frame ###)
-		frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
-		self._blckd_text = self._info_frame(frame, height=4)
-		self._blckd_text.grid(row=0, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
-
-
-		#frame = LabelFrame(self, text='\u25A2')	### control frame ###
-		#frame.grid(row=2, column=1, sticky='nswe', padx=self._pad, pady=self._pad)
-		#panel_frame = Frame(frame)
-		#panel_frame.pack(expand=True, fill='x', padx=self._pad, pady=self._pad)
-
-		#self._quit_button = Button(panel_frame, text='\u2716', width=2, command=self._quit_app)
-		#self._quit_button.pack(side='right', padx=(0, self._pad*4), pady=(0, self._pad))
-		#Hovertip(button, self._labels.quit_tip)
-
-		#Sizegrip(self).grid(row=3, column=1, sticky='se', padx=self._pad, pady=self._pad)
-		#self._init_warning()
-
+		Sizegrip(self).grid(row=3, column=2, sticky='se')
+		while not self._utils.i_have_root():
+			pw = askstring(self._labels.root_required, self._labels.enter_sudo, show='*')
+			if pw == '':
+				continue
+			if pw == None:
+				self._quit_app()
+				return
+			self._utils.set_password(pw)
+		self._init_warning()
 
 	def _dropdown_entry(self, parent, text, textvariable, key, hovertip, width=None):
 		'''Combobox with LabelFrame and Buttons'''
@@ -501,7 +498,7 @@ class Gui(Tk):
 
 	def _job_box(self, parent, row, col):
 		'''Job box with text field'''
-		frame = LabelFrame(parent, text=self._labels.job)
+		frame = LabelFrame(parent, text=f'{self._labels.job} {row+1}.{col+1}')
 		button = Button(frame, text='\u261F', command= lambda: self._add_job(row, col))
 		button.grid(row=0, column=0, sticky='nsew', padx=self._pad, pady=self._pad)
 		Hovertip(button, self._labels.add_job)
@@ -514,7 +511,7 @@ class Gui(Tk):
 			wrap = "none",
 			padx = self._pad,
 			pady = self._pad,
-			height = 2,
+			height = 4,
 			width = 24,
 			xscrollcommand=hsc.set)
 		text.grid(row=1, column=0, columnspan=2, sticky='nswe', padx=self._pad)
@@ -533,17 +530,9 @@ class Gui(Tk):
 		'''Remove job from jobs frame'''
 		pass
 
-	def _sudo(self):
-		button = Button(self._control_frame,	### sudo ###
-			text = self._labels.sudo_password,
-			command = self._test_sudo
-			)
-		button.pack(side='right', padx=self._pad, pady=(0, self._pad))
-		Hovertip(button, self._labels.sudo_check_tip)
-		self._sudo_password = StringVar()
-		entry = Entry(self._control_frame, textvariable=self._sudo_password, show='*')
-		entry.pack(side='right', fill='x', expand=True, padx=self._pad, pady=(0, self._pad))
-		Hovertip(entry, self._labels.sudo_password_tip)
+	def _toggle_ro(self):
+		'''Read only on/off'''
+		pass
 
 	def _info_frame(self, parent, height=None):
 		'''ScrolledText to show infos'''
@@ -992,20 +981,6 @@ class Gui(Tk):
 		self._exec_button.configure(state='normal')
 		self._quit_button_text.set(self._labels.quit)
 		self._work_thread = None
-
-	def _test_sudo(self):
-		'''Test sudo password'''
-		if not self._coreutils.i_have_root():
-			if not self._coreutils.no_pw_sudo():
-				showerror(title=self._labels.error, message=self._labels.no_sudo)
-				return False
-			if not self._coreutils.whoami():
-				showerror(title=self._labels.error, message=self._labels.no_root)
-				return False
-			if not self._coreutils.gen_cmd('echo', 'test', sudo=True, password='test'):
-				showerror(title=self._labels.error, message=self._labels.invalid_password)
-				return False
-		return True
 
 	def _start(self):
 		'''Start queue processing'''
